@@ -1,0 +1,13 @@
+
+{
+  "crons": [
+    {
+      "path": "/api/check-emails",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/process-replies",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
