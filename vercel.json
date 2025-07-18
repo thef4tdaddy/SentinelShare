@@ -1,13 +1,17 @@
-
 {
   "crons": [
     {
       "path": "/api/check-emails",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 9,17 * * *"
     },
     {
       "path": "/api/process-replies",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 12,20 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "pages/api/*.js": {
+      "maxDuration": 60
+    }
+  }
 }
