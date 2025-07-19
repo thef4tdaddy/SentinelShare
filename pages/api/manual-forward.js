@@ -3,7 +3,7 @@ import { ManualForwarder } from '../../lib/manual-forwarder.js'
 import { NotionDashboard } from '../../lib/notion-client.js'
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
@@ -11,12 +11,14 @@ export default async function handler(req, res) {
     const manualForwarder = new ManualForwarder()
     const notion = new NotionDashboard()
     
+    // Support both GET and POST requests
+    const params = req.method === 'GET' ? req.query : req.body
     const { 
       mode = 'auto',
       emailIds = [],
       ruleId = null,
       hours = 24
-    } = req.body
+    } = params
 
     let result
 
@@ -29,10 +31,11 @@ export default async function handler(req, res) {
       
       case 'specific':
         // Process specific email IDs with optional rule override
-        if (!emailIds || emailIds.length === 0) {
+        const emailArray = Array.isArray(emailIds) ? emailIds : (emailIds ? emailIds.split(',') : [])
+        if (!emailArray || emailArray.length === 0) {
           return res.status(400).json({ error: 'Email IDs required for specific mode' })
         }
-        result = await manualForwarder.processSpecificEmails(emailIds, ruleId)
+        result = await manualForwarder.processSpecificEmails(emailArray, ruleId)
         break
       
       case 'list-rules':
