@@ -9,7 +9,7 @@ node_modules
 # Production
 build
 .env
-
+.next
 # Misc
 .DS_Store
 .vscode

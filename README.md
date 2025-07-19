@@ -11,13 +11,14 @@ Automatically forwards receipts from your Gmail and iCloud accounts to your wife
 - 📊 **Complete Notion integration** for monitoring and control
 - 📱 **Mobile management** via Notion app
 - 🎛️ **Manual overrides** directly in Notion databases
+- 🎯 **Manual forwarding system** with custom rules and pattern matching
 - 💰 **Spending analysis** with amount extraction
 - 🔄 **Real-time sync** between email replies and Notion
 
 ## 🚀 Quick Start
 
 1. **Follow SETUP.md** for complete installation guide
-2. **Create 4 Notion databases** (Activity, Preferences, Replies, Stats)
+2. **Create 5 Notion databases** (Activity, Preferences, Replies, Stats, Manual Forward)
 3. **Deploy to Vercel** with environment variables
 4. **Test with sample receipt** email
 
@@ -35,12 +36,20 @@ Reply to any forwarded email with:
 - **Preferences** - Add/remove blocks directly
 - **Wife's Replies** - Command history and actions taken
 - **System Stats** - Performance and health monitoring
+- **Manual Forward Rules** - Custom forwarding rules with pattern matching
 
 ### Manual Overrides
 Add entries directly to Notion Preferences database:
 - **Blocked Sender**: Item="amazon", Type="Blocked Sender"
 - **Always Forward**: Item="starbucks", Type="Always Forward"
 - **Blocked Category**: Item="restaurants", Type="Blocked Category"
+
+### Manual Forward Rules
+Create custom forwarding rules in the Manual Forward database:
+- **Email Pattern**: "*@amazon.com" (wildcards supported)
+- **Subject Pattern**: "*order*" or "receipt"
+- **Forward To**: custom-email@example.com
+- **Priority**: Lower numbers = higher priority
 
 ## 📊 Analytics
 
