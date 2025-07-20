@@ -26,6 +26,36 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Health Check
+      run: |
+        echo "🏥 Checking API health..."
+        
+        response=$(timeout 30 curl -s -X GET \
+          "${{ secrets.VERCEL_APP_URL }}/api/health" \
+          -H "Content-Type: application/json" \
+          --max-time 25 \
+          --fail-with-body) || {
+          echo "❌ Health check failed or timed out"
+          exit 1
+        }
+        
+        echo "Health check response: $response"
+        
+        if echo "$response" | jq -e '.success == true' > /dev/null 2>&1; then
+          echo "✅ API is healthy"
+          allEnvVars=$(echo "$response" | jq -r '.allRequiredEnvVarsPresent // false')
+          if [ "$allEnvVars" = "true" ]; then
+            echo "✅ All required environment variables are present"
+          else
+            echo "⚠️ Some environment variables may be missing"
+            echo "$response" | jq -r '.environment'
+          fi
+        else
+          echo "❌ API health check failed"
+          echo "$response"
+          exit 1
+        fi
+
     - name: Process Regular Email Checks
       if: ${{ github.event.inputs.mode == 'all' || github.event.inputs.mode == 'regular' || github.event.inputs.mode == '' }}
       run: |

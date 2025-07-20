@@ -30,13 +30,30 @@ export default async function handler(req, res) {
   try {
     console.log("Starting email check at", new Date().toISOString());
 
-    const gmailClient = new GmailClient();
-    const icloudClient = new ICloudClient();
-    const emailSender = new EmailSender();
-    const notion = new NotionDashboard();
+    // Initialize clients with error handling
+    let gmailClient, icloudClient, emailSender, notion;
+    
+    try {
+      gmailClient = new GmailClient();
+      icloudClient = new ICloudClient();
+      emailSender = new EmailSender();
+      notion = new NotionDashboard();
+      console.log("All clients initialized successfully");
+    } catch (initError) {
+      console.error("Client initialization error:", initError);
+      throw new Error(`Failed to initialize email clients: ${initError.message}`);
+    }
 
     // Wrap main logic in timeout handler
     const mainLogic = async () => {
+      // Check required environment variables first
+      const requiredEnvVars = ['WIFE_EMAIL', 'NOTION_TOKEN', 'NOTION_DATABASE_ID'];
+      const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+      
+      if (missingEnvVars.length > 0) {
+        throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+      }
+
       // Get recent emails from both accounts
     const [gmailEmails, icloudEmails] = await Promise.all([
       gmailClient.getRecentEmails().catch((err) => {
