@@ -10,19 +10,34 @@ import { NotionDashboard } from "../../lib/notion-client";
 import { CONFIG } from "../../lib/config";
 
 export default async function handler(req, res) {
+  // Set headers to prevent redirects and ensure JSON response
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  
   if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ 
+      success: false,
+      error: "Method not allowed",
+      timestamp: new Date().toISOString()
+    });
   }
 
+  // Set up timeout to prevent hanging requests
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout after 25 seconds')), 25000);
+  });
+
   try {
-    console.log("Starting email check...");
+    console.log("Starting email check at", new Date().toISOString());
 
     const gmailClient = new GmailClient();
     const icloudClient = new ICloudClient();
     const emailSender = new EmailSender();
     const notion = new NotionDashboard();
 
-    // Get recent emails from both accounts
+    // Wrap main logic in timeout handler
+    const mainLogic = async () => {
+      // Get recent emails from both accounts
     const [gmailEmails, icloudEmails] = await Promise.all([
       gmailClient.getRecentEmails().catch((err) => {
         console.error("Gmail error:", err);
@@ -212,23 +227,44 @@ export default async function handler(req, res) {
     // Sync current preferences to Notion
     await notion.updatePreferences(preferences);
 
-    res.status(200).json({
+    return {
       success: true,
       processed: allEmails.length,
       forwarded: forwardedCount,
       skipped: skippedCount,
       timestamp: new Date().toISOString(),
-    });
+    };
+  };
+
+  // Execute with timeout
+  const result = await Promise.race([mainLogic(), timeoutPromise]);
+  res.status(200).json(result);
   } catch (error) {
     console.error("Email check error:", error);
-    const notion = new NotionDashboard();
-    await notion.logActivity(
-      { subject: "System Error", from: "system", source: "system" },
-      "error",
-      error.message
-    );
-    res
-      .status(500)
-      .json({ error: "Internal server error", details: error.message });
+    
+    // Try to log to Notion but don't let it fail the response
+    try {
+      const notion = new NotionDashboard();
+      await Promise.race([
+        notion.logActivity(
+          { subject: "System Error", from: "system", source: "system" },
+          "error",
+          error.message
+        ),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Notion logging timeout')), 5000))
+      ]);
+    } catch (notionError) {
+      console.error("Failed to log to Notion:", notionError.message);
+    }
+
+    res.status(500).json({ 
+      success: false,
+      error: "Internal server error", 
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      processed: 0,
+      forwarded: 0,
+      skipped: 0
+    });
   }
 }
