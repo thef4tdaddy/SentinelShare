@@ -1,25 +1,17 @@
 {
-  "name": "receipt-forwarder",
-  "version": "1.0.0",
-  "private": true,
+  "name": "receipt-forwarder-root",
+  "version": "0.1.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "cd frontend && npm install && npm run build",
+    "heroku-postbuild": "npm run build",
+    "prepare": "husky"
   },
-  "dependencies": {
-    "@notionhq/client": "^2.3.0",
-    "@vercel/kv": "^1.0.1",
-    "imap": "^0.8.19",
-    "mailparser": "^3.7.4",
-    "next": "^14.0.0",
-    "nodemailer": "^6.10.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+  "engines": {
+    "node": "18.x"
   },
   "devDependencies": {
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.0.0"
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "husky": "^9.0.0"
   }
 }

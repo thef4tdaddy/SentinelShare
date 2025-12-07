@@ -1,0 +1,30 @@
+name: "PR Title Check"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  main:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Ensure appropriate coverage for types
+          types: |
+            fix
+            feat
+            docs
+            ci
+            chore
+            test
+            refactor
+            style
+            perf
+            build

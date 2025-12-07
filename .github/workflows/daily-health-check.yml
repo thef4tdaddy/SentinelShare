@@ -1,0 +1,79 @@
+name: Daily Health Check
+
+on:
+  schedule:
+    # Run every day at 8:00 AM US/Chicago (14:00 UTC)
+    - cron: '0 14 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  issues: write # Needed to create issues on failure
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      # --- Backend Setup & Test ---
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r ../requirements.txt
+          pip install pytest pytest-cov httpx
+
+      - name: Run Backend Tests & Coverage
+        run: |
+          cd backend
+          source venv/bin/activate
+          # Run tests and output coverage report to terminal. Fail under 50%.
+          pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/
+        continue-on-error: false
+
+      # --- Frontend Setup & Test ---
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Frontend Tests & Coverage
+        run: |
+          cd frontend
+          # Fail if coverage is under 50%
+          npm run test:run -- --coverage --coverage.thresholds.lines=50
+        continue-on-error: false
+
+      # --- Reporting ---
+      - name: Create Issue on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toLocaleDateString();
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `� Health / Coverage Alert: ${date}`,
+              body: `The Daily Health Check workflow failed on ${date}. \n\n**Possible Causes:**\n1. 🐛 **Tests Failed**: Code logic error.\n2. 📉 **Low Coverage**: Coverage dropped below **50%**.\n\nPlease check the [Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) to see which one it is.`,
+              labels: ['bug', 'automated-report', 'coverage']
+            });

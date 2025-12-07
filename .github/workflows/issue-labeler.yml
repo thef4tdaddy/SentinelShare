@@ -1,0 +1,354 @@
+name: Label Issues Automatically
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+# Prevent duplicate runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  issues: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  auto-label-by-keywords:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Auto-label issues by keywords
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const titleAndBody = `${issue.title} ${issue.body || ''}`.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+
+            // Get existing labels
+            const { data: repoLabels } = await github.rest.issues.listLabelsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            const existingLabelNames = repoLabels.map(label => label.name);
+            const existingLabelsLower = existingLabelNames.map(name => name.toLowerCase());
+
+            // Extract explicit labels from body (e.g., "label: bug", "labels: bug, enhancement", "bug:", etc.)
+            const explicitLabels = [];
+            const labelPatterns = [
+              /(?:^|\n|^|\s)(?:label|labels|tag|tags)[\s:]+([^\n,]+(?:,\s*[^\n,]+)*)/gi,
+              /(?:^|\n|^|\s)([a-z\s]+):[\s]*(?:bug|enhancement|feature|documentation|test|performance|security)/gi,
+              /\[([^\]]+)\]/g, // Markdown-style [label]
+              /#([a-z0-9-]+)/g, // Hashtag-style #label
+            ];
+
+            for (const pattern of labelPatterns) {
+              const matches = body.matchAll(pattern);
+              for (const match of matches) {
+                const labelText = match[1] || match[0];
+                // Split by comma and clean up
+                const labels = labelText.split(',').map(l => l.trim().toLowerCase().replace(/[#\[\]:]/g, ''));
+                explicitLabels.push(...labels);
+              }
+            }
+
+            // Check for explicit label mentions in body (e.g., "this is a bug" -> bug label)
+            const explicitMentions = [];
+            for (const labelName of existingLabelNames) {
+              const labelLower = labelName.toLowerCase();
+              // Look for explicit mentions like "this is a bug" or "bug:" or "label: bug"
+              const mentionPatterns = [
+                new RegExp(`(?:^|\\s|label[\\s:]+|tag[\\s:]+)${labelLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$|,|:)`, 'i'),
+                new RegExp(`\\[${labelLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\]`, 'i'),
+                new RegExp(`#${labelLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'),
+              ];
+              
+              if (mentionPatterns.some(pattern => pattern.test(body))) {
+                explicitMentions.push(labelName);
+              }
+            }
+
+            // Define label keywords with improved context
+            const labelKeywords = {
+              'bug': ['bug', 'error', 'broken', 'crash', 'issue', 'problem', 'failing', 'fail', 'exception', 'doesn\'t work', 'not working', 'broken', 'defect'],
+              'enhancement': ['enhancement', 'feature request', 'feature', 'improve', 'improvement', 'add support', 'would be nice', 'could add', 'suggest'],
+              'documentation': ['docs', 'documentation', 'readme', 'guide', 'tutorial', 'how to', 'instructions'],
+              'testing': ['test', 'tests', 'testing', 'coverage', 'qa', 'test case', 'unit test'],
+              'performance': ['performance', 'slow', 'optimize', 'speed', 'lag', 'memory', 'bottleneck', 'takes too long'],
+              'security': ['security', 'vulnerability', 'cve', 'exploit', 'secure', 'encryption', 'privacy'],
+              'accessibility': ['a11y', 'accessibility', 'wcag', 'keyboard', 'screen reader', 'aria'],
+              'question': ['question', 'how do i', 'how to', 'help', '?', 'wondering', 'confused about']
+              // Removed 'good first issue' - too broad, apply manually
+            };
+
+            // Component-based labels
+            const componentKeywords = {
+              'auth': ['auth', 'login', 'password', 'user account', 'sign up', 'sign in'],
+              'sync': ['sync', 'synchronization', 'firebase', 'offline'],
+              'budget': ['budget', 'envelope', 'allocation'],
+              'debt': ['debt', 'loan', 'payment'],
+              'bills': ['bill', 'invoice', 'recurring'],
+              'transactions': ['transaction', 'ledger', 'split'],
+              'analytics': ['analytics', 'chart', 'report', 'dashboard'],
+              'notifications': ['notification', 'alert', 'remind'],
+              'UI': ['ui', 'ux', 'button', 'modal', 'form', 'component'],
+              'PWA': ['pwa', 'offline', 'install', 'web app'],
+              'Electron': ['electron', 'desktop']
+            };
+
+            // Priority detection
+            const priorityKeywords = {
+              '🔴 Critical': ['critical', 'urgent', 'blocking', 'broken', 'down'],
+              '🟠 High': ['high priority', 'important', 'asap'],
+              '🟡 Medium': ['medium priority'],
+              '⚪ Low': ['low priority', 'nice to have']
+            };
+
+            const toLabel = [];
+            const missing = [];
+
+            // First, add explicitly mentioned labels from body
+            for (const explicitLabel of [...explicitLabels, ...explicitMentions]) {
+              // Try exact match first
+              const exactMatch = existingLabelNames.find(name => name.toLowerCase() === explicitLabel);
+              if (exactMatch && !toLabel.includes(exactMatch)) {
+                toLabel.push(exactMatch);
+                continue;
+              }
+              
+              // Try partial match (e.g., "bug" matches "bug" label)
+              const partialMatch = existingLabelNames.find(name => 
+                name.toLowerCase().includes(explicitLabel) || explicitLabel.includes(name.toLowerCase())
+              );
+              if (partialMatch && !toLabel.includes(partialMatch)) {
+                toLabel.push(partialMatch);
+              }
+            }
+
+            // Check type labels with improved context matching
+            for (const [label, keywords] of Object.entries(labelKeywords)) {
+              // Skip if already explicitly mentioned
+              if (toLabel.includes(label)) continue;
+              
+              // Check for keyword matches with better context
+              const hasKeyword = keywords.some(keyword => {
+                // Look for whole word matches or phrase matches
+                const wordBoundary = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                return wordBoundary.test(titleAndBody);
+              });
+              
+              if (hasKeyword && existingLabelNames.includes(label)) {
+                toLabel.push(label);
+              } else if (hasKeyword) {
+                missing.push(label);
+              }
+            }
+
+            // Check component labels with improved context
+            for (const [label, keywords] of Object.entries(componentKeywords)) {
+              // Skip if already explicitly mentioned
+              if (toLabel.includes(label)) continue;
+              
+              const hasKeyword = keywords.some(keyword => {
+                const wordBoundary = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                return wordBoundary.test(titleAndBody);
+              });
+              
+              if (hasKeyword && existingLabelNames.includes(label)) {
+                toLabel.push(label);
+              } else if (hasKeyword) {
+                missing.push(label);
+              }
+            }
+
+            // Check priority - ONLY ONE priority label allowed
+            // Skip if priority already explicitly mentioned
+            let foundPriority = false;
+            const existingPriorityLabels = toLabel.filter(l => 
+              ['🔴 Critical', '🟠 High', '🟡 Medium', '⚪ Low'].includes(l)
+            );
+
+            if (existingPriorityLabels.length > 0) {
+              foundPriority = true; // Priority already set explicitly
+            } else {
+              for (const [label, keywords] of Object.entries(priorityKeywords)) {
+                if (keywords.some(keyword => {
+                  const wordBoundary = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                  return wordBoundary.test(titleAndBody);
+                })) {
+                  if (!foundPriority) {
+                    if (existingLabelNames.includes(label)) {
+                      toLabel.push(label);
+                    } else {
+                      missing.push(label);
+                    }
+                    foundPriority = true;
+                  }
+                  break; // Stop after checking first matching priority
+                }
+              }
+            }
+
+            // Apply labels
+            if (toLabel.length > 0) {
+              const uniqueLabels = [...new Set(toLabel)];
+              await github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: uniqueLabels
+              });
+              console.log(`Applied labels: ${uniqueLabels.join(', ')}`);
+            }
+
+            // Log missing labels (don't spam with comments)
+            if (missing.length > 0) {
+              const uniqueMissing = [...new Set(missing)];
+              console.log('⚠️ Missing labels detected (not created):', uniqueMissing.join(', '));
+              console.log('Create these labels at: https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/labels');
+              // Don't post comment - it spams issues unnecessarily
+            }
+
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add triage label to new issues
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+
+            // Only label on initial open
+            if (context.payload.action === 'opened') {
+              try {
+                await github.rest.issues.addLabels({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['Todo']
+                });
+              } catch (error) {
+                console.log('Could not add triage label:', error.message);
+              }
+            }
+
+  missing-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Flag issues needing more information
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const bodyLength = (issue.body || '').trim().length;
+
+            if (bodyLength < 50) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `📋 **Please provide more details**\n\nYour issue description is quite brief. To help us better understand and fix the problem, please include:\n\n- **Environment**: OS, browser, app version\n- **Steps to reproduce**: Exact steps to trigger the issue\n- **Expected behavior**: What should happen\n- **Actual behavior**: What actually happens\n- **Screenshots/logs**: If applicable\n\nThank you! 🙏`
+              });
+            }
+
+  assign-milestone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign issue to lowest numbered open milestone
+        uses: actions/github-script@v8
+        with:
+          script: |
+            // Only assign milestone to newly opened issues
+            if (context.payload.action !== 'opened') {
+              console.log('Issue not newly opened, skipping milestone assignment');
+              return;
+            }
+
+            const issue = context.payload.issue;
+
+            // Skip if issue already has a milestone
+            if (issue.milestone) {
+              console.log(`Issue #${issue.number} already has milestone: ${issue.milestone.title}`);
+              return;
+            }
+
+            try {
+              // Get all open milestones
+              const { data: milestones } = await github.rest.issues.listMilestones({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100
+              });
+
+              if (milestones.length === 0) {
+                console.log('No open milestones found, skipping assignment');
+                return;
+              }
+
+              // Parse version number from milestone title (e.g., "v2.0", "v2.2.1", "v3.0")
+              const parseVersion = (title) => {
+                const match = title.match(/^v?(\d+)\.(\d+)(?:\.(\d+))?/i);
+                if (!match) return null;
+                return {
+                  major: parseInt(match[1], 10),
+                  minor: parseInt(match[2], 10),
+                  patch: parseInt(match[3] || '0', 10),
+                  original: title
+                };
+              };
+
+              // Filter milestones with valid version numbers and sort by version
+              const milestonesWithVersions = milestones
+                .map(m => ({
+                  milestone: m,
+                  version: parseVersion(m.title)
+                }))
+                .filter(m => m.version !== null)
+                .sort((a, b) => {
+                  const vA = a.version;
+                  const vB = b.version;
+                  
+                  // Compare major version
+                  if (vA.major !== vB.major) {
+                    return vA.major - vB.major;
+                  }
+                  // Compare minor version
+                  if (vA.minor !== vB.minor) {
+                    return vA.minor - vB.minor;
+                  }
+                  // Compare patch version
+                  return vA.patch - vB.patch;
+                });
+
+              if (milestonesWithVersions.length === 0) {
+                console.log('No milestones with valid version numbers found, skipping assignment');
+                return;
+              }
+
+              // Get the lowest version milestone
+              const lowestMilestone = milestonesWithVersions[0].milestone;
+
+              if (!lowestMilestone) {
+                console.log('Could not find lowest version milestone');
+                return;
+              }
+
+              // Assign issue to the lowest numbered milestone
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                milestone: lowestMilestone.number
+              });
+
+              console.log(`Assigned issue #${issue.number} to milestone: ${lowestMilestone.title} (#${lowestMilestone.number})`);
+            } catch (error) {
+              console.log('Could not assign milestone:', error.message);
+              // Don't fail the workflow if milestone assignment fails
+            }
