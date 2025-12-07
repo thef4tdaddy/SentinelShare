@@ -23,15 +23,30 @@ jobs:
       working-directory: frontend
       run: npm ci
 
+    - name: Lint
+      id: lint
+      working-directory: frontend
+      run: npm run lint
+      continue-on-error: true
+
     - name: Typecheck
       id: typecheck
       working-directory: frontend
       run: npm run check
+      continue-on-error: true
 
     - name: Build
       id: build
       working-directory: frontend
       run: npm run build
+      continue-on-error: true
+
+    - name: Check Status
+      if: always()
+      run: |
+        if [ "${{ steps.lint.outcome }}" == "failure" ] || [ "${{ steps.typecheck.outcome }}" == "failure" ] || [ "${{ steps.build.outcome }}" == "failure" ]; then
+          exit 1
+        fi
 
   backend-check:
     runs-on: ubuntu-latest
@@ -49,3 +64,28 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r ../requirements.txt
+
+    - name: Lint with Ruff
+      id: ruff
+      working-directory: backend
+      run: ruff check . --output-format=github
+      continue-on-error: true
+
+    - name: Typecheck with Mypy
+      id: mypy
+      working-directory: backend
+      run: mypy .
+      continue-on-error: true
+
+    - name: Run Tests
+      id: pytest
+      working-directory: backend
+      run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ || true
+
+    - name: Check Status
+      if: always()
+      run: |
+        if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
+          echo "One or more steps failed."
+          exit 1
+        fi

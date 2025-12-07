@@ -1,133 +1,65 @@
-:root {
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --bg-main: #f3f4f6;
-  --bg-card: #ffffff;
-  --text-main: #111827;
-  --text-secondary: #6b7280;
-  --border: #e5e7eb;
-  --success: #10b981;
-  --danger: #ef4444;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-bg-main: #f3f4f6;
+  --color-bg-card: #ffffff;
+  --color-text-main: #111827;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
 }
 
 body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--bg-main);
-  color: var(--text-main);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
+  @apply bg-bg-main text-text-main font-sans m-0;
 }
 
 .card {
-  background: var(--bg-card);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  padding: 1.5rem;
-  margin-bottom: 1rem;
+  @apply bg-bg-card rounded-lg shadow-sm p-6 mb-4;
 }
-
-h1, h2, h3 { margin-top: 0; }
 
 button {
-  cursor: pointer;
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  transition: background 0.2s;
-}
-
-button:hover {
-  background: var(--primary-hover);
+  @apply cursor-pointer bg-primary text-white border-0 py-2 px-4 rounded text-sm transition-colors duration-200 hover:bg-primary-hover;
 }
 
 button.secondary {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-}
-
-button.secondary:hover {
-  background: var(--bg-main);
+  @apply bg-transparent text-text-secondary border border-border hover:bg-bg-main;
 }
 
 button.danger {
-  background: var(--danger);
+  @apply bg-danger text-white;
 }
 
 input, select {
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  font-size: 0.9rem;
-  width: 100%;
-  box-sizing: border-box;
+  @apply p-2 border border-border rounded text-sm w-full box-border;
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
+  @apply w-full border-collapse;
 }
 
 th, td {
-  text-align: left;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  @apply text-left p-3 border-b border-border;
 }
 
 th {
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  @apply text-text-secondary font-semibold text-xs uppercase tracking-wider;
 }
 
 .badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  @apply px-2 py-1 rounded-full text-xs font-medium;
 }
 
 .badge.forwarded {
-  background-color: #d1fae5;
-  color: #065f46;
+  @apply bg-green-100 text-green-800;
 }
 
 .badge.ignored, .badge.blocked {
-  background-color: #fee2e2;
-  color: #991b1b;
+  @apply bg-red-100 text-red-800;
 }
 
-.nav {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  padding: 1rem 0;
-  margin-bottom: 2rem;
-}
-
-.nav-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.nav-links button {
-  background: transparent;
-  color: var(--text-secondary);
-  margin-left: 1rem;
-  font-weight: 500;
-}
-
-.nav-links button.active {
-  color: var(--primary);
-  background: #eff6ff;
+.container {
+  @apply max-w-7xl mx-auto px-4;
 }
