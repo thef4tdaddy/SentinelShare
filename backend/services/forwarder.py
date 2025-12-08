@@ -9,7 +9,7 @@ class EmailForwarder:
     def forward_email(original_email_data: dict, target_email: str):
         sender_email = os.environ.get("SENDER_EMAIL")
         password = os.environ.get("SENDER_PASSWORD")
-        smtp_server = "smtp.gmail.com" # Default to Gmail, make configurable if needed
+        smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
         smtp_port = 587
 
         if not sender_email or not password:

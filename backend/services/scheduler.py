@@ -10,9 +10,43 @@ from datetime import datetime
 
 scheduler = BackgroundScheduler()
 
+import json
+
 def process_emails():
     print("🔄 Checking for new emails...")
-    emails = EmailService.fetch_unseen_emails()
+    
+    all_emails = []
+    
+    # 1. Try Multi-Account Config
+    email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+    if email_accounts_json:
+        try:
+            accounts = json.loads(email_accounts_json)
+            if isinstance(accounts, list):
+                print(f"👥 Processing {len(accounts)} accounts...")
+                for acc in accounts:
+                    user = acc.get("email")
+                    pwd = acc.get("password")
+                    server = acc.get("imap_server", "imap.gmail.com")
+                    
+                    if user and pwd:
+                        print(f"   Scanning {user}...")
+                        fetched = EmailService.fetch_unseen_emails(user, pwd, server)
+                        all_emails.extend(fetched)
+        except json.JSONDecodeError:
+            print("❌ Error parsing EMAIL_ACCOUNTS JSON")
+
+    # 2. Fallback to Legacy Single Account (if no accounts processed yet)
+    if not all_emails and not email_accounts_json:
+        user = os.environ.get("GMAIL_EMAIL")
+        pwd = os.environ.get("GMAIL_PASSWORD")
+        server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
+        
+        if user and pwd:
+             print(f"👤 Processing single account {user}...")
+             all_emails = EmailService.fetch_unseen_emails(user, pwd, server)
+    
+    emails = all_emails
     
     if not emails:
         print("📭 No new emails.")

@@ -6,11 +6,7 @@ from datetime import datetime
 
 class EmailService:
     @staticmethod
-    def fetch_unseen_emails(limit=20):
-        imap_server = "imap.gmail.com" # Default
-        email_user = os.environ.get("GMAIL_EMAIL") # Or any polled email
-        email_pass = os.environ.get("GMAIL_PASSWORD")
-
+    def fetch_unseen_emails(email_user, email_pass, imap_server="imap.gmail.com", limit=20):
         if not email_user or not email_pass:
             print("❌ IMAP Credentials missing")
             return []
