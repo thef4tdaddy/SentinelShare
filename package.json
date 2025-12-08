@@ -2,12 +2,12 @@
   "name": "receipt-forwarder-root",
   "version": "0.1.0",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install --include=dev && npm run build",
     "heroku-postbuild": "npm run build",
     "prepare": "husky"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",

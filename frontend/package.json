@@ -10,6 +10,9 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "vitest"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@testing-library/dom": "^10.0.0",
