@@ -23,13 +23,16 @@ class EmailForwarder:
                         first_acc = accounts[0]
                         sender_email = first_acc.get("email")
                         password = first_acc.get("password")
-                        # Also override SMTP server if provided in account, otherwise keep env default
-                        # Note: We prioritize the account's specific server if we are using the account's creds
-                        # But to keep it simple, we'll likely rely on SMTP_SERVER env or standard mapping.
-                        # Actually, let's use the account's server if available? 
-                        # The user might be mixing Gmail and iCloud.
-                        # If we pick the first account, we should probably stick to standard SMTP unless defined.
-                        # For now, let's just get the creds.
+                        
+                        # Infer SMTP server from IMAP if possible
+                        imap_s = first_acc.get("imap_server", "")
+                        if "gmail" in imap_s:
+                            smtp_server = "smtp.gmail.com"
+                        elif "mail.me.com" in imap_s or "icloud" in imap_s:
+                            smtp_server = "smtp.mail.me.com"
+                        elif imap_s.startswith("imap."):
+                            # Try guessing smtp.domain
+                            smtp_server = imap_s.replace("imap.", "smtp.", 1)
             except:
                 pass
 
