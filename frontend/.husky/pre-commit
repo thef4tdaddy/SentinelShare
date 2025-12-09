@@ -1,3 +1,1 @@
-#!/usr/bin/env sh
-
-cd frontend && npx lint-staged --config configs/.lintstagedrc.json
+npx lint-staged

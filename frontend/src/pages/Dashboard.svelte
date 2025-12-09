@@ -4,8 +4,16 @@
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
 
+	interface Activity {
+		processed_at: string;
+		subject: string;
+		sender: string;
+		status: string;
+		category?: string;
+	}
+
 	let stats = { total_forwarded: 0, total_blocked: 0, total_processed: 0 };
-	let activity: any[] = [];
+	let activity: Activity[] = [];
 
 	onMount(async () => {
 		try {
