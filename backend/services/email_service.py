@@ -6,7 +6,7 @@ from datetime import datetime
 
 class EmailService:
     @staticmethod
-    def fetch_unseen_emails(email_user, email_pass, imap_server="imap.gmail.com", limit=20):
+    def fetch_recent_emails(email_user, email_pass, imap_server="imap.gmail.com", limit=20):
         if not email_user or not email_pass:
             print("❌ IMAP Credentials missing")
             return []
@@ -16,7 +16,9 @@ class EmailService:
             mail.login(email_user, email_pass)
             mail.select("inbox")
 
-            status, messages = mail.search(None, "UNSEEN")
+            # Fetch ALL emails, but we only process the last 'limit'
+            # Note: valid only if server returns IDs in order, which is standard
+            status, messages = mail.search(None, "ALL")
             if status != "OK":
                 return []
 

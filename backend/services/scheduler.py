@@ -31,7 +31,7 @@ def process_emails():
                     
                     if user and pwd:
                         print(f"   Scanning {user}...")
-                        fetched = EmailService.fetch_unseen_emails(user, pwd, server)
+                        fetched = EmailService.fetch_recent_emails(user, pwd, server)
                         all_emails.extend(fetched)
         except json.JSONDecodeError:
             print("❌ Error parsing EMAIL_ACCOUNTS JSON")
@@ -44,7 +44,7 @@ def process_emails():
         
         if user and pwd:
              print(f"👤 Processing single account {user}...")
-             all_emails = EmailService.fetch_unseen_emails(user, pwd, server)
+             all_emails = EmailService.fetch_recent_emails(user, pwd, server)
     
     emails = all_emails
     
