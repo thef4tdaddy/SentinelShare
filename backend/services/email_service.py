@@ -23,8 +23,11 @@ class EmailService:
                 return []
 
             email_ids = messages[0].split()
+            print(f"   📬 Total emails found in inbox: {len(email_ids)}")
+            
             # Process latest first
             email_ids = email_ids[-limit:]
+            print(f"   📥 Fetching last {len(email_ids)} emails...")
             
             emails_data = []
 

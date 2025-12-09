@@ -72,11 +72,15 @@ def process_emails():
             is_receipt = ReceiptDetector.is_receipt(email_data)
             category = ReceiptDetector.categorize_receipt(email_data)
             
+            print(f"   🔍 Analyzing: {email_data.get('subject')} | From: {email_data.get('from')}")
+            print(f"      -> Is Receipt: {is_receipt} | Category: {category}")
+
             status = "ignored"
             reason = "Not a receipt"
             
             if is_receipt:
                 # Forward
+                print(f"      🚀 Forwarding to {target_email}...")
                 success = EmailForwarder.forward_email(email_data, target_email)
                 status = "forwarded" if success else "error"
                 reason = "Detected as receipt" if success else "SMTP Error"
