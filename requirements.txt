@@ -3,12 +3,12 @@ uvicorn[standard]==0.27.1
 sqlmodel==0.0.16
 psycopg2-binary==2.9.9
 alembic==1.13.1
-python-multipart==0.0.9
-requests==2.31.0
+python-multipart==0.0.18
+requests==2.32.4
 APScheduler==3.10.4
 email-validator==2.1.0.post1
 pytest==8.0.0
 beautifulsoup4==4.12.3
 pytest-cov==4.1.0
-black==24.2.0
+black==24.3.0
 isort==5.13.2
