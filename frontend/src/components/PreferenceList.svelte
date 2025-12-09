@@ -70,7 +70,7 @@
 
 	<!-- Add Form -->
 	<div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: flex-end;">
-		{#each fields as field}
+		{#each fields as field (field.key)}
 			<div style="flex: 1;">
 				<label
 					for="{type}-{field.key}"
@@ -78,7 +78,7 @@
 				>
 				{#if field.type === 'select'}
 					<select id="{type}-{field.key}" bind:value={newItem[field.key]}>
-						{#each field.options as opt}
+						{#each field.options as opt (opt)}
 							<option value={opt}>{opt}</option>
 						{/each}
 					</select>
@@ -99,16 +99,16 @@
 	<table>
 		<thead>
 			<tr>
-				{#each fields as field}
+				{#each fields as field (field.key)}
 					<th>{field.label}</th>
 				{/each}
 				<th>Actions</th>
 			</tr>
 		</thead>
 		<tbody>
-			{#each items as item}
+			{#each items as item (item.id || Math.random())}
 				<tr>
-					{#each fields as field}
+					{#each fields as field (field.key)}
 						<td>{item[field.key] || '-'}</td>
 					{/each}
 					<td>

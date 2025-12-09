@@ -1,5 +1,6 @@
 <script lang="ts">
 	interface Activity {
+		id: number;
 		processed_at: string;
 		subject: string;
 		sender: string;
@@ -29,7 +30,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each activities as item}
+				{#each activities as item (item.id || item.processed_at)}
 					<tr>
 						<td style="font-size: 0.85rem; color: var(--text-secondary);"
 							>{formatDate(item.processed_at)}</td
