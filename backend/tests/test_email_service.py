@@ -221,4 +221,4 @@ class TestEmailService:
         
         assert len(emails) == 1
         # The subject should be decoded
-        assert "Test Subject" in emails[0]['subject'] or emails[0]['subject'] is not None
+        assert emails[0]['subject'] == "Test Subject"
