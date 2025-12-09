@@ -23,11 +23,13 @@ const ALLOWED = new Set([
   'public',
   'scripts',
   'src',
+  'svelte.config.js', // Added
   'tailwind.config.js',
   'tsconfig.app.json',
   'tsconfig.json',
   'tsconfig.node.json',
-  'vite.config.ts'
+  'vite.config.ts',
+  'vitest.config.ts' // Added
 ]);
 
 // Ignored patterns (e.g., temporary files)

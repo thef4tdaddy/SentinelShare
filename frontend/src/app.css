@@ -1,65 +1,74 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-bg-main: #f3f4f6;
-  --color-bg-card: #ffffff;
-  --color-text-main: #111827;
-  --color-text-secondary: #6b7280;
-  --color-border: #e5e7eb;
-  --color-success: #10b981;
-  --color-danger: #ef4444;
+  /* User's Palette */
+  --color-primary: #0D3256; /* Navy Blue */
+  --color-primary-light: #1A4B7C;
+  --color-accent: #18C09D; /* Teal/Green */
+  --color-accent-hover: #139C7F;
+  --color-text-main: #0D3256; /* Navy Blue for primary text */
+  --color-text-secondary: #666666; /* Medium Gray */
+  --color-text-inverse: #FFFFFF;
+  --color-bg-main: #EFEFEF; /* Light Gray */
+  --color-bg-card: #FFFFFF; /* Pure White */
+  --color-border: #E5E7EB;
+
+  /* Status Colors */
+  --color-success: #18C09D;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
 }
 
 body {
-  @apply bg-bg-main text-text-main font-sans m-0;
+  @apply bg-bg-main text-text-main font-sans antialiased min-h-screen flex flex-col;
 }
 
+/* Typography Headings */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-bold tracking-tight text-primary;
+}
+
+h1 { @apply text-3xl; }
+h2 { @apply text-2xl; }
+h3 { @apply text-xl; }
+
+/* Component Classes */
 .card {
-  @apply bg-bg-card rounded-lg shadow-sm p-6 mb-4;
+  @apply bg-bg-card rounded-xl shadow-sm border border-border p-6 transition-all duration-200;
 }
 
-button {
-  @apply cursor-pointer bg-primary text-white border-0 py-2 px-4 rounded text-sm transition-colors duration-200 hover:bg-primary-hover;
+.card:hover {
+  @apply shadow-md transform -translate-y-[1px];
 }
 
-button.secondary {
-  @apply bg-transparent text-text-secondary border border-border hover:bg-bg-main;
+.btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
-button.danger {
-  @apply bg-danger text-white;
+.btn-primary {
+  @apply bg-primary text-text-inverse hover:bg-primary-light shadow-sm hover:shadow active:scale-95;
 }
 
-input, select {
-  @apply p-2 border border-border rounded text-sm w-full box-border;
+.btn-secondary {
+  @apply bg-white text-text-secondary border border-border hover:bg-gray-50 hover:text-primary active:scale-95;
 }
 
-table {
-  @apply w-full border-collapse;
+.btn-accent {
+  @apply bg-accent text-white hover:bg-accent-hover shadow-sm hover:shadow active:scale-95;
 }
 
-th, td {
-  @apply text-left p-3 border-b border-border;
+.btn-danger {
+  @apply bg-danger text-white hover:bg-red-600 shadow-sm active:scale-95;
 }
 
-th {
-  @apply text-text-secondary font-semibold text-xs uppercase tracking-wider;
+.input-field {
+  @apply w-full px-4 py-2 rounded-lg border border-border bg-white text-text-main placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
 }
 
 .badge {
-  @apply px-2 py-1 rounded-full text-xs font-medium;
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
 }
 
-.badge.forwarded {
-  @apply bg-green-100 text-green-800;
-}
-
-.badge.ignored, .badge.blocked {
-  @apply bg-red-100 text-red-800;
-}
-
-.container {
-  @apply max-w-7xl mx-auto px-4;
+.container-custom {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
 }

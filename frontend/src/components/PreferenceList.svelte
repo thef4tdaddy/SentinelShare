@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
+	import { Trash2, Plus } from 'lucide-svelte';
 
 	interface Item {
 		id?: number;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		[key: string]: any; // Allow dynamic access for this form
+		[key: string]: any;
 	}
 
 	export let type: 'preferences' | 'rules';
 	let items: Item[] = [];
 	let newItem: Item = {};
+	let loading = false;
 
 	// Basic form fields based on type
 	let fields =
@@ -42,6 +44,7 @@
 
 	async function addItem() {
 		try {
+			loading = true;
 			const res = await fetchJson(`/settings/${type}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -51,6 +54,8 @@
 			newItem = {}; // Reset
 		} catch {
 			alert('Error adding item');
+		} finally {
+			loading = false;
 		}
 	}
 
@@ -65,59 +70,90 @@
 	}
 </script>
 
-<div class="card">
-	<h3>{type === 'preferences' ? 'Preferences' : 'Manual Rules'}</h3>
-
+<div class="card overflow-hidden">
 	<!-- Add Form -->
-	<div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: flex-end;">
-		{#each fields as field (field.key)}
-			<div style="flex: 1;">
-				<label
-					for="{type}-{field.key}"
-					style="font-size: 0.8rem; display: block; margin-bottom: 0.25rem;">{field.label}</label
-				>
-				{#if field.type === 'select'}
-					<select id="{type}-{field.key}" bind:value={newItem[field.key]}>
-						{#each field.options as opt (opt)}
-							<option value={opt}>{opt}</option>
-						{/each}
-					</select>
+	<div class="p-4 bg-gray-50 border-b border-gray-100 mb-4 rounded-lg">
+		<h4 class="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3">
+			Add New {type === 'preferences' ? 'Preference' : 'Rule'}
+		</h4>
+		<div class="flex flex-col md:flex-row gap-3 items-end">
+			{#each fields as field (field.key)}
+				<div class="w-full">
+					<label
+						for="{type}-{field.key}"
+						class="block text-xs font-medium text-text-secondary mb-1.5 ml-1">{field.label}</label
+					>
+					{#if field.type === 'select'}
+						<select id="{type}-{field.key}" bind:value={newItem[field.key]} class="input-field">
+							<option value="" disabled selected>Select type...</option>
+							{#each field.options as opt (opt)}
+								<option value={opt}>{opt}</option>
+							{/each}
+						</select>
+					{:else}
+						<input
+							id="{type}-{field.key}"
+							type="text"
+							bind:value={newItem[field.key]}
+							placeholder={field.label}
+							class="input-field"
+						/>
+					{/if}
+				</div>
+			{/each}
+			<button on:click={addItem} disabled={loading} class="btn btn-accent h-[42px] px-6">
+				{#if loading}
+					...
 				{:else}
-					<input
-						id="{type}-{field.key}"
-						type="text"
-						bind:value={newItem[field.key]}
-						placeholder={field.label}
-					/>
+					<Plus size={18} /> Add
 				{/if}
-			</div>
-		{/each}
-		<button on:click={addItem}>Add</button>
+			</button>
+		</div>
 	</div>
 
 	<!-- List -->
-	<table>
-		<thead>
-			<tr>
-				{#each fields as field (field.key)}
-					<th>{field.label}</th>
-				{/each}
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each items as item (item.id || Math.random())}
-				<tr>
+	<div class="overflow-x-auto">
+		<table class="w-full text-left text-sm">
+			<thead>
+				<tr class="border-b border-gray-100">
 					{#each fields as field (field.key)}
-						<td>{item[field.key] || '-'}</td>
-					{/each}
-					<td>
-						<button class="secondary danger" on:click={() => item.id && deleteItem(item.id)}
-							>Delete</button
+						<th
+							class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 first:rounded-tl-lg"
+							>{field.label}</th
 						>
-					</td>
+					{/each}
+					<th
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 w-20 text-right rounded-tr-lg"
+						>Action</th
+					>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each items as item (item.id || Math.random())}
+					<tr
+						class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors group"
+					>
+						{#each fields as field (field.key)}
+							<td class="py-3 px-4 text-text-main font-medium">{item[field.key] || '-'}</td>
+						{/each}
+						<td class="py-3 px-4 text-right">
+							<button
+								class="p-2 text-text-secondary hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+								on:click={() => item.id && deleteItem(item.id)}
+								title="Delete"
+							>
+								<Trash2 size={16} />
+							</button>
+						</td>
+					</tr>
+				{:else}
+					<tr>
+						<td colspan={fields.length + 1} class="py-8 text-center text-text-secondary text-sm">
+							No items found.
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 </div>
