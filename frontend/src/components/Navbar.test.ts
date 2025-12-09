@@ -18,14 +18,14 @@ describe('Navbar Component', () => {
 
     it('highlights active view button', () => {
         const onViewChange = vi.fn();
-        const { container } = render(Navbar, { currentView: 'dashboard', onViewChange });
+        render(Navbar, { currentView: 'dashboard', onViewChange });
         const dashboardButton = screen.getByText('Dashboard').closest('button');
         expect(dashboardButton?.classList.contains('active')).toBe(true);
     });
 
     it('highlights settings button when active', () => {
         const onViewChange = vi.fn();
-        const { container } = render(Navbar, { currentView: 'settings', onViewChange });
+        render(Navbar, { currentView: 'settings', onViewChange });
         const settingsButton = screen.getByText('Settings').closest('button');
         expect(settingsButton?.classList.contains('active')).toBe(true);
     });
