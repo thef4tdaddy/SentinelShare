@@ -48,6 +48,8 @@ class TestProcessedEmail:
     
     def test_processed_email_unique_email_id(self, session: Session):
         """Test that email_id must be unique"""
+        from sqlalchemy.exc import IntegrityError
+        
         email1 = ProcessedEmail(
             email_id="duplicate@example.com",
             subject="Email 1",
@@ -68,7 +70,7 @@ class TestProcessedEmail:
         )
         session.add(email2)
         
-        with pytest.raises(Exception):  # Should raise integrity error
+        with pytest.raises(IntegrityError):  # Should raise integrity error
             session.commit()
     
     def test_processed_email_default_processed_at(self, session: Session):
@@ -162,6 +164,8 @@ class TestGlobalSettings:
     
     def test_global_setting_unique_key(self, session: Session):
         """Test that key must be unique"""
+        from sqlalchemy.exc import IntegrityError
+        
         setting1 = GlobalSettings(key="test_key", value="value1")
         session.add(setting1)
         session.commit()
@@ -169,7 +173,7 @@ class TestGlobalSettings:
         setting2 = GlobalSettings(key="test_key", value="value2")
         session.add(setting2)
         
-        with pytest.raises(Exception):  # Should raise integrity error
+        with pytest.raises(IntegrityError):  # Should raise integrity error
             session.commit()
 
 
