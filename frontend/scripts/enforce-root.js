@@ -9,6 +9,7 @@ const rootDir = path.resolve(__dirname, '..');
 const ALLOWED = new Set([
   '.gitignore',
   '.husky',
+  '.prettierrc',
   '.prettierrc.js',
   'README.md',
   'commitlint.config.js',
