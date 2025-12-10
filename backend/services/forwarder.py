@@ -32,7 +32,7 @@ class EmailForwarder:
                         hostname = parsed.hostname if parsed.hostname else imap_s
                         if hostname and (hostname == "gmail.com" or hostname.endswith(".gmail.com")):
                             smtp_server = "smtp.gmail.com"
-                        elif hostname and (hostname == "mail.me.com" or hostname.endswith(".mail.me.com") or "icloud" in hostname):
+                        elif hostname and (hostname == "mail.me.com" or hostname.endswith(".mail.me.com") or hostname == "icloud.com" or hostname.endswith(".icloud.com")):
                             smtp_server = "smtp.mail.me.com"
                         elif hostname and hostname.startswith("imap."):
                             # Try guessing smtp.domain
