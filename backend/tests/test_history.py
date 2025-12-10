@@ -133,6 +133,19 @@ def test_get_specific_processing_run(session: Session):
     assert retrieved_run.check_interval_minutes == 45
 
 
+def test_get_nonexistent_processing_run(session: Session):
+    """Test retrieving a processing run that doesn't exist"""
+    from fastapi import HTTPException
+    import pytest
+    
+    # Try to get a run that doesn't exist
+    with pytest.raises(HTTPException) as exc_info:
+        history.get_processing_run(999, session=session)
+    
+    assert exc_info.value.status_code == 404
+    assert "not found" in exc_info.value.detail.lower()
+
+
 def test_processing_run_pagination(session: Session):
     """Test pagination of processing runs"""
     # Create 10 runs

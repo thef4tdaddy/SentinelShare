@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from backend.database import get_session
 from backend.models import ProcessingRun
@@ -26,4 +26,7 @@ def get_processing_runs(
 @router.get("/processing-runs/{run_id}", response_model=ProcessingRun)
 def get_processing_run(run_id: int, session: Session = Depends(get_session)):
     """Get a specific processing run by ID"""
-    return session.get(ProcessingRun, run_id)
+    run = session.get(ProcessingRun, run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Processing run {run_id} not found")
+    return run
