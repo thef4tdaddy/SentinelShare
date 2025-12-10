@@ -17,7 +17,7 @@ class EmailService:
             mail.logout()
             return {"success": True, "error": None}
         except Exception as e:
-            logging.exception(f"Error when testing email connection for user '{email_user}'")
+            logging.exception("Error when testing email connection")
             return {"success": False, "error": "Unable to connect to email server"}
 
     @staticmethod
