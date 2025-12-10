@@ -22,9 +22,18 @@ class EmailStatus(str, Enum):
 def parse_iso_date(date_str: str) -> datetime:
     """Parse ISO date string, handling Z timezone notation
     
+    Args:
+        date_str: ISO 8601 formatted date string
+    
+    Returns:
+        datetime object
+        
     Raises:
         HTTPException: If date format is invalid
     """
+    if not date_str or date_str.strip() == "":
+        raise ValueError("Empty date string")
+    
     try:
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except (ValueError, AttributeError) as e:
@@ -51,10 +60,10 @@ def get_email_history(
     filters = []
     if status:
         filters.append(ProcessedEmail.status == status.value)
-    if date_from:
+    if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
         filters.append(ProcessedEmail.processed_at >= date_from_obj)
-    if date_to:
+    if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)
     
@@ -99,10 +108,10 @@ def get_history_stats(
     
     # Apply date filters
     filters = []
-    if date_from:
+    if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
         filters.append(ProcessedEmail.processed_at >= date_from_obj)
-    if date_to:
+    if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)
     
