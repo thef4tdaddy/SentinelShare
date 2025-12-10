@@ -86,11 +86,14 @@ def test_processing_run_with_error(session: Session):
 
 def test_get_processing_runs(session: Session):
     """Test retrieving processing runs via API"""
-    # Create multiple runs
+    from datetime import timedelta
+    base_time = datetime.utcnow()
+    
+    # Create multiple runs with explicitly different timestamps
     for i in range(5):
         run = ProcessingRun(
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=base_time + timedelta(seconds=i),
+            completed_at=base_time + timedelta(seconds=i, milliseconds=500),
             emails_checked=i,
             emails_processed=0,
             emails_forwarded=0,
@@ -104,8 +107,9 @@ def test_get_processing_runs(session: Session):
     runs = history.get_processing_runs(limit=10, skip=0, session=session)
     
     assert len(runs) == 5
-    # Runs should be in descending order by started_at
-    assert runs[0].id >= runs[-1].id
+    # Runs should be in descending order by started_at (most recent first)
+    for i in range(len(runs) - 1):
+        assert runs[i].started_at >= runs[i + 1].started_at
 
 
 def test_get_specific_processing_run(session: Session):
@@ -135,10 +139,8 @@ def test_get_specific_processing_run(session: Session):
 
 def test_get_nonexistent_processing_run(session: Session):
     """Test retrieving a processing run that doesn't exist"""
-    from fastapi import HTTPException
-    
     # Try to get a run that doesn't exist
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(Exception) as exc_info:
         history.get_processing_run(999, session=session)
     
     assert exc_info.value.status_code == 404

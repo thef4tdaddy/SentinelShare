@@ -20,17 +20,24 @@ def process_emails():
     # Get the poll interval for tracking
     poll_interval = int(os.environ.get("POLL_INTERVAL", "60"))
     
+    # Initialize run_id to None in case of early exception
+    run_id = None
+    
     # Create a processing run record
-    with Session(engine) as session:
-        processing_run = ProcessingRun(
-            started_at=datetime.utcnow(),
-            check_interval_minutes=poll_interval,
-            status="running"
-        )
-        session.add(processing_run)
-        session.commit()
-        session.refresh(processing_run)
-        run_id = processing_run.id
+    try:
+        with Session(engine) as session:
+            processing_run = ProcessingRun(
+                started_at=datetime.utcnow(),
+                check_interval_minutes=poll_interval,
+                status="running"
+            )
+            session.add(processing_run)
+            session.commit()
+            session.refresh(processing_run)
+            run_id = processing_run.id
+    except Exception as e:
+        print(f"❌ Error creating processing run record: {e}")
+        return
 
     all_emails = []
     emails_processed_count = 0
@@ -113,7 +120,9 @@ def process_emails():
                     run.emails_checked = 0
                     run.emails_processed = 0
                     run.emails_forwarded = 0
-                    run.status = "completed"
+                    # Preserve error status if there was an error during processing
+                    run.status = "error" if error_occurred else "completed"
+                    run.error_message = error_msg if error_occurred else None
                     session.add(run)
                     session.commit()
             return
@@ -205,15 +214,16 @@ def process_emails():
                 
     except Exception as e:
         print(f"❌ Error during email processing: {e}")
-        # Update run with error
-        with Session(engine) as session:
-            run = session.get(ProcessingRun, run_id)
-            if run:
-                run.completed_at = datetime.utcnow()
-                run.status = "error"
-                run.error_message = str(e)
-                session.add(run)
-                session.commit()
+        # Update run with error only if run_id was successfully created
+        if run_id is not None:
+            with Session(engine) as session:
+                run = session.get(ProcessingRun, run_id)
+                if run:
+                    run.completed_at = datetime.utcnow()
+                    run.status = "error"
+                    run.error_message = str(e)
+                    session.add(run)
+                    session.commit()
 
 
 def start_scheduler():

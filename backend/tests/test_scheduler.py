@@ -192,3 +192,92 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
     finally:
         # Restore original engine
         scheduler_module.engine = original_engine
+
+
+@patch.dict(
+    os.environ,
+    {
+        "POLL_INTERVAL": "60",
+        "WIFE_EMAIL": "wife@example.com",
+        "EMAIL_ACCOUNTS": '[{"email": "acc1@example.com", "password": "pass1"}, {"email": "acc2@example.com", "password": "pass2"}]',
+    },
+)
+@patch("backend.services.scheduler.engine")
+@patch("backend.services.scheduler.EmailService.fetch_recent_emails")
+@patch("backend.services.scheduler.EmailForwarder.forward_email")
+@patch("backend.services.scheduler.ReceiptDetector.is_receipt")
+@patch("backend.services.scheduler.ReceiptDetector.categorize_receipt")
+def test_multi_account_email_tagging(
+    mock_categorize,
+    mock_is_receipt,
+    mock_forward,
+    mock_fetch,
+    mock_engine_patch,
+    engine,
+):
+    """Test that emails from multiple accounts are correctly tagged with their source account"""
+    # Use our test engine in the scheduler module
+    import backend.services.scheduler as scheduler_module
+    original_engine = scheduler_module.engine
+    scheduler_module.engine = engine
+    
+    try:
+        # Mock email data from different accounts
+        emails_acc1 = [
+            {
+                "message_id": "msg1",
+                "subject": "Receipt from Amazon",
+                "from": "amazon@example.com",
+                "body": "Thanks for your order",
+            }
+        ]
+        emails_acc2 = [
+            {
+                "message_id": "msg2",
+                "subject": "Receipt from Starbucks",
+                "from": "starbucks@example.com",
+                "body": "Thanks for your purchase",
+            }
+        ]
+        
+        # Mock fetch_recent_emails to return different emails for different accounts
+        def fetch_side_effect(user, pwd, server):
+            if user == "acc1@example.com":
+                return emails_acc1.copy()  # Return copy to avoid mutations
+            elif user == "acc2@example.com":
+                return emails_acc2.copy()
+            return []
+        
+        mock_fetch.side_effect = fetch_side_effect
+        mock_is_receipt.return_value = True
+        mock_categorize.return_value = "Shopping"
+        mock_forward.return_value = True
+
+        # Call process_emails
+        process_emails()
+
+        # Verify that emails were tagged with correct source accounts
+        with Session(engine) as session:
+            emails = session.exec(select(ProcessedEmail)).all()
+            assert len(emails) == 2
+            
+            # Find each email and verify its account_email
+            msg1 = next(e for e in emails if e.email_id == "msg1")
+            msg2 = next(e for e in emails if e.email_id == "msg2")
+            
+            assert msg1.account_email == "acc1@example.com"
+            assert msg2.account_email == "acc2@example.com"
+            
+            # Verify both were processed
+            assert msg1.status == "forwarded"
+            assert msg2.status == "forwarded"
+            
+            # Verify processing run was created
+            runs = session.exec(select(ProcessingRun)).all()
+            assert len(runs) == 1
+            assert runs[0].emails_checked == 2
+            assert runs[0].emails_processed == 2
+            assert runs[0].emails_forwarded == 2
+    finally:
+        # Restore original engine
+        scheduler_module.engine = original_engine
