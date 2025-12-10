@@ -123,7 +123,6 @@ def process_emails():
             target_email = os.environ.get("WIFE_EMAIL")
             if not target_email:
                 print("❌ WIFE_EMAIL not set, cannot forward.")
-                error_occurred = True
                 error_msg = "WIFE_EMAIL not configured"
                 # Update run with error
                 run = session.get(ProcessingRun, run_id)
