@@ -5,230 +5,228 @@ import * as api from '../lib/api';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
-    fetchJson: vi.fn(),
+	fetchJson: vi.fn()
 }));
 
 describe('PreferenceList Component - Preferences Type', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        // Mock window.confirm
-        global.confirm = vi.fn(() => true);
-        // Mock window.alert
-        global.alert = vi.fn();
-    });
+	beforeEach(() => {
+		vi.clearAllMocks();
+		// Mock window.confirm
+		window.confirm = vi.fn(() => true);
+		// Mock window.alert
+		window.alert = vi.fn();
+	});
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-    it('renders preferences title', async () => {
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        render(PreferenceList, { type: 'preferences' });
-        await waitFor(() => {
-            expect(screen.getByText('Preferences')).toBeTruthy();
-        });
-    });
+	it('renders preferences title', async () => {
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		render(PreferenceList, { type: 'preferences' });
+		await waitFor(() => {
+			expect(screen.getByText('Add New Preference')).toBeTruthy();
+		});
+	});
 
-    it('loads and displays preferences on mount', async () => {
-        const mockPreferences = [
-            { id: 1, item: 'amazon', type: 'Always Forward' },
-            { id: 2, item: 'spam', type: 'Blocked Sender' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockPreferences);
+	it('loads and displays preferences on mount', async () => {
+		const mockPreferences = [
+			{ id: 1, item: 'amazon', type: 'Always Forward' },
+			{ id: 2, item: 'spam', type: 'Blocked Sender' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
 
-        render(PreferenceList, { type: 'preferences' });
+		render(PreferenceList, { type: 'preferences' });
 
-        await waitFor(() => {
-            expect(screen.getByText('amazon')).toBeTruthy();
-            expect(screen.getByText('spam')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('amazon')).toBeTruthy();
+			expect(screen.getByText('spam')).toBeTruthy();
+		});
+	});
 
-    it('renders form fields for preferences', async () => {
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        render(PreferenceList, { type: 'preferences' });
+	it('renders form fields for preferences', async () => {
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		render(PreferenceList, { type: 'preferences' });
 
-        await waitFor(() => {
-            expect(screen.getByLabelText(/Item \(e.g., amazon\)/i)).toBeTruthy();
-            expect(screen.getByLabelText(/Type/i)).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByLabelText(/Item \(e.g., amazon\)/i)).toBeTruthy();
+			expect(screen.getByLabelText(/Type/i)).toBeTruthy();
+		});
+	});
 
-    it('adds a new preference item', async () => {
-        const mockNewItem = { id: 3, item: 'ebay', type: 'Always Forward' };
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        (api.fetchJson as any).mockResolvedValueOnce(mockNewItem);
+	it('adds a new preference item', async () => {
+		const mockNewItem = { id: 3, item: 'ebay', type: 'Always Forward' };
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockNewItem);
 
-        render(PreferenceList, { type: 'preferences' });
+		render(PreferenceList, { type: 'preferences' });
 
-        await waitFor(() => {
-            expect(screen.getByLabelText(/Item \(e.g., amazon\)/i)).toBeTruthy();
-        });
+		await waitFor(() => {
+			expect(screen.getByLabelText(/Item \(e.g., amazon\)/i)).toBeTruthy();
+		});
 
-        const itemInput = screen.getByLabelText(/Item \(e.g., amazon\)/i) as HTMLInputElement;
-        const typeSelect = screen.getByLabelText(/Type/i) as HTMLSelectElement;
-        const addButton = screen.getByText('Add');
+		const itemInput = screen.getByLabelText(/Item \(e.g., amazon\)/i) as HTMLInputElement;
+		const typeSelect = screen.getByLabelText(/Type/i) as HTMLSelectElement;
+		const addButton = screen.getByText('Add');
 
-        await fireEvent.input(itemInput, { target: { value: 'ebay' } });
-        await fireEvent.change(typeSelect, { target: { value: 'Always Forward' } });
-        await fireEvent.click(addButton);
+		await fireEvent.input(itemInput, { target: { value: 'ebay' } });
+		await fireEvent.change(typeSelect, { target: { value: 'Always Forward' } });
+		await fireEvent.click(addButton);
 
-        await waitFor(() => {
-            // Check that the second call (after mount) was a POST
-            const calls = (api.fetchJson as any).mock.calls;
-            const postCall = calls.find((call: any) => call[1]?.method === 'POST');
-            expect(postCall).toBeDefined();
-            expect(postCall[0]).toBe('/settings/preferences');
-            expect(postCall[1].method).toBe('POST');
-            expect(postCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
-            
-            // Check that body contains the correct data (order-independent)
-            const bodyData = JSON.parse(postCall[1].body);
-            expect(bodyData.item).toBe('ebay');
-            expect(bodyData.type).toBe('Always Forward');
-        });
-    });
+		await waitFor(() => {
+			// Check that the second call (after mount) was a POST
+			const calls = vi.mocked(api.fetchJson).mock.calls;
+			const postCall = calls.find((call) => call[1]?.method === 'POST');
 
-    it('deletes a preference item', async () => {
-        const mockPreferences = [
-            { id: 1, item: 'amazon', type: 'Always Forward' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockPreferences);
-        (api.fetchJson as any).mockResolvedValueOnce({});
+			expect(postCall).toBeDefined();
+			if (!postCall || !postCall[1]) throw new Error('No POST call found');
 
-        render(PreferenceList, { type: 'preferences' });
+			expect(postCall[0]).toBe('/settings/preferences');
+			expect(postCall[1].method).toBe('POST');
+			expect(postCall[1].headers).toEqual({ 'Content-Type': 'application/json' });
 
-        await waitFor(() => {
-            expect(screen.getByText('amazon')).toBeTruthy();
-        });
+			// Check that body contains the correct data (order-independent)
+			const bodyData = JSON.parse(postCall[1].body as string);
+			expect(bodyData.item).toBe('ebay');
+			expect(bodyData.type).toBe('Always Forward');
+		});
+	});
 
-        const deleteButton = screen.getByText('Delete');
-        await fireEvent.click(deleteButton);
+	it('deletes a preference item', async () => {
+		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({});
 
-        await waitFor(() => {
-            expect(api.fetchJson).toHaveBeenCalledWith('/settings/preferences/1', {
-                method: 'DELETE',
-            });
-        });
-    });
+		render(PreferenceList, { type: 'preferences' });
 
-    it('does not delete if user cancels confirmation', async () => {
-        global.confirm = vi.fn(() => false);
-        const mockPreferences = [
-            { id: 1, item: 'amazon', type: 'Always Forward' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockPreferences);
+		await waitFor(() => {
+			expect(screen.getByText('amazon')).toBeTruthy();
+		});
 
-        render(PreferenceList, { type: 'preferences' });
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
 
-        await waitFor(() => {
-            expect(screen.getByText('amazon')).toBeTruthy();
-        });
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith('/settings/preferences/1', {
+				method: 'DELETE'
+			});
+		});
+	});
 
-        const deleteButton = screen.getByText('Delete');
-        await fireEvent.click(deleteButton);
+	it('does not delete if user cancels confirmation', async () => {
+		window.confirm = vi.fn(() => false);
+		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
 
-        // fetchJson should only be called once (for loading)
-        expect(api.fetchJson).toHaveBeenCalledTimes(1);
-    });
+		render(PreferenceList, { type: 'preferences' });
 
-    it('handles add error gracefully', async () => {
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        (api.fetchJson as any).mockRejectedValueOnce(new Error('API Error'));
+		await waitFor(() => {
+			expect(screen.getByText('amazon')).toBeTruthy();
+		});
 
-        render(PreferenceList, { type: 'preferences' });
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
 
-        await waitFor(() => {
-            expect(screen.getByText('Add')).toBeTruthy();
-        });
+		// fetchJson should only be called once (for loading)
+		expect(api.fetchJson).toHaveBeenCalledTimes(1);
+	});
 
-        const addButton = screen.getByText('Add');
-        await fireEvent.click(addButton);
+	it('handles add error gracefully', async () => {
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
 
-        await waitFor(() => {
-            expect(global.alert).toHaveBeenCalledWith('Error adding item');
-        });
-    });
+		render(PreferenceList, { type: 'preferences' });
 
-    it('handles delete error gracefully', async () => {
-        const mockPreferences = [
-            { id: 1, item: 'amazon', type: 'Always Forward' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockPreferences);
-        (api.fetchJson as any).mockRejectedValueOnce(new Error('API Error'));
+		await waitFor(() => {
+			expect(screen.getByText('Add')).toBeTruthy();
+		});
 
-        render(PreferenceList, { type: 'preferences' });
+		const addButton = screen.getByText('Add');
+		await fireEvent.click(addButton);
 
-        await waitFor(() => {
-            expect(screen.getByText('amazon')).toBeTruthy();
-        });
+		await waitFor(() => {
+			expect(window.alert).toHaveBeenCalledWith('Error adding item');
+		});
+	});
 
-        const deleteButton = screen.getByText('Delete');
-        await fireEvent.click(deleteButton);
+	it('handles delete error gracefully', async () => {
+		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
 
-        await waitFor(() => {
-            expect(global.alert).toHaveBeenCalledWith('Error deleting item');
-        });
-    });
+		render(PreferenceList, { type: 'preferences' });
+
+		await waitFor(() => {
+			expect(screen.getByText('amazon')).toBeTruthy();
+		});
+
+		await waitFor(() => {
+			const deleteButton = screen.getByTitle('Delete');
+			expect(deleteButton).toBeTruthy();
+			fireEvent.click(deleteButton);
+		});
+
+		await waitFor(() => {
+			expect(window.alert).toHaveBeenCalledWith('Error deleting item');
+		});
+	});
 });
 
 describe('PreferenceList Component - Rules Type', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        global.confirm = vi.fn(() => true);
-        global.alert = vi.fn();
-    });
+	beforeEach(() => {
+		vi.clearAllMocks();
+		window.confirm = vi.fn(() => true);
+		window.alert = vi.fn();
+	});
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-    it('renders rules title', async () => {
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        render(PreferenceList, { type: 'rules' });
-        await waitFor(() => {
-            expect(screen.getByText('Manual Rules')).toBeTruthy();
-        });
-    });
+	it('renders rules title', async () => {
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		render(PreferenceList, { type: 'rules' });
+		await waitFor(() => {
+			expect(screen.getByText('Add New Rule')).toBeTruthy();
+		});
+	});
 
-    it('renders form fields for rules', async () => {
-        (api.fetchJson as any).mockResolvedValueOnce([]);
-        render(PreferenceList, { type: 'rules' });
+	it('renders form fields for rules', async () => {
+		vi.mocked(api.fetchJson).mockResolvedValueOnce([]);
+		render(PreferenceList, { type: 'rules' });
 
-        await waitFor(() => {
-            expect(screen.getByLabelText(/Email Pattern/i)).toBeTruthy();
-            expect(screen.getByLabelText(/Subject Pattern/i)).toBeTruthy();
-            expect(screen.getByLabelText(/Purpose/i)).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByLabelText(/Email Pattern/i)).toBeTruthy();
+			expect(screen.getByLabelText(/Subject Pattern/i)).toBeTruthy();
+			expect(screen.getByLabelText(/Purpose/i)).toBeTruthy();
+		});
+	});
 
-    it('loads and displays rules on mount', async () => {
-        const mockRules = [
-            { id: 1, email_pattern: '@amazon.com', subject_pattern: 'order', purpose: 'Amazon orders' },
-            { id: 2, email_pattern: '@ebay.com', subject_pattern: 'purchase', purpose: 'eBay purchases' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockRules);
+	it('loads and displays rules on mount', async () => {
+		const mockRules = [
+			{ id: 1, email_pattern: '@amazon.com', subject_pattern: 'order', purpose: 'Amazon orders' },
+			{ id: 2, email_pattern: '@ebay.com', subject_pattern: 'purchase', purpose: 'eBay purchases' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockRules);
 
-        render(PreferenceList, { type: 'rules' });
+		render(PreferenceList, { type: 'rules' });
 
-        await waitFor(() => {
-            expect(screen.getByText('@amazon.com')).toBeTruthy();
-            expect(screen.getByText('@ebay.com')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('@amazon.com')).toBeTruthy();
+			expect(screen.getByText('@ebay.com')).toBeTruthy();
+		});
+	});
 
-    it('handles missing field values with dash', async () => {
-        const mockRules = [
-            { id: 1, email_pattern: '@amazon.com', subject_pattern: '', purpose: '' },
-        ];
-        (api.fetchJson as any).mockResolvedValueOnce(mockRules);
+	it('handles missing field values with dash', async () => {
+		const mockRules = [{ id: 1, email_pattern: '@amazon.com', subject_pattern: '', purpose: '' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockRules);
 
-        render(PreferenceList, { type: 'rules' });
+		render(PreferenceList, { type: 'rules' });
 
-        await waitFor(() => {
-            expect(screen.getByText('@amazon.com')).toBeTruthy();
-            const dashes = screen.getAllByText('-');
-            expect(dashes.length).toBeGreaterThan(0);
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('@amazon.com')).toBeTruthy();
+			const dashes = screen.getAllByText('-');
+			expect(dashes.length).toBeGreaterThan(0);
+		});
+	});
 });

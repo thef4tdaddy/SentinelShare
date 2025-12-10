@@ -1,91 +1,93 @@
 name: CI
+permissions:
+  contents: read
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   frontend-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-        
-    - name: Install dependencies
-      working-directory: frontend
-      run: npm ci
+      - uses: actions/checkout@v4
 
-    - name: Lint
-      id: lint
-      working-directory: frontend
-      run: npm run lint
-      continue-on-error: true
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-    - name: Typecheck
-      id: typecheck
-      working-directory: frontend
-      run: npm run check
-      continue-on-error: true
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
 
-    - name: Build
-      id: build
-      working-directory: frontend
-      run: npm run build
-      continue-on-error: true
+      - name: Lint
+        id: lint
+        working-directory: frontend
+        run: npm run lint
+        continue-on-error: true
 
-    - name: Check Status
-      if: always()
-      run: |
-        if [ "${{ steps.lint.outcome }}" == "failure" ] || [ "${{ steps.typecheck.outcome }}" == "failure" ] || [ "${{ steps.build.outcome }}" == "failure" ]; then
-          exit 1
-        fi
+      - name: Typecheck
+        id: typecheck
+        working-directory: frontend
+        run: npm run check
+        continue-on-error: true
+
+      - name: Build
+        id: build
+        working-directory: frontend
+        run: npm run build
+        continue-on-error: true
+
+      - name: Check Status
+        if: always()
+        run: |
+          if [ "${{ steps.lint.outcome }}" == "failure" ] || [ "${{ steps.typecheck.outcome }}" == "failure" ] || [ "${{ steps.build.outcome }}" == "failure" ]; then
+            exit 1
+          fi
 
   backend-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
 
-    - name: Install dependencies
-      working-directory: backend
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ../requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ../requirements.txt
 
-    - name: Lint with Ruff
-      id: ruff
-      working-directory: backend
-      run: ruff check . --output-format=github
-      continue-on-error: true
+      - name: Lint with Ruff
+        id: ruff
+        working-directory: backend
+        run: ruff check . --output-format=github
+        continue-on-error: true
 
-    - name: Typecheck with Mypy
-      id: mypy
-      working-directory: backend
-      run: mypy .
-      continue-on-error: true
+      - name: Typecheck with Mypy
+        id: mypy
+        working-directory: backend
+        run: mypy .
+        continue-on-error: true
 
-    - name: Run Tests
-      id: pytest
-      working-directory: backend
-      run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ || true
+      - name: Run Tests
+        id: pytest
+        working-directory: backend
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ || true
 
-    - name: Check Status
-      if: always()
-      run: |
-        if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
-          echo "One or more steps failed."
-          exit 1
-        fi
+      - name: Check Status
+        if: always()
+        run: |
+          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
+            echo "One or more steps failed."
+            exit 1
+          fi
