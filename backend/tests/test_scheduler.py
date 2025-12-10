@@ -1,6 +1,6 @@
 import os
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from backend.models import ProcessingRun, ProcessedEmail
