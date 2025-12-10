@@ -16,20 +16,20 @@ import json
 
 def process_emails():
     print("🔄 Checking for new emails...")
-    
+
     # Get the poll interval for tracking
     poll_interval = int(os.environ.get("POLL_INTERVAL", "60"))
-    
+
     # Initialize run_id to None in case of early exception
     run_id = None
-    
+
     # Create a processing run record
     try:
         with Session(engine) as session:
             processing_run = ProcessingRun(
                 started_at=datetime.utcnow(),
                 check_interval_minutes=poll_interval,
-                status="running"
+                status="running",
             )
             session.add(processing_run)
             session.commit()
@@ -60,39 +60,18 @@ def process_emails():
 
                         if user and pwd:
                             print(f"   Scanning {user}...")
-                            fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                            fetched = EmailService.fetch_recent_emails(
+                                user, pwd, server
+                            )
                             # Tag each email with the source account
                             for email_data in fetched:
                                 email_data["account_email"] = user
                             all_emails.extend(fetched)
-            except json.JSONDecodeError:
-                # 1a. Try to be forgiving (config vars often have single quotes by mistake)
-                try:
-                    print(f"⚠️ Invalid JSON detected. Attempting auto-fix...")
-                    fixed_json = email_accounts_json.replace("'", '"')
-                    accounts = json.loads(fixed_json)
-                    if isinstance(accounts, list):
-                        print("✅ Auto-fix successful. Proceeding with fixed config.")
-                        # Re-run loop with fixed accounts
-                        for acc in accounts:
-                            user = acc.get("email")
-                            pwd = acc.get("password")
-                            server = acc.get("imap_server", "imap.gmail.com")
-
-                            if user and pwd:
-                                print(f"   Scanning {user}...")
-                                fetched = EmailService.fetch_recent_emails(
-                                    user, pwd, server
-                                )
-                                # Tag each email with the source account
-                                for email_data in fetched:
-                                    email_data["account_email"] = user
-                                all_emails.extend(fetched)
-                except Exception as e:
-                    print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
-                    print(f"   Raw Value: {email_accounts_json}")
-                    error_occurred = True
-                    error_msg = f"JSON parsing error: {str(e)}"
+            except Exception as e:
+                print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
+                print(f"   Raw Value: [REDACTED]")
+                error_occurred = True
+                error_msg = f"JSON parsing error: {str(e)}"
 
         # 2. Fallback to Legacy Single Account (if no accounts processed yet)
         if not all_emails and not email_accounts_json:
@@ -159,7 +138,7 @@ def process_emails():
 
                 # This is a new email to process
                 emails_processed_count += 1
-                
+
                 # Get the account this email belongs to
                 account_email = email_data.get("account_email", "unknown")
 
@@ -211,7 +190,7 @@ def process_emails():
                 run.error_message = error_msg
                 session.add(run)
                 session.commit()
-                
+
     except Exception as e:
         print(f"❌ Error during email processing: {e}")
         # Update run with error only if run_id was successfully created

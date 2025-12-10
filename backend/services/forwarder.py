@@ -1,8 +1,10 @@
-import smtplib
 import os
+import smtplib
+from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.message import EmailMessage
+from urllib.parse import urlparse
+
 
 class EmailForwarder:
     @staticmethod
@@ -15,6 +17,7 @@ class EmailForwarder:
         if not sender_email or not password:
             # Fallback to first account in EMAIL_ACCOUNTS
             import json
+
             try:
                 accounts_json = os.environ.get("EMAIL_ACCOUNTS")
                 if accounts_json:
@@ -23,16 +26,26 @@ class EmailForwarder:
                         first_acc = accounts[0]
                         sender_email = first_acc.get("email")
                         password = first_acc.get("password")
-                        
+
                         # Infer SMTP server from IMAP if possible
                         imap_s = first_acc.get("imap_server", "")
-                        if "gmail" in imap_s:
+                        # Parse hostname from imap_s, handling both URLs and plain hostnames
+                        parsed = urlparse(imap_s)
+                        hostname = parsed.hostname if parsed.hostname else imap_s
+                        if hostname and (
+                            hostname == "gmail.com" or hostname.endswith(".gmail.com")
+                        ):
                             smtp_server = "smtp.gmail.com"
-                        elif "mail.me.com" in imap_s or "icloud" in imap_s:
+                        elif hostname and (
+                            hostname == "mail.me.com"
+                            or hostname.endswith(".mail.me.com")
+                            or hostname == "icloud.com"
+                            or hostname.endswith(".icloud.com")
+                        ):
                             smtp_server = "smtp.mail.me.com"
-                        elif imap_s.startswith("imap."):
+                        elif hostname and hostname.startswith("imap."):
                             # Try guessing smtp.domain
-                            smtp_server = imap_s.replace("imap.", "smtp.", 1)
+                            smtp_server = hostname.replace("imap.", "smtp.", 1)
             except:
                 pass
 
@@ -41,15 +54,15 @@ class EmailForwarder:
             return False
 
         msg = MIMEMultipart()
-        msg['From'] = sender_email
-        msg['To'] = target_email
-        msg['Subject'] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
+        msg["From"] = sender_email
+        msg["To"] = target_email
+        msg["Subject"] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
 
         # Create body
         body_text = f"Forwarding receipt from {original_email_data.get('from')}:\n\n"
-        body_text += original_email_data.get('body', '')
-        
-        msg.attach(MIMEText(body_text, 'plain'))
+        body_text += original_email_data.get("body", "")
+
+        msg.attach(MIMEText(body_text, "plain"))
 
         try:
             with smtplib.SMTP(smtp_server, smtp_port) as server:

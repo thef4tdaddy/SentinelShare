@@ -1,10 +1,11 @@
-fastapi==0.109.2
+fastapi>=0.115.6
 uvicorn[standard]==0.27.1
 sqlmodel==0.0.16
 psycopg2-binary==2.9.9
 alembic==1.13.1
-python-multipart==0.0.9
-requests==2.31.0
+python-multipart==0.0.20
+requests>=2.32.5
+starlette>=0.47.2
 APScheduler==3.10.4
 email-validator==2.1.0.post1
 pytest==8.0.0

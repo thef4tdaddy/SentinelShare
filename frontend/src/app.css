@@ -1,3 +1,5 @@
+/* stylelint-disable */
+/* stylelint-disable at-rule-no-unknown */
 @import "tailwindcss";
 
 @theme {
@@ -38,7 +40,7 @@ h3 { @apply text-xl; }
 }
 
 .card:hover {
-  @apply shadow-md transform -translate-y-[1px];
+  @apply shadow-md transform -translate-y-px;
 }
 
 .btn {
