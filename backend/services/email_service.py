@@ -3,7 +3,7 @@ import imaplib
 import os
 from datetime import datetime
 from email.header import decode_header
-
+import logging
 
 class EmailService:
     @staticmethod
@@ -17,7 +17,8 @@ class EmailService:
             mail.logout()
             return {"success": True, "error": None}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            logging.exception("Error when testing email connection")
+            return {"success": False, "error": "Unable to connect to email server"}
 
     @staticmethod
     def fetch_recent_emails(
