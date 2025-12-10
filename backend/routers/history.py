@@ -1,25 +1,43 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlmodel import Session, select, func, and_
 from backend.database import get_session
 from backend.models import ProcessedEmail
 from typing import Optional
 from datetime import datetime
+from enum import Enum
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
 # Constants
 RUN_GROUPING_WINDOW_SECONDS = 300  # 5 minutes - emails within this window are grouped into same run
 
+# Valid status values
+class EmailStatus(str, Enum):
+    FORWARDED = "forwarded"
+    BLOCKED = "blocked"
+    IGNORED = "ignored"
+    ERROR = "error"
+
 
 def parse_iso_date(date_str: str) -> datetime:
-    """Parse ISO date string, handling Z timezone notation"""
-    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+    """Parse ISO date string, handling Z timezone notation
+    
+    Raises:
+        HTTPException: If date format is invalid
+    """
+    try:
+        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+    except (ValueError, AttributeError) as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid date format: {date_str}. Expected ISO 8601 format (e.g., 2025-12-10T10:00:00Z)"
+        )
 
 @router.get("/emails")
 def get_email_history(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=100),
-    status: Optional[str] = None,
+    status: Optional[EmailStatus] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     session: Session = Depends(get_session)
@@ -32,19 +50,13 @@ def get_email_history(
     # Apply filters
     filters = []
     if status:
-        filters.append(ProcessedEmail.status == status)
+        filters.append(ProcessedEmail.status == status.value)
     if date_from:
-        try:
-            date_from_obj = parse_iso_date(date_from)
-            filters.append(ProcessedEmail.processed_at >= date_from_obj)
-        except ValueError:
-            pass
+        date_from_obj = parse_iso_date(date_from)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)
     if date_to:
-        try:
-            date_to_obj = parse_iso_date(date_to)
-            filters.append(ProcessedEmail.processed_at <= date_to_obj)
-        except ValueError:
-            pass
+        date_to_obj = parse_iso_date(date_to)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)
     
     if filters:
         query = query.where(and_(*filters))
@@ -88,17 +100,11 @@ def get_history_stats(
     # Apply date filters
     filters = []
     if date_from:
-        try:
-            date_from_obj = parse_iso_date(date_from)
-            filters.append(ProcessedEmail.processed_at >= date_from_obj)
-        except ValueError:
-            pass
+        date_from_obj = parse_iso_date(date_from)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)
     if date_to:
-        try:
-            date_to_obj = parse_iso_date(date_to)
-            filters.append(ProcessedEmail.processed_at <= date_to_obj)
-        except ValueError:
-            pass
+        date_to_obj = parse_iso_date(date_to)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)
     
     if filters:
         query = query.where(and_(*filters))

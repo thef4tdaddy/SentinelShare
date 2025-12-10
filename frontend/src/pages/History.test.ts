@@ -387,4 +387,148 @@ describe('History Component', () => {
 			expect(screen.getByText('No processing runs found.')).toBeTruthy();
 		});
 	});
+
+	it('calls API with filter parameters when status filter changes', async () => {
+		const mockHistory = {
+			emails: [],
+			pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+		};
+		const mockStats = {
+			total: 0,
+			forwarded: 0,
+			blocked: 0,
+			errors: 0,
+			total_amount: 0,
+			status_breakdown: {}
+		};
+		const mockRuns = { runs: [] };
+
+		// Mock returns for initial load and filter change
+		(api.fetchJson as any)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns);
+
+		render(History);
+
+		// Wait for initial load
+		await waitFor(() => {
+			expect(screen.getByLabelText('Status')).toBeTruthy();
+		});
+
+		// Clear previous calls
+		vi.clearAllMocks();
+
+		// Change status filter
+		const statusSelect = screen.getByLabelText('Status') as HTMLSelectElement;
+		await fireEvent.change(statusSelect, { target: { value: 'forwarded' } });
+
+		// Verify API was called with status parameter
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith(
+				expect.stringContaining('status=forwarded')
+			);
+		});
+	});
+
+	it('clears filters and refreshes data when Clear Filters is clicked', async () => {
+		const mockHistory = {
+			emails: [],
+			pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+		};
+		const mockStats = {
+			total: 0,
+			forwarded: 0,
+			blocked: 0,
+			errors: 0,
+			total_amount: 0,
+			status_breakdown: {}
+		};
+		const mockRuns = { runs: [] };
+
+		// Mock returns for initial load, filter change, and clear filters
+		(api.fetchJson as any)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns);
+
+		render(History);
+
+		// Wait for initial load
+		await waitFor(() => {
+			expect(screen.getByText('Clear Filters')).toBeTruthy();
+		});
+
+		// Set a filter first
+		const statusSelect = screen.getByLabelText('Status') as HTMLSelectElement;
+		await fireEvent.change(statusSelect, { target: { value: 'forwarded' } });
+
+		// Clear previous calls
+		vi.clearAllMocks();
+
+		// Click Clear Filters
+		const clearButton = screen.getByText('Clear Filters');
+		await fireEvent.click(clearButton);
+
+		// Verify filters were reset and API called without filter params
+		await waitFor(() => {
+			expect(statusSelect.value).toBe('');
+			expect(api.fetchJson).toHaveBeenCalled();
+		});
+	});
+
+	it('resets page to 1 when filters change', async () => {
+		const mockHistory = {
+			emails: [],
+			pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+		};
+		const mockStats = {
+			total: 0,
+			forwarded: 0,
+			blocked: 0,
+			errors: 0,
+			total_amount: 0,
+			status_breakdown: {}
+		};
+		const mockRuns = { runs: [] };
+
+		// Mock returns for initial load and filter change
+		(api.fetchJson as any)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns);
+
+		render(History);
+
+		// Wait for initial load
+		await waitFor(() => {
+			expect(screen.getByLabelText('Status')).toBeTruthy();
+		});
+
+		// Clear previous calls
+		vi.clearAllMocks();
+
+		// Change filter
+		const statusSelect = screen.getByLabelText('Status') as HTMLSelectElement;
+		await fireEvent.change(statusSelect, { target: { value: 'blocked' } });
+
+		// Verify API was called with page=1
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith(
+				expect.stringMatching(/page=1/)
+			);
+		});
+	});
 });

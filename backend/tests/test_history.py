@@ -117,9 +117,9 @@ class TestHistoryEmails:
     
     def test_get_emails_filter_by_status(self, session: Session, sample_emails):
         """Test filtering emails by status"""
-        from backend.routers.history import get_email_history
+        from backend.routers.history import get_email_history, EmailStatus
         
-        result = get_email_history(page=1, per_page=50, status="forwarded", session=session)
+        result = get_email_history(page=1, per_page=50, status=EmailStatus.FORWARDED, session=session)
         
         assert len(result["emails"]) == 2
         for email in result["emails"]:
@@ -127,9 +127,9 @@ class TestHistoryEmails:
     
     def test_get_emails_filter_by_blocked_status(self, session: Session, sample_emails):
         """Test filtering emails by blocked status"""
-        from backend.routers.history import get_email_history
+        from backend.routers.history import get_email_history, EmailStatus
         
-        result = get_email_history(page=1, per_page=50, status="blocked", session=session)
+        result = get_email_history(page=1, per_page=50, status=EmailStatus.BLOCKED, session=session)
         
         assert len(result["emails"]) == 1
         assert result["emails"][0].status == "blocked"
@@ -233,3 +233,149 @@ class TestHistoryRuns:
         assert total_forwarded == 2
         assert total_blocked == 2
         assert total_errors == 1
+
+
+class TestHistoryDateFiltering:
+    """Test date filtering functionality"""
+    
+    def test_filter_emails_by_date_from(self, session: Session, sample_emails):
+        """Test filtering emails by date_from parameter"""
+        from backend.routers.history import get_email_history
+        
+        now = datetime.utcnow()
+        date_from = (now - timedelta(minutes=25)).isoformat()
+        
+        result = get_email_history(page=1, per_page=50, date_from=date_from, session=session)
+        
+        # Should only include email1 and email2 (within last 25 minutes)
+        assert len(result["emails"]) == 2
+        assert result["emails"][0].email_id == "email1@test.com"
+        assert result["emails"][1].email_id == "email2@test.com"
+    
+    def test_filter_emails_by_date_to(self, session: Session, sample_emails):
+        """Test filtering emails by date_to parameter"""
+        from backend.routers.history import get_email_history
+        
+        now = datetime.utcnow()
+        date_to = (now - timedelta(minutes=35)).isoformat()
+        
+        result = get_email_history(page=1, per_page=50, date_to=date_to, session=session)
+        
+        # Should only include email4 and email5 (older than 35 minutes)
+        assert len(result["emails"]) == 2
+    
+    def test_filter_emails_by_date_range(self, session: Session, sample_emails):
+        """Test filtering emails by both date_from and date_to"""
+        from backend.routers.history import get_email_history
+        
+        now = datetime.utcnow()
+        date_from = (now - timedelta(minutes=45)).isoformat()
+        date_to = (now - timedelta(minutes=15)).isoformat()
+        
+        result = get_email_history(
+            page=1, per_page=50,
+            date_from=date_from, date_to=date_to,
+            session=session
+        )
+        
+        # Should include email2, email3, email4 (between 15-45 minutes ago)
+        assert len(result["emails"]) == 3
+    
+    def test_invalid_date_from_format(self, session: Session, sample_emails):
+        """Test that invalid date_from format returns 400 error"""
+        from backend.routers.history import get_email_history
+        from fastapi import HTTPException
+        
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(
+                page=1, per_page=50,
+                date_from="invalid-date",
+                session=session
+            )
+        
+        assert exc_info.value.status_code == 400
+        assert "Invalid date format" in exc_info.value.detail
+    
+    def test_invalid_date_to_format(self, session: Session, sample_emails):
+        """Test that invalid date_to format returns 400 error"""
+        from backend.routers.history import get_email_history
+        from fastapi import HTTPException
+        
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(
+                page=1, per_page=50,
+                date_to="not-a-date",
+                session=session
+            )
+        
+        assert exc_info.value.status_code == 400
+        assert "Invalid date format" in exc_info.value.detail
+    
+    def test_stats_with_date_from_filter(self, session: Session, sample_emails):
+        """Test statistics with date_from filter"""
+        from backend.routers.history import get_history_stats
+        
+        now = datetime.utcnow()
+        date_from = (now - timedelta(minutes=25)).isoformat()
+        
+        result = get_history_stats(date_from=date_from, session=session)
+        
+        # Should only count email1 and email2
+        assert result["total"] == 2
+        assert result["forwarded"] == 1
+        assert result["blocked"] == 1
+    
+    def test_stats_with_invalid_date(self, session: Session, sample_emails):
+        """Test that stats endpoint returns 400 for invalid dates"""
+        from backend.routers.history import get_history_stats
+        from fastapi import HTTPException
+        
+        with pytest.raises(HTTPException) as exc_info:
+            get_history_stats(date_from="bad-date", session=session)
+        
+        assert exc_info.value.status_code == 400
+    
+    def test_empty_date_strings_ignored(self, session: Session, sample_emails):
+        """Test that empty date strings are handled gracefully"""
+        from backend.routers.history import get_email_history
+        
+        # Empty strings should be treated as None (no filter)
+        result = get_email_history(
+            page=1, per_page=50,
+            date_from="", date_to="",
+            session=session
+        )
+        
+        # Should return all emails when dates are empty
+        assert len(result["emails"]) == 5
+
+
+class TestHistoryStatusValidation:
+    """Test status parameter validation"""
+    
+    def test_valid_status_forwarded(self, session: Session, sample_emails):
+        """Test filtering with valid 'forwarded' status"""
+        from backend.routers.history import get_email_history, EmailStatus
+        
+        result = get_email_history(
+            page=1, per_page=50,
+            status=EmailStatus.FORWARDED,
+            session=session
+        )
+        
+        assert len(result["emails"]) == 2
+        for email in result["emails"]:
+            assert email.status == "forwarded"
+    
+    def test_valid_status_blocked(self, session: Session, sample_emails):
+        """Test filtering with valid 'blocked' status"""
+        from backend.routers.history import get_email_history, EmailStatus
+        
+        result = get_email_history(
+            page=1, per_page=50,
+            status=EmailStatus.BLOCKED,
+            session=session
+        )
+        
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].status == "blocked"
