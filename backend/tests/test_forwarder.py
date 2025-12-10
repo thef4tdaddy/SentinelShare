@@ -2,7 +2,6 @@ from unittest.mock import Mock, patch
 from backend.services.forwarder import EmailForwarder
 from backend.models import GlobalSettings
 from backend.database import engine
-from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from sqlmodel import Session
 import os
 
