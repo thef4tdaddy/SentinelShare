@@ -112,7 +112,7 @@ def get_history_stats(
     errors = sum(1 for e in emails if e.status == "error")
     
     # Calculate total amount
-    total_amount = sum(e.amount or 0.0 for e in emails if e.amount)
+    total_amount = sum(e.amount for e in emails if e.amount)
     
     # Group by status
     status_breakdown = {}
