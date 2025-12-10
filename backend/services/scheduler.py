@@ -57,7 +57,7 @@ def process_emails():
                             all_emails.extend(fetched)
             except Exception as e:
                 print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
-                print(f"   Raw Value: {email_accounts_json}")
+                print(f"   Raw Value: [REDACTED]")
 
     # 2. Fallback to Legacy Single Account (if no accounts processed yet)
     if not all_emails and not email_accounts_json:
@@ -120,7 +120,9 @@ def process_emails():
                 received_at=datetime.utcnow(),  # Approximate
                 processed_at=datetime.utcnow(),
                 status=status,
-                account_email=user,  # helper var from loop
+                account_email=email_data.get(
+                    "account_email", user
+                ),  # Use source from fetching logic
                 category=category,
                 reason=reason,
             )
