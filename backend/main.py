@@ -15,7 +15,7 @@ async def lifespan(app: FastAPI):
     stop_scheduler()
     print("Shutdown: App stopping.")
 
-from backend.routers import dashboard, settings
+from backend.routers import dashboard, settings, history
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -28,6 +28,7 @@ app = FastAPI(
 
 app.include_router(dashboard.router)
 app.include_router(settings.router)
+app.include_router(history.router)
 
 # Mount API first
 @app.get("/api/health")
