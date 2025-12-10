@@ -230,7 +230,7 @@ describe('History Component', () => {
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
 
-		const { container } = render(History);
+		render(History);
 
 		// Switch to runs tab
 		const runsTab = screen.getByText('Processing Runs');
