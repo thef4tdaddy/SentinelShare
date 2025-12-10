@@ -1,6 +1,7 @@
 import smtplib
 import os
 from email.mime.multipart import MIMEMultipart
+from urllib.parse import urlparse
 from email.mime.text import MIMEText
 from email.message import EmailMessage
 
@@ -26,11 +27,14 @@ class EmailForwarder:
                         
                         # Infer SMTP server from IMAP if possible
                         imap_s = first_acc.get("imap_server", "")
-                        if "gmail" in imap_s:
+                        # Parse hostname from imap_s, handling both URLs and plain hostnames
+                        parsed = urlparse(imap_s)
+                        hostname = parsed.hostname if parsed.hostname else imap_s
+                        if hostname and (hostname == "gmail.com" or hostname.endswith(".gmail.com")):
                             smtp_server = "smtp.gmail.com"
-                        elif "mail.me.com" in imap_s or "icloud" in imap_s:
+                        elif hostname and (hostname == "mail.me.com" or hostname.endswith(".mail.me.com") or "icloud" in hostname):
                             smtp_server = "smtp.mail.me.com"
-                        elif imap_s.startswith("imap."):
+                        elif hostname and hostname.startswith("imap."):
                             # Try guessing smtp.domain
                             smtp_server = imap_s.replace("imap.", "smtp.", 1)
             except:
