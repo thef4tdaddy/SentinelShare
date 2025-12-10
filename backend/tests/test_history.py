@@ -4,7 +4,6 @@ from sqlmodel import Session, create_engine, SQLModel
 from sqlmodel.pool import StaticPool
 from backend.models import ProcessedEmail
 from backend.routers.history import router
-from backend.database import get_session
 
 
 @pytest.fixture(name="session")
