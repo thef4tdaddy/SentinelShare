@@ -147,6 +147,35 @@ def process_emails():
                 # Get the account this email belongs to
                 account_email = email_data.get("account_email", "unknown")
 
+                # Checks for Command (Reply from Wife)
+                from backend.services.command_service import CommandService
+
+                if CommandService.is_command_email(email_data):
+                    print(f"   💬 Detected command email from {email_data.get('from')}")
+                    if CommandService.process_command(email_data):
+                        status = "command_executed"
+                        reason = "User command"
+                    else:
+                        status = "ignored"
+                        reason = "Command from wife (no action)"
+
+                    # Log it
+                    processed = ProcessedEmail(
+                        email_id=msg_id or "unknown",
+                        subject=email_data.get("subject", ""),
+                        sender=email_data.get("from", ""),
+                        received_at=datetime.now(timezone.utc),
+                        processed_at=datetime.now(timezone.utc),
+                        status=status,
+                        account_email=account_email,
+                        category="command",
+                        reason=reason,
+                    )
+                    session.add(processed)
+                    session.commit()
+                    print(f"💾 Saved command status: {status}")
+                    continue
+
                 # Detect
                 is_receipt = ReceiptDetector.is_receipt(email_data)
                 category = ReceiptDetector.categorize_receipt(email_data)

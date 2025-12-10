@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 
 import os
 
-from backend.routers import dashboard, history, settings
+from backend.routers import actions, dashboard, history, settings
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -29,6 +29,7 @@ app = FastAPI(title="Receipt Forwarder API", lifespan=lifespan)
 app.include_router(dashboard.router)
 app.include_router(settings.router)
 app.include_router(history.router)
+app.include_router(actions.router)
 
 
 # Mount API first
