@@ -23,7 +23,7 @@ def parse_iso_date(date_str: str) -> datetime:
     """Parse ISO date string, handling Z timezone notation
     
     Args:
-        date_str: ISO 8601 formatted date string
+        date_str: ISO 8601 formatted date string (non-empty)
     
     Returns:
         datetime object
@@ -31,9 +31,6 @@ def parse_iso_date(date_str: str) -> datetime:
     Raises:
         HTTPException: If date format is invalid
     """
-    if not date_str or date_str.strip() == "":
-        raise ValueError("Empty date string")
-    
     try:
         return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
     except (ValueError, AttributeError) as e:
