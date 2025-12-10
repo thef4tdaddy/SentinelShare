@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session, select, func, and_
 from backend.database import get_session
 from backend.models import ProcessedEmail
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/history", tags=["history"])
