@@ -1,7 +1,8 @@
 <script lang="ts">
 	import PreferenceList from '../components/PreferenceList.svelte';
+	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
 	import { fetchJson } from '../lib/api';
-	import { Play, Settings, Sliders } from 'lucide-svelte';
+	import { Play, Settings, Sliders, Mail } from 'lucide-svelte';
 
 	let loading = false;
 
@@ -35,6 +36,15 @@
 </div>
 
 <div class="space-y-8">
+	<!-- Email Template Section -->
+	<section>
+		<div class="flex items-center gap-2 mb-4">
+			<Mail size={20} class="text-text-secondary" />
+			<h3 class="text-lg font-bold text-text-main">Email Template</h3>
+		</div>
+		<EmailTemplateEditor />
+	</section>
+
 	<!-- Preferences Section -->
 	<section>
 		<div class="flex items-center gap-2 mb-4">

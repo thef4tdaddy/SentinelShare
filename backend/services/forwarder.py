@@ -3,6 +3,13 @@ import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.message import EmailMessage
+from sqlmodel import Session, select
+from backend.database import engine
+from backend.models import GlobalSettings
+
+DEFAULT_EMAIL_TEMPLATE = """Forwarding receipt from {from_}:
+
+{body}"""
 
 class EmailForwarder:
     @staticmethod
@@ -45,9 +52,26 @@ class EmailForwarder:
         msg['To'] = target_email
         msg['Subject'] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
 
-        # Create body
-        body_text = f"Forwarding receipt from {original_email_data.get('from')}:\n\n"
-        body_text += original_email_data.get('body', '')
+        # Get template from database
+        template = DEFAULT_EMAIL_TEMPLATE
+        try:
+            with Session(engine) as session:
+                setting = session.exec(
+                    select(GlobalSettings).where(GlobalSettings.key == "email_template")
+                ).first()
+                if setting:
+                    template = setting.value
+        except:
+            pass  # Use default template if DB access fails
+        
+        # Create body by substituting variables in template
+        # Use replace to avoid KeyError with 'from' keyword
+        body_text = template
+        body_text = body_text.replace('{subject}', original_email_data.get('subject', 'No Subject'))
+        body_text = body_text.replace('{from}', original_email_data.get('from', ''))
+        body_text = body_text.replace('{from_}', original_email_data.get('from', ''))
+        body_text = body_text.replace('{from_email}', original_email_data.get('from', ''))
+        body_text = body_text.replace('{body}', original_email_data.get('body', ''))
         
         msg.attach(MIMEText(body_text, 'plain'))
 
