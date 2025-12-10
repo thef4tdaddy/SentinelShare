@@ -4,6 +4,7 @@ from backend.database import get_session
 from backend.models import Preference, ManualRule, GlobalSettings
 from typing import List
 from pydantic import BaseModel
+from backend.constants import DEFAULT_EMAIL_TEMPLATE
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -56,9 +57,6 @@ def trigger_poll(background_tasks: BackgroundTasks, session: Session = Depends(g
     return {"status": "triggered", "message": "Email poll started in background"}
 
 # Email Template endpoints
-DEFAULT_EMAIL_TEMPLATE = """Forwarding receipt from {from_}:
-
-{body}"""
 
 class EmailTemplateUpdate(BaseModel):
     template: str

@@ -6,10 +6,7 @@ from email.message import EmailMessage
 from sqlmodel import Session, select
 from backend.database import engine
 from backend.models import GlobalSettings
-
-DEFAULT_EMAIL_TEMPLATE = """Forwarding receipt from {from_}:
-
-{body}"""
+from backend.constants import DEFAULT_EMAIL_TEMPLATE
 
 class EmailForwarder:
     @staticmethod
@@ -65,12 +62,9 @@ class EmailForwarder:
             pass  # Use default template if DB access fails
         
         # Create body by substituting variables in template
-        # Use replace to avoid KeyError with 'from' keyword
         body_text = template
         body_text = body_text.replace('{subject}', original_email_data.get('subject', 'No Subject'))
         body_text = body_text.replace('{from}', original_email_data.get('from', ''))
-        body_text = body_text.replace('{from_}', original_email_data.get('from', ''))
-        body_text = body_text.replace('{from_email}', original_email_data.get('from', ''))
         body_text = body_text.replace('{body}', original_email_data.get('body', ''))
         
         msg.attach(MIMEText(body_text, 'plain'))

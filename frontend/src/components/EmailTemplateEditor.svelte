@@ -50,8 +50,6 @@
 			previewText = template
 				.replace(/{subject}/g, 'Your Amazon Order Confirmation')
 				.replace(/{from}/g, 'no-reply@amazon.com')
-				.replace(/{from_email}/g, 'no-reply@amazon.com')
-				.replace(/{from_}/g, 'no-reply@amazon.com')
 				.replace(
 					/{body}/g,
 					'Thank you for your order!\n\nOrder #123-4567890-1234567\nTotal: $49.99\n\nYour order will be delivered on January 15, 2024.'

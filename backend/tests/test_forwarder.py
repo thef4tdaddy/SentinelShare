@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 from backend.services.forwarder import EmailForwarder
 from backend.models import GlobalSettings
 from backend.database import engine
+from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from sqlmodel import Session
 import os
 
@@ -233,7 +234,7 @@ class TestEmailForwarder:
                 session.delete(existing)
                 session.commit()
             
-            custom_template = "Custom template: {subject} from {from_}\n\nContent:\n{body}"
+            custom_template = "Custom template: {subject} from {from}\n\nContent:\n{body}"
             setting = GlobalSettings(
                 key="email_template",
                 value=custom_template,
@@ -285,7 +286,7 @@ class TestEmailForwarder:
                 session.delete(existing)
                 session.commit()
                 
-            template = "Subject: {subject}\nFrom: {from_}\nBody: {body}"
+            template = "Subject: {subject}\nFrom: {from}\nBody: {body}"
             setting = GlobalSettings(
                 key="email_template",
                 value=template,
