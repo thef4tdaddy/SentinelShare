@@ -7,6 +7,14 @@ from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
+# Constants
+RUN_GROUPING_WINDOW_SECONDS = 300  # 5 minutes - emails within this window are grouped into same run
+
+
+def parse_iso_date(date_str: str) -> datetime:
+    """Parse ISO date string, handling Z timezone notation"""
+    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+
 @router.get("/emails")
 def get_email_history(
     page: int = Query(1, ge=1),
@@ -27,13 +35,13 @@ def get_email_history(
         filters.append(ProcessedEmail.status == status)
     if date_from:
         try:
-            date_from_obj = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            date_from_obj = parse_iso_date(date_from)
             filters.append(ProcessedEmail.processed_at >= date_from_obj)
         except ValueError:
             pass
     if date_to:
         try:
-            date_to_obj = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            date_to_obj = parse_iso_date(date_to)
             filters.append(ProcessedEmail.processed_at <= date_to_obj)
         except ValueError:
             pass
@@ -81,13 +89,13 @@ def get_history_stats(
     filters = []
     if date_from:
         try:
-            date_from_obj = datetime.fromisoformat(date_from.replace('Z', '+00:00'))
+            date_from_obj = parse_iso_date(date_from)
             filters.append(ProcessedEmail.processed_at >= date_from_obj)
         except ValueError:
             pass
     if date_to:
         try:
-            date_to_obj = datetime.fromisoformat(date_to.replace('Z', '+00:00'))
+            date_to_obj = parse_iso_date(date_to)
             filters.append(ProcessedEmail.processed_at <= date_to_obj)
         except ValueError:
             pass
@@ -142,7 +150,7 @@ def get_recent_runs(
     current_run = None
     
     for email in all_emails:
-        if current_run is None or (current_run["last_processed"] - email.processed_at).total_seconds() > 300:
+        if current_run is None or (current_run["last_processed"] - email.processed_at).total_seconds() > RUN_GROUPING_WINDOW_SECONDS:
             # Start a new run
             if current_run:
                 runs.append(current_run)
