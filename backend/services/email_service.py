@@ -7,6 +7,19 @@ from email.header import decode_header
 
 class EmailService:
     @staticmethod
+    def test_connection(email_user, email_pass, imap_server="imap.gmail.com"):
+        if not email_user or not email_pass:
+            return {"success": False, "error": "Credentials missing"}
+
+        try:
+            mail = imaplib.IMAP4_SSL(imap_server)
+            mail.login(email_user, email_pass)
+            mail.logout()
+            return {"success": True, "error": None}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
     def fetch_recent_emails(
         email_user, email_pass, imap_server="imap.gmail.com", limit=20
     ):
