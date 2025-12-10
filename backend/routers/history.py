@@ -3,7 +3,7 @@ from sqlmodel import Session, select, func, and_
 from backend.database import get_session
 from backend.models import ProcessedEmail
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
