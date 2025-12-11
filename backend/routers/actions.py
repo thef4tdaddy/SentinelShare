@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import os
 from datetime import datetime, timezone
-
+import html
 from backend.services.command_service import CommandService
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
@@ -26,6 +26,9 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
     """
     if not verify_signature(cmd, arg, ts, sig):
         raise HTTPException(status_code=403, detail="Invalid signature")
+
+    # Escape user input for safe HTML rendering
+    safe_arg = html.escape(arg)
 
     # Check timestamp expiration (e.g. 7 days link validity)
     try:
@@ -53,17 +56,17 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         # But for 'STOP amazon', it handles as blocked sender.
         # Ideally we differentiate STOP_SENDER vs STOP_CATEGORY in the link generation.
         success = True
-        message = f"🚫 Successfully Blocked: {arg}"
+        message = f"🚫 Successfully Blocked: {safe_arg}"
 
     elif cmd.upper() == "MORE":
         CommandService._add_preference(arg, "Always Forward")
         success = True
-        message = f"✅ Always Forwarding: {arg}"
+        message = f"✅ Always Forwarding: {safe_arg}"
 
     elif cmd.upper() == "BLOCK_CATEGORY":
         CommandService._add_preference(arg, "Blocked Category")
         success = True
-        message = f"🚫 Blocked Category: {arg}"
+        message = f"🚫 Blocked Category: {safe_arg}"
 
     elif cmd.upper() == "SETTINGS":
         from backend.database import engine
