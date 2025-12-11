@@ -3,7 +3,7 @@ name: Daily Health Check
 on:
   schedule:
     # Run every day at 8:00 AM US/Chicago (14:00 UTC)
-    - cron: '0 14 * * *'
+    - cron: "0 14 * * *"
   workflow_dispatch: # Allow manual trigger
 
 permissions:
@@ -24,8 +24,8 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Install Backend Dependencies
         run: |
@@ -40,15 +40,16 @@ jobs:
           cd backend
           source venv/bin/activate
           # Run tests and output coverage report to terminal. Fail under 50%.
-          pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/
+          set -o pipefail
+          pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
         continue-on-error: false
 
       # --- Frontend Setup & Test ---
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
@@ -60,7 +61,8 @@ jobs:
         run: |
           cd frontend
           # Fail if coverage is under 50%
-          npm run test:run -- --coverage --coverage.thresholds.lines=50
+          set -o pipefail
+          npm run test:run -- --coverage --coverage.thresholds.lines=50 2>&1 | tee ../frontend_test.log
         continue-on-error: false
 
       # --- Reporting ---
@@ -69,11 +71,45 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
             const date = new Date().toLocaleDateString();
+
+            let backendLog = '';
+            let frontendLog = '';
+
+            try { backendLog = fs.readFileSync('backend_test.log', 'utf8'); } catch (e) {}
+            try { frontendLog = fs.readFileSync('frontend_test.log', 'utf8'); } catch (e) {}
+
+            // Helper to extract relevant failure lines
+            function getFailureSummary(log) {
+              if (!log) return 'No log available (Step might have been skipped).';
+              const lines = log.split('\n');
+              // Simple heuristic: grab lines with "FAILED" or "ERROR" or the summary at the end
+              const failures = lines.filter(l => l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL'));
+              const summary = lines.slice(-20).join('\n'); // Last 20 lines usually have the summary
+              
+              if (failures.length > 0) {
+                 return `### ❌ Detected Failures:\n\`\`\`\n${failures.slice(0, 10).join('\n')}\n...\n\`\`\`\n\n### 📋 Log Summary:\n\`\`\`\n${summary}\n\`\`\``;
+              }
+              return `### 📋 Log Summary:\n\`\`\`\n${summary}\n\`\`\``;
+            }
+
+            const backendSummary = getFailureSummary(backendLog);
+            const frontendSummary = getFailureSummary(frontendLog);
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `� Health / Coverage Alert: ${date}`,
-              body: `The Daily Health Check workflow failed on ${date}. \n\n**Possible Causes:**\n1. 🐛 **Tests Failed**: Code logic error.\n2. 📉 **Low Coverage**: Coverage dropped below **50%**.\n\nPlease check the [Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) to see which one it is.`,
+              title: `🚨 Health / Coverage Alert: ${date}`,
+              body: `The Daily Health Check workflow failed on ${date}. 
+              
+              ## 🐍 Backend Status
+              ${backendSummary}
+              
+              ## ⚛️ Frontend Status
+              ${frontendSummary}
+              
+              ---
+              [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
               labels: ['bug', 'automated-report', 'coverage']
             });
