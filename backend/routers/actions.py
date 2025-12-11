@@ -3,9 +3,14 @@ import hmac
 import os
 from datetime import datetime, timezone
 
+from backend.database import get_session
+from backend.models import ManualRule, ProcessedEmail
 from backend.services.command_service import CommandService
-from fastapi import APIRouter, HTTPException, Query
+from backend.services.forwarder import EmailForwarder
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from sqlmodel import Session
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -117,3 +122,100 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
          """
     else:
         return "<h1>❌ Unknown Command</h1>"
+
+
+class ToggleIgnoredRequest(BaseModel):
+    email_id: int
+
+
+@router.post("/toggle-ignored")
+def toggle_ignored_email(
+    request: ToggleIgnoredRequest,
+    session: Session = Depends(get_session)
+):
+    """
+    Toggle an ignored email: create a manual rule and forward the email
+    """
+    # Get the email
+    email = session.get(ProcessedEmail, request.email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+    
+    # Check if email is ignored
+    if email.status != "ignored":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Email status is '{email.status}', not 'ignored'"
+        )
+    
+    # Create a manual rule based on the email sender
+    # Extract domain or email pattern from sender
+    sender = email.sender.lower()
+    email_pattern = None
+    
+    # Try to extract email address from sender (format: "Name <email@domain.com>")
+    if "<" in sender and ">" in sender:
+        email_pattern = sender.split("<")[1].split(">")[0].strip()
+    elif "@" in sender:
+        # If it's just an email address
+        email_pattern = sender.strip()
+    
+    if not email_pattern:
+        raise HTTPException(
+            status_code=400, 
+            detail="Could not extract email pattern from sender"
+        )
+    
+    # Create the manual rule
+    manual_rule = ManualRule(
+        email_pattern=email_pattern,
+        subject_pattern=None,
+        priority=10,
+        purpose=f"Auto-created from ignored email: {email.subject[:50]}",
+    )
+    session.add(manual_rule)
+    
+    # Forward the email now
+    target_email = os.environ.get("WIFE_EMAIL")
+    if not target_email:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="WIFE_EMAIL not configured"
+        )
+    
+    # Prepare email data for forwarding
+    email_data = {
+        "message_id": email.email_id,
+        "subject": email.subject,
+        "from": email.sender,
+        "body": f"[Previously ignored email from {email.received_at}]\n\n",
+        "account_email": email.account_email,
+    }
+    
+    # Try to forward the email
+    success = EmailForwarder.forward_email(email_data, target_email)
+    
+    if not success:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to forward email"
+        )
+    
+    # Update email status to forwarded
+    email.status = "forwarded"
+    email.reason = "Manually toggled from ignored"
+    
+    # Commit changes
+    session.add(email)
+    session.commit()
+    session.refresh(email)
+    session.refresh(manual_rule)
+    
+    return {
+        "success": True,
+        "email": email,
+        "rule": manual_rule,
+        "message": f"Email forwarded and rule created for {email_pattern}"
+    }

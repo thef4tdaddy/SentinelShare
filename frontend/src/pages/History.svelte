@@ -9,7 +9,8 @@
 		AlertCircle,
 		ChevronLeft,
 		ChevronRight,
-		History as HistoryIcon
+		History as HistoryIcon,
+		RefreshCw
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -149,6 +150,27 @@
 				return 'bg-red-100 text-red-800 border-red-200';
 			default:
 				return 'bg-blue-100 text-blue-600 border-blue-200';
+		}
+	}
+
+	async function toggleIgnored(email: Email) {
+		if (!confirm(`Forward this email and create a rule for "${email.sender}"?`)) {
+			return;
+		}
+
+		try {
+			const result = await fetchJson('/actions/toggle-ignored', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email_id: email.id })
+			});
+
+			alert(result.message || 'Email forwarded and rule created successfully!');
+			// Reload history to see the updated status
+			await loadHistory();
+		} catch (e) {
+			console.error('Failed to toggle ignored email', e);
+			alert('Error: Failed to forward email and create rule');
 		}
 	}
 </script>
@@ -325,12 +347,17 @@
 						>
 							Processed
 						</th>
+						<th
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 text-center"
+						>
+							Actions
+						</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#if loading}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary">
+							<td colspan="7" class="py-12 text-center text-text-secondary">
 								<div class="flex items-center justify-center gap-2">
 									<Clock size={20} class="animate-spin" />
 									Loading...
@@ -339,7 +366,7 @@
 						</tr>
 					{:else if emails.length === 0}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary">
+							<td colspan="7" class="py-12 text-center text-text-secondary">
 								<div class="flex flex-col items-center justify-center gap-3">
 									<div class="bg-gray-100 p-3 rounded-full">
 										<Mail size={24} class="text-gray-400" />
@@ -387,6 +414,20 @@
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm whitespace-nowrap">
 									{formatDate(email.processed_at)}
+								</td>
+								<td class="py-3 px-4 text-center">
+									{#if email.status === 'ignored'}
+										<button
+											on:click={() => toggleIgnored(email)}
+											class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-primary hover:bg-primary-dark rounded-lg transition-colors"
+											title="Forward this email and create a rule"
+										>
+											<RefreshCw size={14} />
+											Forward & Rule
+										</button>
+									{:else}
+										<span class="text-gray-400 text-xs">—</span>
+									{/if}
 								</td>
 							</tr>
 						{/each}
