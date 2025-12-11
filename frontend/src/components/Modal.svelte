@@ -37,12 +37,12 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
 		on:click={handleBackdropClick}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby={title ? 'modal-title' : undefined}
 	>
 		<div
 			class="relative w-full max-w-md mx-4 bg-bg-card rounded-xl shadow-2xl border border-border transform transition-all"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby={title ? 'modal-title' : undefined}
 		>
 			{#if title || showCloseButton}
 				<div class="flex items-center justify-between p-6 pb-4 border-b border-border">
