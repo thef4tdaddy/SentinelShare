@@ -9,8 +9,17 @@ from fastapi import FastAPI
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    create_db_and_tables()
-    print("Startup: Database tables created.")
+    # Check/Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
+    try:
+        from backend.migration_utils import run_migrations
+
+        run_migrations()
+    except Exception as e:
+        print(f"Startup Migration Error: {e}")
+        # Fallback to legacy creation if migrations fail (e.g. Alembic missing)
+        # create_db_and_tables()
+
+    print("Startup: Database checks complete.")
     start_scheduler()
     yield
     # Shutdown
