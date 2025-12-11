@@ -11,7 +11,6 @@ vi.mock('../lib/api', () => ({
 describe('Settings Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		window.confirm = vi.fn(() => true);
 		window.alert = vi.fn();
 	});
 
@@ -47,15 +46,38 @@ describe('Settings Component', () => {
 
 	it('triggers poll when Run Now is clicked and confirmed', async () => {
 		const mockResponse = { message: 'Poll triggered successfully' };
-		vi.mocked(api.fetchJson).mockResolvedValue(mockResponse);
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
 
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
 
+		// Modal should open
 		await waitFor(() => {
-			expect(window.confirm).toHaveBeenCalledWith('Run email check now?');
+			expect(screen.getByText('Run Email Check')).toBeTruthy();
+			expect(
+				screen.getByText(
+					/Do you want to run the email check now\? This will process all emails/i
+				)
+			).toBeTruthy();
+		});
+
+		// Click confirm button in modal (the second "Run Now" button)
+		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
+		const confirmButton = buttons[1]; // The modal button is the second one
+
+		// Mock the trigger-poll response
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResponse);
+
+		await fireEvent.click(confirmButton);
+
+		await waitFor(() => {
 			expect(api.fetchJson).toHaveBeenCalledWith('/settings/trigger-poll', {
 				method: 'POST'
 			});
@@ -64,8 +86,12 @@ describe('Settings Component', () => {
 	});
 
 	it('does not trigger poll if user cancels confirmation', async () => {
-		window.confirm = vi.fn(() => false);
-		vi.mocked(api.fetchJson).mockResolvedValue([]);
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
 
 		render(Settings);
 
@@ -73,23 +99,51 @@ describe('Settings Component', () => {
 			expect(screen.getByText('Run Now')).toBeTruthy();
 		});
 
-		// Clear the calls from PreferenceList mount
+		// Clear the calls from mount
 		vi.clearAllMocks();
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
 
-		expect(window.confirm).toHaveBeenCalledWith('Run email check now?');
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Run Email Check')).toBeTruthy();
+		});
+
+		// Click cancel button
+		const cancelButton = screen.getByRole('button', { name: 'Cancel' });
+		await fireEvent.click(cancelButton);
+
+		// API should not be called
 		expect(api.fetchJson).not.toHaveBeenCalled();
 	});
 
 	it('shows default message if API response has no message', async () => {
-		vi.mocked(api.fetchJson).mockResolvedValue({});
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
 
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Run Email Check')).toBeTruthy();
+		});
+
+		// Click confirm button in modal (the second "Run Now" button)
+		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
+		const confirmButton = buttons[1]; // The modal button is the second one
+
+		// Mock the trigger-poll response with no message
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({});
+
+		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
 			expect(window.alert).toHaveBeenCalledWith('Poll triggered');
@@ -97,12 +151,31 @@ describe('Settings Component', () => {
 	});
 
 	it('handles trigger poll error gracefully', async () => {
-		vi.mocked(api.fetchJson).mockRejectedValue(new Error('API Error'));
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
 
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Run Email Check')).toBeTruthy();
+		});
+
+		// Click confirm button in modal (the second "Run Now" button)
+		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
+		const confirmButton = buttons[1]; // The modal button is the second one
+
+		// Mock the trigger-poll API error
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
+
+		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
 			expect(window.alert).toHaveBeenCalledWith('Error triggering poll');

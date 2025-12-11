@@ -11,8 +11,6 @@ vi.mock('../lib/api', () => ({
 describe('PreferenceList Component - Preferences Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Mock window.confirm
-		window.confirm = vi.fn(() => true);
 		// Mock window.alert
 		window.alert = vi.fn();
 	});
@@ -106,6 +104,17 @@ describe('PreferenceList Component - Preferences Type', () => {
 		const deleteButton = screen.getByTitle('Delete');
 		await fireEvent.click(deleteButton);
 
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+		});
+
+		// Click confirm button (look for button with class btn-danger)
+		const buttons = screen.getAllByRole('button');
+		const confirmButton = buttons.find((btn) => btn.classList.contains('btn-danger'));
+		if (!confirmButton) throw new Error('Confirm button not found');
+		await fireEvent.click(confirmButton);
+
 		await waitFor(() => {
 			expect(api.fetchJson).toHaveBeenCalledWith('/settings/preferences/1', {
 				method: 'DELETE'
@@ -114,7 +123,6 @@ describe('PreferenceList Component - Preferences Type', () => {
 	});
 
 	it('does not delete if user cancels confirmation', async () => {
-		window.confirm = vi.fn(() => false);
 		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
 		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
 
@@ -126,6 +134,17 @@ describe('PreferenceList Component - Preferences Type', () => {
 
 		const deleteButton = screen.getByTitle('Delete');
 		await fireEvent.click(deleteButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+		});
+
+		// Click cancel button (look for button with class btn-secondary)
+		const buttons = screen.getAllByRole('button');
+		const cancelButton = buttons.find((btn) => btn.classList.contains('btn-secondary'));
+		if (!cancelButton) throw new Error('Cancel button not found');
+		await fireEvent.click(cancelButton);
 
 		// fetchJson should only be called once (for loading)
 		expect(api.fetchJson).toHaveBeenCalledTimes(1);
@@ -160,11 +179,19 @@ describe('PreferenceList Component - Preferences Type', () => {
 			expect(screen.getByText('amazon')).toBeTruthy();
 		});
 
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
+
+		// Modal should open
 		await waitFor(() => {
-			const deleteButton = screen.getByTitle('Delete');
-			expect(deleteButton).toBeTruthy();
-			fireEvent.click(deleteButton);
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
 		});
+
+		// Click confirm button (look for button with class btn-danger)
+		const buttons = screen.getAllByRole('button');
+		const confirmButton = buttons.find((btn) => btn.classList.contains('btn-danger'));
+		if (!confirmButton) throw new Error('Confirm button not found');
+		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
 			expect(window.alert).toHaveBeenCalledWith('Error deleting item');
@@ -175,7 +202,6 @@ describe('PreferenceList Component - Preferences Type', () => {
 describe('PreferenceList Component - Rules Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		window.confirm = vi.fn(() => true);
 		window.alert = vi.fn();
 	});
 

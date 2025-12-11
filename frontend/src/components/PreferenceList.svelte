@@ -2,6 +2,7 @@
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
 	import { Trash2, Plus } from 'lucide-svelte';
+	import ConfirmDialog from './ConfirmDialog.svelte';
 
 	interface Item {
 		id?: number;
@@ -9,13 +10,19 @@
 		[key: string]: any;
 	}
 
-	export let type: 'preferences' | 'rules';
-	let items: Item[] = [];
-	let newItem: Item = {};
-	let loading = false;
+	interface PreferenceListProps {
+		type: 'preferences' | 'rules';
+	}
+
+	let { type }: PreferenceListProps = $props();
+	let items: Item[] = $state([]);
+	let newItem: Item = $state({});
+	let loading = $state(false);
+	let showDeleteConfirm = $state(false);
+	let itemToDelete: number | null = $state(null);
 
 	// Basic form fields based on type
-	let fields =
+	let fields = $derived(
 		type === 'preferences'
 			? [
 					{ key: 'item', label: 'Item (e.g., amazon)' },
@@ -30,7 +37,8 @@
 					{ key: 'email_pattern', label: 'Email Pattern' },
 					{ key: 'subject_pattern', label: 'Subject Pattern' },
 					{ key: 'purpose', label: 'Purpose' }
-				];
+				]
+	);
 
 	onMount(loadItems);
 
@@ -60,13 +68,26 @@
 	}
 
 	async function deleteItem(id: number) {
-		if (!confirm('Are you sure?')) return;
+		itemToDelete = id;
+		showDeleteConfirm = true;
+	}
+
+	async function handleConfirmDelete() {
+		if (itemToDelete === null) return;
+		showDeleteConfirm = false;
 		try {
-			await fetchJson(`/settings/${type}/${id}`, { method: 'DELETE' });
-			items = items.filter((i) => i.id !== id);
+			await fetchJson(`/settings/${type}/${itemToDelete}`, { method: 'DELETE' });
+			items = items.filter((i) => i.id !== itemToDelete);
 		} catch {
 			alert('Error deleting item');
+		} finally {
+			itemToDelete = null;
 		}
+	}
+
+	function handleCancelDelete() {
+		showDeleteConfirm = false;
+		itemToDelete = null;
 	}
 </script>
 
@@ -157,3 +178,16 @@
 		</table>
 	</div>
 </div>
+
+<ConfirmDialog
+	bind:isOpen={showDeleteConfirm}
+	onConfirm={handleConfirmDelete}
+	onCancel={handleCancelDelete}
+	title="Confirm Delete"
+	message="Are you sure you want to delete this {type === 'preferences'
+		? 'preference'
+		: 'rule'}? This action cannot be undone."
+	confirmText="Delete"
+	cancelText="Cancel"
+	danger={true}
+/>

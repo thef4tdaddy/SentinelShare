@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PreferenceList from '../components/PreferenceList.svelte';
 	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
+	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import {
 		Play,
@@ -19,18 +20,20 @@
 		error?: string;
 	}
 
-	let loading = false;
-	let connectionResults: ConnectionResult[] = [];
-	let checkingConnections = false;
+	let loading = $state(false);
+	let connectionResults: ConnectionResult[] = $state([]);
+	let checkingConnections = $state(false);
 	let pollInterval: ReturnType<typeof setInterval>;
+	let showConfirmDialog = $state(false);
 
-	async function triggerPoll() {
+	function openConfirmDialog() {
+		showConfirmDialog = true;
+	}
+
+	async function handleConfirmPoll() {
+		showConfirmDialog = false;
 		try {
 			loading = true;
-			if (!confirm('Run email check now?')) {
-				loading = false;
-				return;
-			}
 			const res = await fetchJson('/settings/trigger-poll', { method: 'POST' });
 			alert(res.message || 'Poll triggered');
 		} catch {
@@ -38,6 +41,10 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	function handleCancelPoll() {
+		showConfirmDialog = false;
 	}
 
 	async function checkConnections() {
@@ -73,7 +80,7 @@
 			<Loader2 size={16} class={checkingConnections ? 'animate-spin' : ''} />
 			{checkingConnections ? 'Testing...' : 'Test Connections'}
 		</button>
-		<button on:click={triggerPoll} disabled={loading} class="btn btn-primary">
+		<button on:click={openConfirmDialog} disabled={loading} class="btn btn-primary">
 			<Play size={16} class={loading ? 'animate-spin' : ''} />
 			{loading ? 'Running...' : 'Run Now'}
 		</button>
@@ -147,3 +154,13 @@
 		<PreferenceList type="rules" />
 	</section>
 </div>
+
+<ConfirmDialog
+	bind:isOpen={showConfirmDialog}
+	onConfirm={handleConfirmPoll}
+	onCancel={handleCancelPoll}
+	title="Run Email Check"
+	message="Do you want to run the email check now? This will process all emails from your configured accounts."
+	confirmText="Run Now"
+	cancelText="Cancel"
+/>
