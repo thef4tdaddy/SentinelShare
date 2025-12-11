@@ -23,17 +23,9 @@
 		cancelText = 'Cancel',
 		danger = false
 	}: ConfirmDialogProps = $props();
-
-	function handleConfirm() {
-		onConfirm();
-	}
-
-	function handleCancel() {
-		onCancel();
-	}
 </script>
 
-<Modal {isOpen} onClose={handleCancel} {title} showCloseButton={false}>
+<Modal {isOpen} onClose={onCancel} {title} showCloseButton={false}>
 	<div class="space-y-4">
 		<div class="flex items-start gap-3">
 			{#if danger}
@@ -45,10 +37,10 @@
 		</div>
 
 		<div class="flex gap-3 justify-end pt-2">
-			<button on:click={handleCancel} class="btn btn-secondary">
+			<button on:click={onCancel} class="btn btn-secondary">
 				{cancelText}
 			</button>
-			<button on:click={handleConfirm} class="btn {danger ? 'btn-danger' : 'btn-primary'}">
+			<button on:click={onConfirm} class="btn {danger ? 'btn-danger' : 'btn-primary'}">
 				{confirmText}
 			</button>
 		</div>
