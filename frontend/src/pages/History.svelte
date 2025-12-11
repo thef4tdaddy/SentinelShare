@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
+	import { formatDate } from '../lib/dateUtils';
 	import {
 		Clock,
 		Mail,
@@ -105,7 +106,7 @@
 		loadHistory();
 		// Add keyboard event listener for Escape key
 		window.addEventListener('keydown', handleKeydown);
-		
+
 		return () => {
 			window.removeEventListener('keydown', handleKeydown);
 		};
@@ -119,17 +120,6 @@
 	function goToPage(page: number) {
 		pagination.page = page;
 		loadHistory();
-	}
-
-	function formatDate(dateStr: string) {
-		if (!dateStr) return '';
-		return new Date(dateStr).toLocaleString(undefined, {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 	}
 
 	function formatAmount(amount?: number) {
@@ -202,16 +192,18 @@
 			});
 
 			successMessage = result.message || 'Email forwarded and rule created successfully!';
-			
+
 			// Wait a moment to show success message, then close and reload
 			setTimeout(async () => {
 				closeModal();
 				await loadHistory();
 			}, 1500);
-		} catch (e: any) {
+		} catch (e: unknown) {
 			console.error('Failed to toggle ignored email', e);
 			// Extract error message from the response if available
-			errorMessage = e?.message || e?.detail || 'Failed to forward email and create rule. Please try again.';
+			const err = e as { message?: string; detail?: string };
+			errorMessage =
+				err?.message || err?.detail || 'Failed to forward email and create rule. Please try again.';
 			isProcessing = false;
 		}
 	}
@@ -595,8 +587,10 @@
 
 			<!-- Success Message -->
 			{#if successMessage}
-				<div class="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2">
-					<CheckCircle size={20} class="text-emerald-600 flex-shrink-0 mt-0.5" />
+				<div
+					class="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2"
+				>
+					<CheckCircle size={20} class="text-emerald-600 shrink-0 mt-0.5" />
 					<p class="text-sm text-emerald-800">{successMessage}</p>
 				</div>
 			{/if}
@@ -604,7 +598,7 @@
 			<!-- Error Message -->
 			{#if errorMessage}
 				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-					<AlertCircle size={20} class="text-red-600 flex-shrink-0 mt-0.5" />
+					<AlertCircle size={20} class="text-red-600 shrink-0 mt-0.5" />
 					<p class="text-sm text-red-800">{errorMessage}</p>
 				</div>
 			{/if}
@@ -619,11 +613,11 @@
 				<div class="bg-gray-50 rounded-lg p-4 space-y-2">
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
-						<p class="text-sm text-text-main break-words">{selectedEmail.subject}</p>
+						<p class="text-sm text-text-main break-all">{selectedEmail.subject}</p>
 					</div>
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Sender:</span>
-						<p class="text-sm text-text-main break-words">{selectedEmail.sender}</p>
+						<p class="text-sm text-text-main break-all">{selectedEmail.sender}</p>
 					</div>
 					{#if selectedEmail.reason}
 						<div>
@@ -636,18 +630,10 @@
 
 			<!-- Modal Actions -->
 			<div class="flex gap-3 justify-end">
-				<button 
-					on:click={closeModal} 
-					class="btn btn-secondary"
-					disabled={isProcessing}
-				> 
-					Cancel 
+				<button on:click={closeModal} class="btn btn-secondary" disabled={isProcessing}>
+					Cancel
 				</button>
-				<button 
-					on:click={confirmToggle} 
-					class="btn btn-primary"
-					disabled={isProcessing}
-				>
+				<button on:click={confirmToggle} class="btn btn-primary" disabled={isProcessing}>
 					{#if isProcessing}
 						<RefreshCw size={16} class="animate-spin" />
 						Processing...

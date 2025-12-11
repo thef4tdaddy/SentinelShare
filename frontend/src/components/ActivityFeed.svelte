@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { FileText, Clock, User, Tag, Activity as ActivityIcon, Ban } from 'lucide-svelte';
+	import { formatTime, formatShortDate } from '../lib/dateUtils';
 
 	interface Activity {
 		id: number;
@@ -51,10 +52,7 @@
 						<td class="py-3 px-4 text-text-secondary whitespace-nowrap">
 							<div class="flex items-center gap-1.5">
 								<span class="text-sm font-medium">
-									{new Date(item.processed_at).toLocaleDateString(undefined, {
-										month: 'short',
-										day: 'numeric'
-									})}
+									{formatShortDate(item.processed_at)}
 								</span>
 							</div>
 						</td>
@@ -99,10 +97,7 @@
 						<td class="py-3 px-4 text-right text-text-secondary w-32 whitespace-nowrap">
 							<div class="flex items-center justify-end gap-1.5">
 								<Clock size={13} class="text-gray-400" />
-								{new Date(item.processed_at).toLocaleTimeString([], {
-									hour: '2-digit',
-									minute: '2-digit'
-								})}
+								{formatTime(item.processed_at)}
 							</div>
 						</td>
 					</tr>

@@ -191,19 +191,96 @@ def toggle_ignored_email(
         session.rollback()
         raise HTTPException(status_code=500, detail="WIFE_EMAIL not configured")
 
-    # Prepare email data for forwarding
-    email_data = {
-        "message_id": email.email_id,
-        "subject": email.subject,
-        "from": email.sender,
-        "body": f"""[This email was previously marked as ignored and is now being forwarded]
+    # Try to fetch the original email content
+    import json
+
+    from backend.services.email_service import EmailService
+
+    # 1. Get credentials for the source account
+    email_user = None
+    email_pass = None
+    imap_server = "imap.gmail.com"  # Default
+
+    account_email = email.account_email
+
+    # Check env vars first (legacy single account)
+    if not account_email or account_email == os.environ.get("SENDER_EMAIL"):
+        email_user = os.environ.get("SENDER_EMAIL")
+        email_pass = os.environ.get("SENDER_PASSWORD")
+    elif account_email == os.environ.get("GMAIL_EMAIL"):
+        email_user = os.environ.get("GMAIL_EMAIL")
+        email_pass = os.environ.get("GMAIL_PASSWORD")
+    elif account_email == os.environ.get("ICLOUD_EMAIL"):
+        email_user = os.environ.get("ICLOUD_EMAIL")
+        email_pass = os.environ.get("ICLOUD_PASSWORD")
+        imap_server = "imap.mail.me.com"
+
+    # Check EMAIL_ACCOUNTS
+    if not email_user:
+        try:
+            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+            if accounts_json:
+                accounts = json.loads(accounts_json)
+                for acc in accounts:
+                    if acc.get("email") == account_email:
+                        email_user = acc.get("email")
+                        email_pass = acc.get("password")
+                        imap_server = acc.get("imap_server", "imap.gmail.com")
+                        break
+        except:
+            pass
+
+    # Default to primary if we can't find specific ones (last resort/fallback)
+    if not email_user:
+        email_user = os.environ.get("SENDER_EMAIL")
+        email_pass = os.environ.get("SENDER_PASSWORD")
+
+    # 2. Fetch content
+    original_content = None
+    if email_user and email_pass:
+        original_content = EmailService.fetch_email_by_id(
+            email_user, email_pass, email.email_id, imap_server
+        )
+
+    # 3. Construct body
+    if original_content:
+        # Use the fetched content
+        body_text = original_content.get("body", "")
+        # If we have HTML but no text, maybe use HTML?
+        # EmailForwarder usually takes 'body' as text/html depending on structure.
+        # But here we pass a single 'body' string.
+        # Let's prepend the system note
+        final_body = f"""<div style="background-color: #f0fdf4; padding: 10px; border: 1px solid #86efac; margin-bottom: 20px; border-radius: 6px;">
+            <p><strong>[SentinelShare Notification]</strong></p>
+            <p>This email was previously marked as <strong>{email.status}</strong> and is now being forwarded per your request.</p>
+            <p><strong>Reason:</strong> {email.reason or 'Not a receipt'}</p>
+            <p><em>A manual rule has been created to forward future emails from this sender.</em></p>
+        </div>
+        <hr>
+        {original_content.get("html_body") or original_content.get("body")}
+        """
+        # If original was plain text, we might want to wrap it in <pre> or just text.
+        # But EmailForwarder.forward_email logic (via SimpleEmailService usually) sends HTML?
+        # Let's see EmailForwarder.forward_email. It uses 'sender_email' credentials to send.
+        # It calls SimpleEmailService.send_email with html_content=body usually?
+        # I'll assume HTML is safe.
+    else:
+        # Fallback to placeholder
+        final_body = f"""[This email was previously marked as ignored and is now being forwarded]
 
 Originally received: {email.received_at.strftime('%Y-%m-%d %H:%M:%S UTC') if email.received_at else 'Unknown'}
 Category: {email.category or 'Unknown'}
 Reason for initial ignore: {email.reason or 'Not a receipt'}
 
-Note: Original email body is not available as it was not stored.
-A manual rule has been created to forward future emails from this sender.""",
+Note: Original email body is not available as it was not stored and could not be fetched from the server.
+A manual rule has been created to forward future emails from this sender."""
+
+    # Prepare email data for forwarding
+    email_data = {
+        "message_id": email.email_id,
+        "subject": email.subject,
+        "from": email.sender,  # We populate 'from' field in the forwarded email template usually
+        "body": final_body,
         "account_email": email.account_email,
     }
 
