@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v0.2.0...receipt-forwarder-root-v1.0.0) (2025-12-11)
+
+
+### Features
+
+* **auth:** implement single-user authentication (backend middleware + frontend login) ([8eda037](https://github.com/thef4tdaddy/SentinelShare/commit/8eda037a1ad98149552958f98a814348105c29a0))
+* **db:** automate legacy database stamping and migration on startup ([91d9498](https://github.com/thef4tdaddy/SentinelShare/commit/91d94985a8564e77fc5093432f64c44e812f3ea9))
+* release 1.0 preparation (alembic, version bump, templates) ([f074997](https://github.com/thef4tdaddy/SentinelShare/commit/f074997a327fda9ee2da1ee6011206f1d4eaff92))
+
+
+### Bug Fixes
+
+* **settings:** render HTML in email template preview ([53596ae](https://github.com/thef4tdaddy/SentinelShare/commit/53596ae3add21199c502c0253e3e0df237f92f6e))
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([ac5cc1e](https://github.com/thef4tdaddy/SentinelShare/commit/ac5cc1e401a0a1e994bf8f773824ff6f39a8c047))
+
 ## [0.2.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v0.1.0...receipt-forwarder-root-v0.2.0) (2025-12-11)
 
 
