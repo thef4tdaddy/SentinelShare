@@ -164,14 +164,18 @@ def toggle_ignored_email(
             status_code=400, detail="Could not extract email pattern from sender"
         )
 
-    # Create the manual rule
-    manual_rule = ManualRule(
-        email_pattern=email_pattern,
-        subject_pattern=None,
-        priority=DEFAULT_MANUAL_RULE_PRIORITY,
-        purpose=f"Auto-created from ignored email: {email.subject[:50]}",
-    )
-    session.add(manual_rule)
+    # Check if a manual rule with the same email_pattern already exists
+    manual_rule = session.exec(
+        ManualRule.select().where(ManualRule.email_pattern == email_pattern)
+    ).first()
+    if not manual_rule:
+        manual_rule = ManualRule(
+            email_pattern=email_pattern,
+            subject_pattern=None,
+            priority=DEFAULT_MANUAL_RULE_PRIORITY,
+            purpose=f"Auto-created from ignored email: {email.subject[:50]}",
+        )
+        session.add(manual_rule)
 
     # Forward the email now
     target_email = os.environ.get("WIFE_EMAIL")
