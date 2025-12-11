@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 from datetime import datetime, timezone
+from email.utils import parseaddr
 
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import get_session
@@ -11,7 +12,7 @@ from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -148,34 +149,35 @@ def toggle_ignored_email(
         )
 
     # Create a manual rule based on the email sender
-    # Extract domain or email pattern from sender
-    sender = email.sender.lower()
-    email_pattern = None
-
-    # Try to extract email address from sender (format: "Name <email@domain.com>")
-    if "<" in sender and ">" in sender:
-        email_pattern = sender.split("<")[1].split(">")[0].strip()
-    elif "@" in sender:
-        # If it's just an email address
-        email_pattern = sender.strip()
-
-    if not email_pattern:
+    # Extract email address from sender using RFC 5322 compliant parser
+    sender = email.sender
+    # parseaddr returns (realname, email_address)
+    _, email_pattern = parseaddr(sender)
+    
+    if not email_pattern or "@" not in email_pattern:
         raise HTTPException(
             status_code=400, detail="Could not extract email pattern from sender"
         )
+    
+    # Normalize to lowercase for consistency
+    email_pattern = email_pattern.lower().strip()
 
     # Check if a manual rule with the same email_pattern already exists
-    manual_rule = session.exec(
-        ManualRule.select().where(ManualRule.email_pattern == email_pattern)
+    existing_rule = session.exec(
+        select(ManualRule).where(ManualRule.email_pattern == email_pattern)
     ).first()
-    if not manual_rule:
+    if not existing_rule:
+        # Truncate subject intelligently with ellipsis
+        truncated_subject = email.subject[:47] + "..." if len(email.subject) > 50 else email.subject
         manual_rule = ManualRule(
             email_pattern=email_pattern,
             subject_pattern=None,
             priority=DEFAULT_MANUAL_RULE_PRIORITY,
-            purpose=f"Auto-created from ignored email: {email.subject[:50]}",
+            purpose=f"Auto-created from ignored email: {truncated_subject}",
         )
         session.add(manual_rule)
+    else:
+        manual_rule = existing_rule
 
     # Forward the email now
     target_email = os.environ.get("WIFE_EMAIL")

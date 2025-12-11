@@ -67,6 +67,9 @@
 	let activeTab: 'emails' | 'runs' = 'emails';
 	let showModal = false;
 	let selectedEmail: Email | null = null;
+	let isProcessing = false;
+	let successMessage = '';
+	let errorMessage = '';
 
 	async function loadHistory() {
 		loading = true;
@@ -100,6 +103,12 @@
 
 	onMount(() => {
 		loadHistory();
+		// Add keyboard event listener for Escape key
+		window.addEventListener('keydown', handleKeydown);
+		
+		return () => {
+			window.removeEventListener('keydown', handleKeydown);
+		};
 	});
 
 	function handleFilterChange() {
@@ -159,15 +168,31 @@
 	function openModal(email: Email) {
 		selectedEmail = email;
 		showModal = true;
+		successMessage = '';
+		errorMessage = '';
+		// Focus management will be handled by Svelte's auto-focus
 	}
 
 	function closeModal() {
 		showModal = false;
 		selectedEmail = null;
+		successMessage = '';
+		errorMessage = '';
+		isProcessing = false;
+	}
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape' && showModal) {
+			closeModal();
+		}
 	}
 
 	async function confirmToggle() {
-		if (!selectedEmail) return;
+		if (!selectedEmail || isProcessing) return;
+
+		isProcessing = true;
+		errorMessage = '';
+		successMessage = '';
 
 		try {
 			const result = await fetchJson('/actions/toggle-ignored', {
@@ -176,13 +201,18 @@
 				body: JSON.stringify({ email_id: selectedEmail.id })
 			});
 
-			alert(result.message || 'Email forwarded and rule created successfully!');
-			closeModal();
-			// Reload history to see the updated status
-			await loadHistory();
-		} catch (e) {
+			successMessage = result.message || 'Email forwarded and rule created successfully!';
+			
+			// Wait a moment to show success message, then close and reload
+			setTimeout(async () => {
+				closeModal();
+				await loadHistory();
+			}, 1500);
+		} catch (e: any) {
 			console.error('Failed to toggle ignored email', e);
-			alert('Error: Failed to forward email and create rule');
+			// Extract error message from the response if available
+			errorMessage = e?.message || e?.detail || 'Failed to forward email and create rule. Please try again.';
+			isProcessing = false;
 		}
 	}
 </script>
@@ -541,6 +571,10 @@
 	<div
 		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
 		on:click={closeModal}
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="modal-title"
+		aria-describedby="modal-description"
 	>
 		<div
 			class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
@@ -548,19 +582,36 @@
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
-				<h3 class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
+				<h3 id="modal-title" class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
 				<button
 					on:click={closeModal}
 					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
 					title="Close"
+					aria-label="Close modal"
 				>
 					<X size={20} class="text-text-secondary" />
 				</button>
 			</div>
 
+			<!-- Success Message -->
+			{#if successMessage}
+				<div class="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2">
+					<CheckCircle size={20} class="text-emerald-600 flex-shrink-0 mt-0.5" />
+					<p class="text-sm text-emerald-800">{successMessage}</p>
+				</div>
+			{/if}
+
+			<!-- Error Message -->
+			{#if errorMessage}
+				<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+					<AlertCircle size={20} class="text-red-600 flex-shrink-0 mt-0.5" />
+					<p class="text-sm text-red-800">{errorMessage}</p>
+				</div>
+			{/if}
+
 			<!-- Modal Content -->
 			<div class="mb-6">
-				<p class="text-text-secondary mb-4">
+				<p id="modal-description" class="text-text-secondary mb-4">
 					This email was marked as ignored. Do you want to forward it and create a rule to
 					automatically forward similar emails in the future?
 				</p>
@@ -585,10 +636,25 @@
 
 			<!-- Modal Actions -->
 			<div class="flex gap-3 justify-end">
-				<button on:click={closeModal} class="btn btn-secondary"> Cancel </button>
-				<button on:click={confirmToggle} class="btn btn-primary">
-					<RefreshCw size={16} />
-					Forward & Create Rule
+				<button 
+					on:click={closeModal} 
+					class="btn btn-secondary"
+					disabled={isProcessing}
+				> 
+					Cancel 
+				</button>
+				<button 
+					on:click={confirmToggle} 
+					class="btn btn-primary"
+					disabled={isProcessing}
+				>
+					{#if isProcessing}
+						<RefreshCw size={16} class="animate-spin" />
+						Processing...
+					{:else}
+						<RefreshCw size={16} />
+						Forward & Create Rule
+					{/if}
 				</button>
 			</div>
 		</div>
