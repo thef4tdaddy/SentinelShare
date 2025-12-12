@@ -77,8 +77,17 @@ class EmailForwarder:
 
         # Prepare content
         body_content = original_email_data.get("body", "")
-        # Basic HTML newline replacement for safety if plain text is passed
-        body_content_html = body_content.replace(chr(10), "<br>")
+        raw_html_body = original_email_data.get("html_body")
+
+        if raw_html_body and len(raw_html_body.strip()) > 0:
+            # Use the original HTML
+            # Check if it's a full document (has <html> tag)
+            # If our template wraps it in another <html>, we might want to strip the original outer tags
+            # But specific complex parsing is risky. Most clients render nested HTML okay.
+            body_content_html = raw_html_body
+        else:
+            # Basic HTML newline replacement for safety if plain text is passed
+            body_content_html = body_content.replace(chr(10), "<br>")
 
         # Construct Action Links
         app_url = os.environ.get("APP_URL")

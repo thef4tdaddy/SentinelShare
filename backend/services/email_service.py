@@ -133,6 +133,7 @@ class EmailService:
                                 "subject": subject,
                                 "from": sender,
                                 "body": body,
+                                "html_body": html_body,
                                 "date": msg.get("Date"),
                                 "account_email": email_user,
                             }
