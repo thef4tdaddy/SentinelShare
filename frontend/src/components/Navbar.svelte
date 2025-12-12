@@ -19,7 +19,7 @@
 				alt="SentinelShare"
 				class="h-14 w-auto border-2 border-primary bg-white rounded-lg shadow-sm"
 			/>
-			<span class="text-xs font-mono text-gray-400 mt-2">v1.0.0</span>
+			<span class="text-xs font-mono text-gray-400 mt-2">v{__APP_VERSION__}</span>
 		</div>
 
 		<!-- Navigation Links -->

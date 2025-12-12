@@ -5,162 +5,147 @@ import * as api from '../lib/api';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
-    fetchJson: vi.fn(),
+	fetchJson: vi.fn()
 }));
 
 describe('Dashboard Component', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-    it('renders stats cards', async () => {
-        const mockStats = {
-            total_forwarded: 10,
-            total_blocked: 5,
-            total_processed: 15,
-        };
-        const mockActivity = [];
+	it('renders stats cards', async () => {
+		const mockStats = {
+			total_forwarded: 10,
+			total_blocked: 5,
+			total_processed: 15
+		};
+		const mockActivity: Record<string, unknown>[] = [];
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        render(Dashboard);
+		render(Dashboard);
 
-        await waitFor(() => {
-            expect(screen.getByText('Total Processed')).toBeTruthy();
-            expect(screen.getByText('Forwarded')).toBeTruthy();
-            expect(screen.getByText('Blocked/Ignored')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('Total Processed')).toBeTruthy();
+			expect(screen.getByText('Forwarded')).toBeTruthy();
+			expect(screen.getByText('Blocked/Ignored')).toBeTruthy();
+		});
+	});
 
-    it('displays correct stats values', async () => {
-        const mockStats = {
-            total_forwarded: 42,
-            total_blocked: 13,
-            total_processed: 55,
-        };
-        const mockActivity = [];
+	it('displays correct stats values', async () => {
+		const mockStats = {
+			total_forwarded: 42,
+			total_blocked: 13,
+			total_processed: 55
+		};
+		const mockActivity: Record<string, unknown>[] = [];
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        render(Dashboard);
+		render(Dashboard);
 
-        await waitFor(() => {
-            expect(screen.getByText('55')).toBeTruthy();
-            expect(screen.getByText('42')).toBeTruthy();
-            expect(screen.getByText('13')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('55')).toBeTruthy();
+			expect(screen.getByText('42')).toBeTruthy();
+			expect(screen.getByText('13')).toBeTruthy();
+		});
+	});
 
-    it('renders activity feed', async () => {
-        const mockStats = {
-            total_forwarded: 0,
-            total_blocked: 0,
-            total_processed: 0,
-        };
-        const mockActivity = [
-            {
-                id: 1,
-                subject: 'Test Receipt',
-                sender: 'amazon',
-                status: 'forwarded',
-                category: 'amazon',
-                processed_at: new Date().toISOString(),
-            },
-        ];
+	it('renders activity feed', async () => {
+		const mockStats = {
+			total_forwarded: 0,
+			total_blocked: 0,
+			total_processed: 0
+		};
+		const mockActivity = [
+			{
+				id: 1,
+				subject: 'Test Receipt',
+				sender: 'amazon',
+				status: 'forwarded',
+				category: 'amazon',
+				processed_at: new Date().toISOString()
+			}
+		];
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        render(Dashboard);
+		render(Dashboard);
 
-        await waitFor(() => {
-            expect(screen.getByText('Recent Activity')).toBeTruthy();
-            expect(screen.getByText('Test Receipt')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('Recent Activity')).toBeTruthy();
+			expect(screen.getByText('Test Receipt')).toBeTruthy();
+		});
+	});
 
-    it('handles empty activity', async () => {
-        const mockStats = {
-            total_forwarded: 0,
-            total_blocked: 0,
-            total_processed: 0,
-        };
-        const mockActivity = [];
+	it('handles empty activity', async () => {
+		const mockStats = {
+			total_forwarded: 0,
+			total_blocked: 0,
+			total_processed: 0
+		};
+		const mockActivity: Record<string, unknown>[] = [];
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        render(Dashboard);
+		render(Dashboard);
 
-        await waitFor(() => {
-            expect(screen.getByText('No activity found.')).toBeTruthy();
-        });
-    });
+		await waitFor(() => {
+			expect(screen.getByText('No activity found.')).toBeTruthy();
+		});
+	});
 
-    it('calls correct API endpoints on mount', async () => {
-        const mockStats = {
-            total_forwarded: 0,
-            total_blocked: 0,
-            total_processed: 0,
-        };
-        const mockActivity = [];
+	it('calls correct API endpoints on mount', async () => {
+		const mockStats = {
+			total_forwarded: 0,
+			total_blocked: 0,
+			total_processed: 0
+		};
+		const mockActivity: Record<string, unknown>[] = [];
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        render(Dashboard);
+		render(Dashboard);
 
-        await waitFor(() => {
-            expect(api.fetchJson).toHaveBeenCalledWith('/dashboard/stats');
-            expect(api.fetchJson).toHaveBeenCalledWith('/dashboard/activity');
-        });
-    });
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith('/dashboard/stats');
+			expect(api.fetchJson).toHaveBeenCalledWith('/dashboard/activity');
+		});
+	});
 
-    it('handles API errors gracefully', async () => {
-        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-        
-        (api.fetchJson as any).mockRejectedValueOnce(new Error('API Error'));
+	it('handles API errors gracefully', async () => {
+		const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-        render(Dashboard);
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
 
-        await waitFor(() => {
-            expect(consoleSpy).toHaveBeenCalledWith(
-                'Failed to load dashboard data',
-                expect.any(Error)
-            );
-        });
+		render(Dashboard);
 
-        consoleSpy.mockRestore();
-    });
+		await waitFor(() => {
+			expect(consoleSpy).toHaveBeenCalledWith('Failed to load dashboard data', expect.any(Error));
+		});
 
-    it('displays stats with subtexts', async () => {
-        const mockStats = {
-            total_forwarded: 10,
-            total_blocked: 5,
-            total_processed: 15,
-        };
-        const mockActivity = [];
+		consoleSpy.mockRestore();
+	});
 
-        (api.fetchJson as any)
-            .mockResolvedValueOnce(mockStats)
-            .mockResolvedValueOnce(mockActivity);
+	it('displays stats with subtexts', async () => {
+		const mockStats = {
+			total_forwarded: 10,
+			total_blocked: 5,
+			total_processed: 15
+		};
+		const mockActivity: Record<string, unknown>[] = [];
 
-        render(Dashboard);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockStats).mockResolvedValueOnce(mockActivity);
 
-        await waitFor(() => {
-            expect(screen.getByText('Receipts found')).toBeTruthy();
-            expect(screen.getByText('Not receipts')).toBeTruthy();
-        });
-    });
+		render(Dashboard);
+
+		await waitFor(() => {
+			expect(screen.getByText('Receipts found')).toBeTruthy();
+			expect(screen.getByText('Not receipts')).toBeTruthy();
+		});
+	});
 });
