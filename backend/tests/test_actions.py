@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -24,7 +24,7 @@ def session_fixture():
 @pytest.fixture(name="sample_ignored_email")
 def sample_ignored_email_fixture(session: Session):
     """Create a sample ignored email for testing"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     email = ProcessedEmail(
         email_id="ignored-email@test.com",
@@ -79,8 +79,8 @@ class TestToggleIgnored:
             email_id="formatted@test.com",
             subject="Test Email",
             sender="John Doe <john@example.com>",
-            received_at=datetime.utcnow(),
-            processed_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
             status="ignored",
             account_email="user1@example.com",
             category=None,
@@ -118,8 +118,8 @@ class TestToggleIgnored:
             email_id="forwarded@test.com",
             subject="Test Email",
             sender="test@example.com",
-            received_at=datetime.utcnow(),
-            processed_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
             status="forwarded",
             account_email="user1@example.com",
             category="shopping",
@@ -180,8 +180,8 @@ class TestToggleIgnored:
             email_id="invalid@test.com",
             subject="Test Email",
             sender="InvalidSender",
-            received_at=datetime.utcnow(),
-            processed_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
             status="ignored",
             account_email="user1@example.com",
             category=None,

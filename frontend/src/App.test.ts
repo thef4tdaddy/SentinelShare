@@ -11,13 +11,24 @@ vi.mock('./lib/api', () => ({
 describe('App Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Mock API calls for Dashboard
+// Mock API calls for Dashboard and Auth
 		vi.mocked(api.fetchJson).mockResolvedValue([]);
+		
+		// Mock globally for fetch if it's used directly in onMount
+		global.fetch = vi.fn(() => 
+			Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ authenticated: true }),
+			})
+		) as unknown as typeof fetch;
 	});
 
-	it('renders with Navbar', () => {
+	it('renders with Navbar', async () => {
 		render(App);
-		expect(screen.getByAltText('SentinelShare')).toBeTruthy();
+		// Wait for loading to finish
+		await waitFor(() => {
+			expect(screen.getByAltText('SentinelShare')).toBeTruthy();
+		});
 	});
 
 	it('renders Dashboard by default', async () => {
@@ -37,6 +48,9 @@ describe('App Component', () => {
 
 		render(App);
 
+		// Wait for dashboard to load first
+		await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy());
+
 		const settingsButton = screen.getByRole('button', { name: 'Settings' });
 		await fireEvent.click(settingsButton);
 
@@ -52,6 +66,9 @@ describe('App Component', () => {
 		vi.mocked(api.fetchJson).mockResolvedValue([]);
 
 		render(App);
+
+		// Wait for dashboard
+		await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy());
 
 		// Click settings first
 		const settingsButton = screen.getByRole('button', { name: 'Settings' });
@@ -80,6 +97,9 @@ describe('App Component', () => {
 		vi.mocked(api.fetchJson).mockResolvedValue([]);
 
 		render(App);
+
+		// Wait for load
+		await waitFor(() => expect(screen.getByRole('button', { name: 'Dashboard' })).toBeTruthy());
 
 		const dashboardButton = screen.getByRole('button', { name: 'Dashboard' });
 		expect(dashboardButton.classList.contains('bg-white')).toBe(true);

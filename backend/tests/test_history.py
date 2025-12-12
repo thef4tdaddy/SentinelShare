@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 import pytest
 from backend.models import ProcessedEmail, ProcessingRun
@@ -24,7 +24,7 @@ def session_fixture():
 @pytest.fixture(name="sample_emails")
 def sample_emails_fixture(session: Session):
     """Create sample emails for testing"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     emails = [
         ProcessedEmail(
@@ -201,8 +201,8 @@ class TestHistoryRuns:
 
         # Create dummy runs to match the expectation of "recent runs"
         run1 = ProcessingRun(
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             emails_checked=3,
             emails_processed=3,
             emails_forwarded=1,
@@ -244,8 +244,8 @@ class TestHistoryRuns:
         # We need total 5 emails, 2 forwarded, 2 blocked, 1 error
         # Run 1: 3 emails (1 fwd, 1 blocked, 1 error)
         run1 = ProcessingRun(
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             emails_checked=3,
             emails_processed=3,
             emails_forwarded=1,
@@ -254,8 +254,8 @@ class TestHistoryRuns:
         )
         # Run 2: 2 emails (1 fwd, 1 blocked)
         run2 = ProcessingRun(
-            started_at=datetime.utcnow() - timedelta(minutes=10),
-            completed_at=datetime.utcnow() - timedelta(minutes=9),
+            started_at=datetime.now(timezone.utc) - timedelta(minutes=10),
+            completed_at=datetime.now(timezone.utc) - timedelta(minutes=9),
             emails_checked=2,
             emails_processed=2,
             emails_forwarded=1,
@@ -291,7 +291,7 @@ class TestHistoryDateFiltering:
         """Test filtering emails by date_from parameter"""
         from backend.routers.history import get_email_history
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         date_from = (now - timedelta(minutes=25)).isoformat()
 
         result = get_email_history(
@@ -307,7 +307,7 @@ class TestHistoryDateFiltering:
         """Test filtering emails by date_to parameter"""
         from backend.routers.history import get_email_history
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         date_to = (now - timedelta(minutes=35)).isoformat()
 
         result = get_email_history(
@@ -321,7 +321,7 @@ class TestHistoryDateFiltering:
         """Test filtering emails by both date_from and date_to"""
         from backend.routers.history import get_email_history
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         date_from = (now - timedelta(minutes=45)).isoformat()
         date_to = (now - timedelta(minutes=15)).isoformat()
 
@@ -362,7 +362,7 @@ class TestHistoryDateFiltering:
         """Test statistics with date_from filter"""
         from backend.routers.history import get_history_stats
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         date_from = (now - timedelta(minutes=25)).isoformat()
 
         result = get_history_stats(date_from=date_from, session=session)
@@ -425,8 +425,8 @@ class TestHistoryStatusValidation:
 def test_create_processing_run(session: Session):
     """Test creating a processing run record"""
     run = ProcessingRun(
-        started_at=datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         emails_checked=10,
         emails_processed=3,
         emails_forwarded=2,
@@ -448,8 +448,8 @@ def test_create_processing_run(session: Session):
 def test_processing_run_with_no_emails(session: Session):
     """Test processing run when no emails are found"""
     run = ProcessingRun(
-        started_at=datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         emails_checked=0,
         emails_processed=0,
         emails_forwarded=0,
@@ -470,8 +470,8 @@ def test_processing_run_with_no_emails(session: Session):
 def test_processing_run_with_error(session: Session):
     """Test processing run with error"""
     run = ProcessingRun(
-        started_at=datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         emails_checked=5,
         emails_processed=0,
         emails_forwarded=0,
@@ -492,7 +492,7 @@ def test_get_processing_runs(session: Session):
     """Test retrieving processing runs via API"""
     from datetime import timedelta
 
-    base_time = datetime.utcnow()
+    base_time = datetime.now(timezone.utc)
 
     # Create multiple runs with explicitly different timestamps
     for i in range(5):
@@ -520,8 +520,8 @@ def test_get_processing_runs(session: Session):
 def test_get_specific_processing_run(session: Session):
     """Test retrieving a specific processing run by ID"""
     run = ProcessingRun(
-        started_at=datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         emails_checked=10,
         emails_processed=5,
         emails_forwarded=3,
@@ -557,8 +557,8 @@ def test_processing_run_pagination(session: Session):
     # Create 10 runs
     for i in range(10):
         run = ProcessingRun(
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             emails_checked=i,
             emails_processed=0,
             emails_forwarded=0,

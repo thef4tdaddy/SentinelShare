@@ -1,5 +1,6 @@
+
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import Session, create_engine, SQLModel, select
 from sqlmodel.pool import StaticPool
 from backend.models import ProcessedEmail, Stats, GlobalSettings, Preference, ManualRule
@@ -26,7 +27,7 @@ class TestProcessedEmail:
             email_id="test123@example.com",
             subject="Test Email",
             sender="sender@example.com",
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             status="forwarded",
             category="amazon",
             amount=50.00,
@@ -54,7 +55,7 @@ class TestProcessedEmail:
             email_id="duplicate@example.com",
             subject="Email 1",
             sender="sender@example.com",
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             status="forwarded"
         )
         session.add(email1)
@@ -65,7 +66,7 @@ class TestProcessedEmail:
             email_id="duplicate@example.com",
             subject="Email 2",
             sender="sender@example.com",
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             status="forwarded"
         )
         session.add(email2)
@@ -79,7 +80,7 @@ class TestProcessedEmail:
             email_id="test@example.com",
             subject="Test",
             sender="sender@example.com",
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             status="forwarded"
         )
         
@@ -96,7 +97,7 @@ class TestProcessedEmail:
             email_id="minimal@example.com",
             subject="Minimal Email",
             sender="sender@example.com",
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             status="ignored"
         )
         
