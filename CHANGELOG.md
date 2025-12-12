@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.0.0...receipt-forwarder-root-v1.0.1) (2025-12-12)
+
+
+### Bug Fixes
+
+* add itsdangerous dependency for sessions and finalize agent config ([b38e0d9](https://github.com/thef4tdaddy/SentinelShare/commit/b38e0d985058c5d6a333887f6fabd835fd64f6ac))
+* add missing sqlmodel import to migration ([623eff0](https://github.com/thef4tdaddy/SentinelShare/commit/623eff0c95dbb41002d1a3d2722825590489085d))
+* generate initial tables migration to resolve missing relation errors ([da2cbf8](https://github.com/thef4tdaddy/SentinelShare/commit/da2cbf8e8ceb8e5817694eeda7a1d923d6366b2c))
+* reorder middleware to ensure session works in auth middleware ([180e41e](https://github.com/thef4tdaddy/SentinelShare/commit/180e41e3efdb2f9815cf1e3359a21498b35eb904))
+
 ## [1.0.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v0.2.0...receipt-forwarder-root-v1.0.0) (2025-12-11)
 
 
