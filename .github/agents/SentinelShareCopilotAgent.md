@@ -1,13 +1,6 @@
 ---
 name: Sentinel Share Copilot Agent
 description: A comprehensive development assistant for SentinelShare, knowledgeable in the full architecture, rules, and patterns.
-tools:
-  - run-command
-  - read-file
-  - write-file
-  - view-file
-  - replace-file-content
-  - multi-replace-file-content
 ---
 
 # SentinelShare - System Configuration & Rules
