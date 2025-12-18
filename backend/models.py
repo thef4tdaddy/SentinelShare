@@ -11,12 +11,14 @@ def utc_now():
 
 class ProcessedEmail(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    email_id: str = Field(index=True, unique=True)  # Message-ID header
-    subject: str
-    sender: str
-    received_at: datetime
-    processed_at: datetime = Field(default_factory=utc_now)
-    status: str  # "forwarded", "blocked", "error"
+    email_id: Optional[str] = Field(
+        default=None, index=True, unique=True
+    )  # Message-ID header
+    subject: Optional[str] = None
+    sender: Optional[str] = None
+    received_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = Field(default_factory=utc_now)
+    status: Optional[str] = None  # "forwarded", "blocked", "error"
     account_email: Optional[str] = None  # The account that received this email
     category: Optional[str] = None  # "amazon", "receipt", "spam", etc.
     amount: Optional[float] = None
