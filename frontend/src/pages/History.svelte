@@ -12,7 +12,10 @@
 		ChevronRight,
 		History as HistoryIcon,
 		RefreshCw,
-		X
+		X,
+		Search,
+		ThumbsUp,
+		ThumbsDown
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -38,6 +41,18 @@
 		blocked: number;
 		errors: number;
 		email_ids: number[];
+	}
+
+	interface AnalysisOutcome {
+		email_id: number;
+		analysis: {
+			steps: Array<{
+				step: string;
+				result: boolean;
+				detail?: string;
+			}>;
+			final_decision: boolean;
+		};
 	}
 
 	let emails: Email[] = [];
@@ -69,6 +84,8 @@
 	let showModal = false;
 	let selectedEmail: Email | null = null;
 	let isProcessing = false;
+	let isAnalyzing = false;
+	let selectedAnalysis: AnalysisOutcome | null = null;
 	let successMessage = '';
 	let errorMessage = '';
 
@@ -198,12 +215,48 @@
 				closeModal();
 				await loadHistory();
 			}, 1500);
-		} catch (e: unknown) {
-			console.error('Failed to toggle ignored email', e);
-			// Extract error message from the response if available
-			const err = e as { message?: string; detail?: string };
-			errorMessage =
-				err?.message || err?.detail || 'Failed to forward email and create rule. Please try again.';
+		} catch (e) {
+			console.error('Toggle failed', e);
+			errorMessage = 'Failed to toggle email status.';
+		} finally {
+			isProcessing = false;
+		}
+	}
+
+	async function reprocessEmail(emailId: number) {
+		if (!selectedEmail) return;
+		isAnalyzing = true;
+		errorMessage = '';
+		try {
+			selectedAnalysis = await fetchJson(`/api/history/reprocess/${emailId}`, {
+				method: 'POST'
+			});
+		} catch (e) {
+			console.error('Failed to analyze email', e);
+			errorMessage = 'Retrospective analysis failed. Content may have expired.';
+		} finally {
+			isAnalyzing = false;
+		}
+	}
+
+	async function submitFeedback(isReceipt: boolean) {
+		if (!selectedEmail) return;
+		isProcessing = true;
+		try {
+			await fetchJson('/api/history/feedback', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email_id: selectedEmail.id, is_receipt: isReceipt })
+			});
+			successMessage = 'Feedback recorded. A rule has been suggested in Shadow Mode.';
+			setTimeout(() => {
+				closeModal();
+				loadHistory();
+			}, 2000);
+		} catch (e) {
+			console.error('Failed to submit feedback', e);
+			errorMessage = 'Failed to submit feedback.';
+		} finally {
 			isProcessing = false;
 		}
 	}
@@ -273,7 +326,7 @@
 		class="px-4 py-2 font-medium transition-all {activeTab === 'emails'
 			? 'text-primary border-b-2 border-primary'
 			: 'text-text-secondary hover:text-text-main'}"
-		on:click={() => (activeTab = 'emails')}
+		onclick={() => (activeTab = 'emails')}
 	>
 		All Emails
 	</button>
@@ -281,7 +334,7 @@
 		class="px-4 py-2 font-medium transition-all {activeTab === 'runs'
 			? 'text-primary border-b-2 border-primary'
 			: 'text-text-secondary hover:text-text-main'}"
-		on:click={() => (activeTab = 'runs')}
+		onclick={() => (activeTab = 'runs')}
 	>
 		Processing Runs
 	</button>
@@ -298,7 +351,7 @@
 				<select
 					id="status-filter"
 					bind:value={filters.status}
-					on:change={handleFilterChange}
+					onchange={handleFilterChange}
 					class="input"
 				>
 					<option value="">All</option>
@@ -317,7 +370,7 @@
 					id="date-from"
 					type="datetime-local"
 					bind:value={filters.date_from}
-					on:change={handleFilterChange}
+					onchange={handleFilterChange}
 					class="input"
 				/>
 			</div>
@@ -328,13 +381,13 @@
 					id="date-to"
 					type="datetime-local"
 					bind:value={filters.date_to}
-					on:change={handleFilterChange}
+					onchange={handleFilterChange}
 					class="input"
 				/>
 			</div>
 
 			<button
-				on:click={() => {
+				onclick={() => {
 					filters = { status: '', date_from: '', date_to: '' };
 					handleFilterChange();
 				}}
@@ -412,7 +465,7 @@
 								<td class="py-3 px-4">
 									{#if email.status === 'ignored'}
 										<button
-											on:click={() => openModal(email)}
+											onclick={() => openModal(email)}
 											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
 												email.status
 											)} cursor-pointer hover:opacity-80 transition-opacity"
@@ -431,6 +484,17 @@
 											{email.status}
 										</span>
 									{/if}
+									<button
+										onclick={() => {
+											selectedEmail = email;
+											showModal = true;
+											reprocessEmail(email.id);
+										}}
+										class="ml-2 p-1 text-gray-400 hover:text-primary transition-colors"
+										title="Analyze Detection Logic"
+									>
+										<Search size={14} />
+									</button>
 								</td>
 								<td class="py-3 px-4 font-medium text-text-main">
 									<div class="truncate max-w-[300px]" title={email.subject}>
@@ -472,7 +536,7 @@
 				</div>
 				<div class="flex gap-2">
 					<button
-						on:click={() => goToPage(pagination.page - 1)}
+						onclick={() => goToPage(pagination.page - 1)}
 						disabled={pagination.page === 1}
 						class="btn btn-secondary btn-sm"
 					>
@@ -480,7 +544,7 @@
 						Previous
 					</button>
 					<button
-						on:click={() => goToPage(pagination.page + 1)}
+						onclick={() => goToPage(pagination.page + 1)}
 						disabled={pagination.page === pagination.total_pages}
 						class="btn btn-secondary btn-sm"
 					>
@@ -560,23 +624,30 @@
 
 <!-- Modal for confirming toggle action -->
 {#if showModal && selectedEmail}
-	<div
-		class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-		on:click={closeModal}
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="modal-title"
-		aria-describedby="modal-description"
-	>
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+		<!-- Backdrop -->
 		<div
-			class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6"
-			on:click={(e) => e.stopPropagation()}
+			class="absolute inset-0 bg-black bg-opacity-50"
+			onclick={closeModal}
+			onkeydown={(e) => e.key === 'Enter' && closeModal()}
+			role="button"
+			tabindex="0"
+			aria-label="Close modal backdrop"
+		></div>
+
+		<!-- Modal Content -->
+		<div
+			class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="modal-title"
+			aria-describedby="modal-description"
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
 				<h3 id="modal-title" class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
 				<button
-					on:click={closeModal}
+					onclick={closeModal}
 					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
 					title="Close"
 					aria-label="Close modal"
@@ -605,43 +676,91 @@
 
 			<!-- Modal Content -->
 			<div class="mb-6">
-				<p id="modal-description" class="text-text-secondary mb-4">
-					This email was marked as ignored. Do you want to forward it and create a rule to
-					automatically forward similar emails in the future?
+				{#if isAnalyzing}
+					<div class="py-12 text-center">
+						<RefreshCw size={24} class="animate-spin text-primary mx-auto mb-2" />
+						<p class="text-sm text-text-secondary">Analyzing rule logic...</p>
+					</div>
+				{:else if selectedAnalysis}
+					<div class="mb-4">
+						<h4 class="text-sm font-bold text-text-main mb-2">Detection Trace</h4>
+						<div class="bg-gray-50 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+							{#each selectedAnalysis.analysis.steps as step (step.step)}
+								<div class="flex items-center justify-between text-xs">
+									<span class="text-text-secondary">{step.step}:</span>
+									<span class={step.result ? 'text-emerald-600 font-bold' : 'text-red-500'}>
+										{step.result ? 'MATCH' : 'MISS'}
+									</span>
+								</div>
+								{#if step.detail}
+									<p class="text-[10px] text-gray-400 italic ml-2">{step.detail}</p>
+								{/if}
+							{/each}
+						</div>
+						<div
+							class="mt-3 p-2 rounded {selectedAnalysis.analysis.final_decision
+								? 'bg-emerald-50 text-emerald-700'
+								: 'bg-red-50 text-red-700'} text-xs font-bold text-center"
+						>
+							Final Decision: {selectedAnalysis.analysis.final_decision
+								? 'RECEIPT'
+								: 'NOT A RECEIPT'}
+						</div>
+					</div>
+				{/if}
+
+				<p id="modal-description" class="text-text-secondary mb-4 text-sm">
+					Help improve the adaptive rule engine by providing feedback.
 				</p>
 
-				<div class="bg-gray-50 rounded-lg p-4 space-y-2">
+				<div class="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-100">
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
-						<p class="text-sm text-text-main break-all">{selectedEmail.subject}</p>
+						<p class="text-sm text-text-main font-medium break-all">{selectedEmail.subject}</p>
 					</div>
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Sender:</span>
 						<p class="text-sm text-text-main break-all">{selectedEmail.sender}</p>
 					</div>
-					{#if selectedEmail.reason}
-						<div>
-							<span class="text-xs font-semibold text-text-secondary uppercase">Reason:</span>
-							<p class="text-sm text-text-main">{selectedEmail.reason}</p>
-						</div>
-					{/if}
 				</div>
 			</div>
 
 			<!-- Modal Actions -->
-			<div class="flex gap-3 justify-end">
-				<button on:click={closeModal} class="btn btn-secondary" disabled={isProcessing}>
-					Cancel
-				</button>
-				<button on:click={confirmToggle} class="btn btn-primary" disabled={isProcessing}>
-					{#if isProcessing}
-						<RefreshCw size={16} class="animate-spin" />
-						Processing...
-					{:else}
-						<RefreshCw size={16} />
-						Forward & Create Rule
+			<div class="flex flex-wrap gap-3 justify-between">
+				<div class="flex gap-2">
+					<button
+						onclick={() => submitFeedback(true)}
+						class="btn btn-secondary border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+						disabled={isProcessing}
+						title="Mark as SHOULD have been a receipt"
+					>
+						<ThumbsUp size={16} />
+					</button>
+					<button
+						onclick={() => submitFeedback(false)}
+						class="btn btn-secondary border-red-200 text-red-700 hover:bg-red-50"
+						disabled={isProcessing}
+						title="Mark as NOT a receipt"
+					>
+						<ThumbsDown size={16} />
+					</button>
+				</div>
+
+				<div class="flex gap-2">
+					<button onclick={closeModal} class="btn btn-secondary" disabled={isProcessing}>
+						Close
+					</button>
+					{#if selectedEmail.status === 'ignored'}
+						<button onclick={confirmToggle} class="btn btn-primary" disabled={isProcessing}>
+							{#if isProcessing}
+								<RefreshCw size={16} class="animate-spin" />
+							{:else}
+								<RefreshCw size={16} />
+								Forward & Create Rule
+							{/if}
+						</button>
 					{/if}
-				</button>
+				</div>
 			</div>
 		</div>
 	</div>

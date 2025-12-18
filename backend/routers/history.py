@@ -1,10 +1,15 @@
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import List, Optional
 
 from backend.database import get_session
-from backend.models import ProcessedEmail, ProcessingRun
-from fastapi import APIRouter, Depends, HTTPException, Query
+from backend.models import ManualRule, ProcessedEmail, ProcessingRun
+from backend.security import decrypt_content
+from backend.services.detector import ReceiptDetector
+from backend.services.email_service import EmailService
+from backend.services.forwarder import EmailForwarder
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -95,6 +100,143 @@ def get_email_history(
             "total": total,
             "total_pages": (total + per_page - 1) // per_page,
         },
+    }
+
+
+@router.post("/reprocess/{email_id}")
+def reprocess_email(email_id: int, session: Session = Depends(get_session)):
+    """Re-analyze a specific email using current rules and logic."""
+    email = session.get(ProcessedEmail, email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    # 1. Get content from encrypted storage
+    body = decrypt_content(email.encrypted_body)
+    html_body = decrypt_content(email.encrypted_html)
+
+    # 2. Fallback to IMAP if content is gone (retention expired)
+    if not body and not html_body:
+        creds = EmailService.get_credentials_for_account(email.account_email)
+        if not creds:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot fallback to IMAP: Credentials missing for this account",
+            )
+
+        fetched = EmailService.fetch_email_by_id(
+            email.account_email, creds["password"], email.email_id, creds["imap_server"]
+        )
+        if not fetched:
+            raise HTTPException(status_code=404, detail="Email not found in IMAP inbox")
+
+        body = fetched.get("body", "")
+        html_body = fetched.get("html_body", "")
+
+    # 3. Analyze
+    email_data = {
+        "subject": email.subject,
+        "from": email.sender,
+        "body": body,
+        "html_body": html_body,
+    }
+
+    analysis = ReceiptDetector.debug_is_receipt(email_data, session=session)
+    category = ReceiptDetector.categorize_receipt(email_data)
+
+    return {
+        "analysis": analysis,
+        "category": category,
+        "current_status": email.status,
+        "suggested_status": "forwarded" if analysis["final_decision"] else "blocked",
+    }
+
+
+@router.post("/feedback")
+def submit_feedback(
+    email_id: int = Body(...),
+    is_receipt: bool = Body(...),
+    session: Session = Depends(get_session),
+):
+    """Store user feedback for future rule learning."""
+    email = session.get(ProcessedEmail, email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    # Store feedback
+    email.reason = f"User Feedback: Should be receipt={is_receipt}. " + (
+        email.reason or ""
+    )
+    session.add(email)
+
+    # 2. If it SHOULD have been a receipt, generate a suggested rule
+    if is_receipt:
+        from backend.services.learning_service import LearningService
+
+        suggestion = LearningService.generate_rule_from_email(email)
+        if suggestion:
+            new_rule = ManualRule(
+                email_pattern=suggestion["email_pattern"],
+                subject_pattern=suggestion["subject_pattern"],
+                purpose=suggestion["purpose"],
+                confidence=suggestion["confidence"],
+                is_shadow_mode=True,  # Always start in shadow mode
+                match_count=0,
+            )
+            session.add(new_rule)
+
+    session.commit()
+    return {"status": "success", "message": "Feedback recorded and rule suggested"}
+
+
+@router.post("/reprocess-all-ignored")
+def reprocess_all_ignored(session: Session = Depends(get_session)):
+    """Reprocess all 'ignored' emails from the last 24 hours (if bodies are available)."""
+    from datetime import timezone
+
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(hours=24)
+
+    ignored_emails = session.exec(
+        select(ProcessedEmail)
+        .where(ProcessedEmail.status == "ignored")
+        .where(ProcessedEmail.processed_at >= day_ago)
+        .where(ProcessedEmail.encrypted_body != None)
+    ).all()
+
+    reprocessed_count = 0
+    forwarded_count = 0
+    target_email = os.environ.get("WIFE_EMAIL")
+
+    for email in ignored_emails:
+        body = decrypt_content(email.encrypted_body)
+        html_body = decrypt_content(email.encrypted_html)
+
+        email_data = {
+            "subject": email.subject,
+            "from": email.sender,
+            "body": body,
+            "html_body": html_body,
+            "message_id": email.email_id,
+        }
+
+        is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
+        if is_receipt and target_email:
+            success = EmailForwarder.forward_email(email_data, target_email)
+            if success:
+                email.status = "forwarded"
+                email.category = ReceiptDetector.categorize_receipt(email_data)
+                email.reason = "Reprocessed: Now detected as receipt"
+                session.add(email)
+                forwarded_count += 1
+
+        reprocessed_count += 1
+
+    session.commit()
+    return {
+        "status": "success",
+        "reprocessed": reprocessed_count,
+        "newly_forwarded": forwarded_count,
+        "message": f"Successfully reprocessed {reprocessed_count} emails. {forwarded_count} were newly forwarded.",
     }
 
 

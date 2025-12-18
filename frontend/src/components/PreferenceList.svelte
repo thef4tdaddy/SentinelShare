@@ -122,7 +122,7 @@
 					{/if}
 				</div>
 			{/each}
-			<button on:click={addItem} disabled={loading} class="btn btn-accent h-[42px] px-6">
+			<button onclick={addItem} disabled={loading} class="btn btn-accent h-[42px] px-6">
 				{#if loading}
 					...
 				{:else}
@@ -160,7 +160,7 @@
 						<td class="py-3 px-4 text-right">
 							<button
 								class="p-2 text-text-secondary hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-								on:click={() => item.id && deleteItem(item.id)}
+								onclick={() => item.id && deleteItem(item.id)}
 								title="Delete"
 							>
 								<Trash2 size={16} />

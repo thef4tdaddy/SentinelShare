@@ -1,79 +1,82 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { fetchJson, API_BASE } from './api';
 
+// Explicitly type the global fetch mock
+// const fetchMock = globalThis.fetch as Mock;
+
 describe('API Module', () => {
-    beforeEach(() => {
-        global.fetch = vi.fn();
-    });
+	beforeEach(() => {
+		globalThis.fetch = vi.fn();
+	});
 
-    afterEach(() => {
-        vi.restoreAllMocks();
-    });
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-    it('exports correct API_BASE', () => {
-        expect(API_BASE).toBe('/api');
-    });
+	it('exports correct API_BASE', () => {
+		expect(API_BASE).toBe('/api');
+	});
 
-    it('makes a GET request by default', async () => {
-        const mockData = { message: 'success' };
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockData,
-        });
+	it('makes a GET request by default', async () => {
+		const mockData = { message: 'success' };
+		(globalThis.fetch as Mock).mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockData
+		});
 
-        const result = await fetchJson('/test');
-        
-        expect(global.fetch).toHaveBeenCalledWith('/api/test', {});
-        expect(result).toEqual(mockData);
-    });
+		const result = await fetchJson('/test');
 
-    it('makes a POST request with options', async () => {
-        const mockData = { id: 1 };
-        const requestBody = { name: 'test' };
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockData,
-        });
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test', {});
+		expect(result).toEqual(mockData);
+	});
 
-        const result = await fetchJson('/test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-        });
+	it('makes a POST request with options', async () => {
+		const mockData = { id: 1 };
+		const requestBody = { name: 'test' };
+		(globalThis.fetch as Mock).mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockData
+		});
 
-        expect(global.fetch).toHaveBeenCalledWith('/api/test', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
-        });
-        expect(result).toEqual(mockData);
-    });
+		const result = await fetchJson('/test', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(requestBody)
+		});
 
-    it('throws error when response is not ok', async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: false,
-            statusText: 'Not Found',
-        });
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(requestBody)
+		});
+		expect(result).toEqual(mockData);
+	});
 
-        await expect(fetchJson('/test')).rejects.toThrow('API Error: Not Found');
-    });
+	it('throws error when response is not ok', async () => {
+		(globalThis.fetch as Mock).mockResolvedValueOnce({
+			ok: false,
+			statusText: 'Not Found'
+		});
 
-    it('makes a DELETE request', async () => {
-        const mockData = { success: true };
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockData,
-        });
+		await expect(fetchJson('/test')).rejects.toThrow('API Error: Not Found');
+	});
 
-        const result = await fetchJson('/test/1', { method: 'DELETE' });
+	it('makes a DELETE request', async () => {
+		const mockData = { success: true };
+		(globalThis.fetch as Mock).mockResolvedValueOnce({
+			ok: true,
+			json: async () => mockData
+		});
 
-        expect(global.fetch).toHaveBeenCalledWith('/api/test/1', { method: 'DELETE' });
-        expect(result).toEqual(mockData);
-    });
+		const result = await fetchJson('/test/1', { method: 'DELETE' });
 
-    it('handles network errors', async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test/1', { method: 'DELETE' });
+		expect(result).toEqual(mockData);
+	});
 
-        await expect(fetchJson('/test')).rejects.toThrow('Network error');
-    });
+	it('handles network errors', async () => {
+		(globalThis.fetch as Mock).mockRejectedValueOnce(new Error('Network error'));
+
+		await expect(fetchJson('/test')).rejects.toThrow('Network error');
+	});
 });

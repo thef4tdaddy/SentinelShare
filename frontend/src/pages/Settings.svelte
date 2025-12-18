@@ -10,7 +10,8 @@
 		Mail,
 		CheckCircle,
 		AlertTriangle,
-		Loader2
+		Loader2,
+		History as HistoryIcon
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
@@ -47,6 +48,19 @@
 		showConfirmDialog = false;
 	}
 
+	async function reprocessAllIgnored() {
+		if (!confirm('Reprocess all ignored emails from last 24h?')) return;
+		loading = true;
+		try {
+			const res = await fetchJson('/api/history/reprocess-all-ignored', { method: 'POST' });
+			alert(res.message);
+		} catch {
+			alert('Failed to reprocess emails');
+		} finally {
+			loading = false;
+		}
+	}
+
 	async function checkConnections() {
 		checkingConnections = true;
 		try {
@@ -76,11 +90,15 @@
 	</div>
 
 	<div class="flex gap-2">
-		<button on:click={checkConnections} disabled={checkingConnections} class="btn btn-secondary">
+		<button onclick={checkConnections} disabled={checkingConnections} class="btn btn-secondary">
 			<Loader2 size={16} class={checkingConnections ? 'animate-spin' : ''} />
 			{checkingConnections ? 'Testing...' : 'Test Connections'}
 		</button>
-		<button on:click={openConfirmDialog} disabled={loading} class="btn btn-primary">
+		<button onclick={reprocessAllIgnored} disabled={loading} class="btn btn-secondary">
+			<HistoryIcon size={16} class={loading ? 'animate-spin' : ''} />
+			Reprocess Ignored
+		</button>
+		<button onclick={openConfirmDialog} disabled={loading} class="btn btn-primary">
 			<Play size={16} class={loading ? 'animate-spin' : ''} />
 			{loading ? 'Running...' : 'Run Now'}
 		</button>

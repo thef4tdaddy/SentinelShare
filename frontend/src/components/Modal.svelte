@@ -88,12 +88,16 @@
 	});
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} />
 
 {#if isOpen}
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		on:click={handleBackdropClick}
+		onclick={handleBackdropClick}
+		onkeydown={handleKeydown}
+		role="button"
+		tabindex="-1"
+		aria-label="Close modal"
 	>
 		<div
 			bind:this={modalElement}
@@ -112,7 +116,7 @@
 					{/if}
 					{#if showCloseButton}
 						<button
-							on:click={onClose}
+							onclick={onClose}
 							class="p-1 rounded-lg text-text-secondary hover:text-text-main hover:bg-gray-100 transition-colors"
 							aria-label="Close"
 						>

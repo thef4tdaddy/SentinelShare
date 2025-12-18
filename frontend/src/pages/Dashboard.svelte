@@ -16,8 +16,6 @@
 
 	let stats = { total_forwarded: 0, total_blocked: 0, total_processed: 0 };
 	let activity: Activity[] = [];
-	let loading = true;
-
 	onMount(async () => {
 		try {
 			const [statsRes, activityRes] = await Promise.all([
@@ -29,8 +27,6 @@
 			activity = activityRes;
 		} catch (e) {
 			console.error('Failed to load dashboard data', e);
-		} finally {
-			loading = false;
 		}
 	});
 </script>

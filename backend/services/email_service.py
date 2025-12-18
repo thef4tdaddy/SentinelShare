@@ -1,12 +1,97 @@
 import email
 import imaplib
+import json
 import logging
 import os
 from datetime import datetime
 from email.header import decode_header
+from typing import Optional
 
 
 class EmailService:
+    @staticmethod
+    def get_all_accounts() -> list:
+        """
+        Retrieves all configured email accounts from environment variables.
+        Handles both the legacy single-account setup and the multi-account EMAIL_ACCOUNTS JSON.
+        """
+        all_accounts = []
+
+        # 1. Check Multi-Account Config
+        email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+        if email_accounts_json:
+            try:
+                try:
+                    accounts = json.loads(email_accounts_json)
+                except json.JSONDecodeError:
+                    # Try single quote fix (common mistake in .env)
+                    fixed_json = email_accounts_json.replace("'", '"')
+                    accounts = json.loads(fixed_json)
+
+                if isinstance(accounts, list):
+                    for acc in accounts:
+                        if acc.get("email") and acc.get("password"):
+                            all_accounts.append(
+                                {
+                                    "email": acc.get("email"),
+                                    "password": acc.get("password"),
+                                    "imap_server": acc.get(
+                                        "imap_server", "imap.gmail.com"
+                                    ),
+                                }
+                            )
+            except Exception as e:
+                print(f"❌ Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
+
+        # 2. Legacy / Primary Account Fallback
+        # Only add if it wasn't already included in EMAIL_ACCOUNTS and exists
+        legacy_user = os.environ.get("GMAIL_EMAIL") or os.environ.get("SENDER_EMAIL")
+        legacy_pass = os.environ.get("GMAIL_PASSWORD") or os.environ.get(
+            "SENDER_PASSWORD"
+        )
+        legacy_imap = os.environ.get("IMAP_SERVER", "imap.gmail.com")
+
+        if legacy_user and legacy_pass:
+            # Check if already added
+            if not any(a["email"].lower() == legacy_user.lower() for a in all_accounts):
+                all_accounts.append(
+                    {
+                        "email": legacy_user,
+                        "password": legacy_pass,
+                        "imap_server": legacy_imap,
+                    }
+                )
+
+        # 3. Dedicated iCloud check
+        icloud_user = os.environ.get("ICLOUD_EMAIL")
+        icloud_pass = os.environ.get("ICLOUD_PASSWORD")
+        if icloud_user and icloud_pass:
+            if not any(a["email"].lower() == icloud_user.lower() for a in all_accounts):
+                all_accounts.append(
+                    {
+                        "email": icloud_user,
+                        "password": icloud_pass,
+                        "imap_server": "imap.mail.me.com",
+                    }
+                )
+
+        return all_accounts
+
+    @staticmethod
+    def get_credentials_for_account(account_email: str) -> Optional[dict]:
+        """
+        Finds credentials for a specific account email.
+        """
+        if not account_email:
+            return None
+
+        accounts = EmailService.get_all_accounts()
+        for acc in accounts:
+            if acc["email"].lower() == account_email.lower():
+                return acc
+
+        return None
+
     @staticmethod
     def test_connection(email_user, email_pass, imap_server="imap.gmail.com"):
         if not email_user or not email_pass:
@@ -144,7 +229,8 @@ class EmailService:
             return emails_data
 
         except Exception as e:
-            print(f"❌ IMAP Error: {e}")
+            # CodeQL: Avoid logging full exception details
+            print(f"❌ IMAP Error: {type(e).__name__}")
             return []
 
     @staticmethod

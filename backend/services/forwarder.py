@@ -1,5 +1,10 @@
+import hashlib
+import hmac
+import json
 import os
 import smtplib
+import urllib.parse
+from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -8,6 +13,7 @@ from urllib.parse import urlparse
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import engine
 from backend.models import GlobalSettings
+from backend.services.email_service import EmailService
 from sqlmodel import Session, select
 
 
@@ -20,39 +26,32 @@ class EmailForwarder:
         smtp_port = 587
 
         if not sender_email or not password:
-            # Fallback to first account in EMAIL_ACCOUNTS
-            import json
+            # Fallback to centralized account logic
+            accounts = EmailService.get_all_accounts()
+            if accounts:
+                first_acc = accounts[0]
+                sender_email = first_acc.get("email")
+                password = first_acc.get("password")
 
-            try:
-                accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-                if accounts_json:
-                    accounts = json.loads(accounts_json)
-                    if accounts and isinstance(accounts, list):
-                        first_acc = accounts[0]
-                        sender_email = first_acc.get("email")
-                        password = first_acc.get("password")
-
-                        # Infer SMTP server from IMAP if possible
-                        imap_s = first_acc.get("imap_server", "")
-                        # Parse hostname from imap_s, handling both URLs and plain hostnames
-                        parsed = urlparse(imap_s)
-                        hostname = parsed.hostname if parsed.hostname else imap_s
-                        if hostname and (
-                            hostname == "gmail.com" or hostname.endswith(".gmail.com")
-                        ):
-                            smtp_server = "smtp.gmail.com"
-                        elif hostname and (
-                            hostname == "mail.me.com"
-                            or hostname.endswith(".mail.me.com")
-                            or hostname == "icloud.com"
-                            or hostname.endswith(".icloud.com")
-                        ):
-                            smtp_server = "smtp.mail.me.com"
-                        elif hostname and hostname.startswith("imap."):
-                            # Try guessing smtp.domain
-                            smtp_server = hostname.replace("imap.", "smtp.", 1)
-            except:
-                pass
+                # Infer SMTP server from IMAP if possible
+                imap_s = first_acc.get("imap_server", "")
+                # Parse hostname from imap_s, handling both URLs and plain hostnames
+                parsed = urlparse(imap_s)
+                hostname = parsed.hostname if parsed.hostname else imap_s
+                if hostname and (
+                    hostname == "gmail.com" or hostname.endswith(".gmail.com")
+                ):
+                    smtp_server = "smtp.gmail.com"
+                elif hostname and (
+                    hostname == "mail.me.com"
+                    or hostname.endswith(".mail.me.com")
+                    or hostname == "icloud.com"
+                    or hostname.endswith(".icloud.com")
+                ):
+                    smtp_server = "smtp.mail.me.com"
+                elif hostname and hostname.startswith("imap."):
+                    # Try guessing smtp.domain
+                    smtp_server = hostname.replace("imap.", "smtp.", 1)
 
         if not sender_email or not password:
             print("❌ SMTP Credentials missing (SENDER_EMAIL or EMAIL_ACCOUNTS)")
@@ -94,11 +93,6 @@ class EmailForwarder:
         # Strip trailing slash if present
         if app_url and app_url.endswith("/"):
             app_url = app_url[:-1]
-
-        import hashlib
-        import hmac
-        import urllib.parse
-        from datetime import datetime, timezone
 
         def make_link(command, arg):
             if app_url:
@@ -202,5 +196,5 @@ class EmailForwarder:
             print(f"✅ Email forwarded to {target_email}")
             return True
         except Exception as e:
-            print(f"❌ Error forwarding email: {e}")
+            print(f"❌ Error forwarding email: {type(e).__name__}")
             return False

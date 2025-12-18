@@ -11,10 +11,34 @@ from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
 
-import json
+
+from datetime import timedelta
+
+from backend.security import encrypt_content
+
+
+def redact_email(email):
+    """
+    Redacts the middle part of an email for safer logging, e.g. "j****e@domain.com"
+    """
+    if not isinstance(email, str) or "@" not in email:
+        return "[REDACTED]"
+    name, domain = email.split("@", 1)
+    if len(name) <= 2:
+        redacted = "*" * len(name)
+    else:
+        redacted = name[0] + "*" * (len(name) - 2) + name[-1]
+    return f"{redacted}@{domain}"
 
 
 def process_emails():
+    # 0. Check for SECRET_KEY to ensure encryption services are available
+    if not os.environ.get("SECRET_KEY"):
+        print(
+            "❌ SECRET_KEY not set. Skipping email processing to prevent encryption errors."
+        )
+        return
+
     print("🔄 Checking for new emails...")
 
     # Get the poll interval for tracking
@@ -36,7 +60,7 @@ def process_emails():
             session.refresh(processing_run)
             run_id = processing_run.id
     except Exception as e:
-        print(f"❌ Error creating processing run record: {e}")
+        print(f"❌ Error creating processing run record: {type(e).__name__}")
         return
 
     all_emails = []
@@ -46,51 +70,30 @@ def process_emails():
     error_msg = None
 
     try:
-        # 1. Try Multi-Account Config
-        email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-        if email_accounts_json:
-            try:
-                try:
-                    accounts = json.loads(email_accounts_json)
-                except json.JSONDecodeError:
-                    # Try single quote fix (common mistake in .env)
-                    fixed_json = email_accounts_json.replace("'", '"')
-                    accounts = json.loads(fixed_json)
-                if isinstance(accounts, list):
-                    print(f"👥 Processing {len(accounts)} accounts...")
-                    for acc in accounts:
-                        user = acc.get("email")
-                        pwd = acc.get("password")
-                        server = acc.get("imap_server", "imap.gmail.com")
+        # 1. Fetch from all configured accounts using centralized logic
+        accounts = EmailService.get_all_accounts()
+        if accounts:
+            print(f"👥 Processing {len(accounts)} accounts...")
+            for i, acc in enumerate(accounts):
+                user = acc.get("email")
+                pwd = acc.get("password")
+                server = acc.get("imap_server", "imap.gmail.com")
 
-                        if user and pwd:
-                            print(f"   Scanning {user}...")
-                            fetched = EmailService.fetch_recent_emails(
-                                user, pwd, server
-                            )
-                            # Tag each email with the source account
-                            for email_data in fetched:
-                                email_data["account_email"] = user
-                            all_emails.extend(fetched)
-            except Exception as e:
-                print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
-                print(f"   Raw Value: [REDACTED]")
-                error_occurred = True
-                error_msg = f"JSON parsing error: {str(e)}"
-
-        # 2. Fallback to Legacy Single Account (if no accounts processed yet)
-        if not all_emails and not email_accounts_json:
-            user = os.environ.get("GMAIL_EMAIL")
-            pwd = os.environ.get("GMAIL_PASSWORD")
-            server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
-
-            if user and pwd:
-                print(f"👤 Processing single account {user}...")
-                fetched = EmailService.fetch_recent_emails(user, pwd, server)
-                # Tag each email with the source account
-                for email_data in fetched:
-                    email_data["account_email"] = user
-                all_emails = fetched
+                if user and pwd:
+                    print(f"   Scanning account #{i+1}...")
+                    try:
+                        fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                        # Tag each email with the source account
+                        for email_data in fetched:
+                            email_data["account_email"] = user
+                        all_emails.extend(fetched)
+                    except Exception as e:
+                        # CodeQL: Avoid logging full exception as it may contain credentials
+                        print(f"❌ Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
+                        error_occurred = True
+                        error_msg = f"Error scanning account #{i+1}: Connection failed ({type(e).__name__})"
+        else:
+            print("⚠️ No email accounts configured.")
 
         emails = all_emails
 
@@ -159,7 +162,7 @@ def process_emails():
                         status = "ignored"
                         reason = "Command from wife (no action)"
 
-                    # Log it
+                    # Log it (with encryption and retention if needed, though commands usually don't need body retention)
                     processed = ProcessedEmail(
                         email_id=msg_id or "unknown",
                         subject=email_data.get("subject", ""),
@@ -170,15 +173,24 @@ def process_emails():
                         account_email=account_email,
                         category="command",
                         reason=reason,
+                        retention_expires_at=datetime.now(timezone.utc)
+                        + timedelta(hours=24),
+                        encrypted_body=encrypt_content(email_data.get("body", "")),
+                        encrypted_html=encrypt_content(email_data.get("html_body", "")),
                     )
                     session.add(processed)
                     session.commit()
-                    print(f"💾 Saved command status: {status}")
+                    print(f"❌ Failed to send confirmation: {status}")
                     continue
 
-                # Detect
-                is_receipt = ReceiptDetector.is_receipt(email_data)
+                # Detect (passing session for manual rules/preferences)
+                is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
                 category = ReceiptDetector.categorize_receipt(email_data)
+
+                # Shadow Mode Testing (Learning)
+                from backend.services.learning_service import LearningService
+
+                LearningService.run_shadow_mode(session, email_data)
 
                 print(
                     f"   🔍 Analyzing: {email_data.get('subject')} | From: {email_data.get('from')}"
@@ -208,10 +220,14 @@ def process_emails():
                     account_email=account_email,
                     category=category,
                     reason=reason,
+                    retention_expires_at=datetime.now(timezone.utc)
+                    + timedelta(hours=24),
+                    encrypted_body=encrypt_content(email_data.get("body", "")),
+                    encrypted_html=encrypt_content(email_data.get("html_body", "")),
                 )
                 session.add(processed)
                 session.commit()
-                print(f"💾 Saved email status: {status} (Account: {account_email})")
+                print(f"💾 Saved status: {status} (Account: {account_email})")
 
             # Update the processing run with final counts
             run = session.get(ProcessingRun, run_id)
@@ -223,10 +239,16 @@ def process_emails():
                 run.status = "error" if error_occurred else "completed"
                 run.error_message = error_msg
                 session.add(run)
+
+                # Run rule promotion logic
+                from backend.services.learning_service import LearningService
+
+                LearningService.auto_promote_rules(session)
+
                 session.commit()
 
     except Exception as e:
-        print(f"❌ Error during email processing: {e}")
+        print(f"❌ Error during email processing: {type(e).__name__}")
         # Update run with error only if run_id was successfully created
         if run_id is not None:
             with Session(engine) as session:
@@ -242,8 +264,35 @@ def process_emails():
 def start_scheduler():
     poll_interval = int(os.environ.get("POLL_INTERVAL", "60"))
     scheduler.add_job(process_emails, "interval", minutes=poll_interval)
+    # Register the cleanup job
+    scheduler.add_job(cleanup_expired_emails, "interval", hours=1)
     scheduler.start()
     print(f"⏰ Scheduler started. Polling every {poll_interval} minutes.")
+
+
+def cleanup_expired_emails():
+    """Cleanup encrypted bodies and HTML for emails older than 24 hours."""
+    print("🧹 Cleaning up expired email bodies...")
+    try:
+        with Session(engine) as session:
+            now = datetime.now(timezone.utc)
+            expired_emails = session.exec(
+                select(ProcessedEmail).where(ProcessedEmail.retention_expires_at < now)
+            ).all()
+
+            count = 0
+            for email in expired_emails:
+                if email.encrypted_body or email.encrypted_html:
+                    email.encrypted_body = None
+                    email.encrypted_html = None
+                    session.add(email)
+                    count += 1
+
+            session.commit()
+            if count > 0:
+                print(f"✅ Cleaned up {count} expired email bodies.")
+    except Exception as e:
+        print(f"❌ Error during cleanup: {type(e).__name__}")
 
 
 def stop_scheduler():

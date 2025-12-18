@@ -11,14 +11,14 @@ vi.mock('./lib/api', () => ({
 describe('App Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-// Mock API calls for Dashboard and Auth
+		// Mock API calls for Dashboard and Auth
 		vi.mocked(api.fetchJson).mockResolvedValue([]);
-		
+
 		// Mock globally for fetch if it's used directly in onMount
-		global.fetch = vi.fn(() => 
+		globalThis.fetch = vi.fn(() =>
 			Promise.resolve({
 				ok: true,
-				json: () => Promise.resolve({ authenticated: true }),
+				json: () => Promise.resolve({ authenticated: true })
 			})
 		) as unknown as typeof fetch;
 	});

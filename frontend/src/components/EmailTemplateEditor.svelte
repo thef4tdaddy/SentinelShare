@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
+	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
 	import { Save, Eye, EyeOff } from 'lucide-svelte';
 
@@ -48,7 +49,7 @@
 			showPreview = false;
 		} else {
 			// Generate a preview with sample data
-			previewText = template
+			const rawPreview = template
 				.replace(/{subject}/g, 'Your Amazon Order Confirmation')
 				.replace(/{from}/g, 'no-reply@amazon.com')
 				.replace(/{simple_name}/g, 'Amazon')
@@ -60,6 +61,9 @@
 					/{body}/g,
 					'Thank you for your order!\n\nOrder #123-4567890-1234567\nTotal: $49.99\n\nYour order will be delivered on January 15, 2024.'
 				);
+
+			// Sanitize HTML to prevent XSS (CI fix)
+			previewText = DOMPurify.sanitize(rawPreview);
 			showPreview = true;
 		}
 	}
@@ -158,12 +162,12 @@
 
 				<!-- Action Buttons -->
 				<div class="flex gap-3 pt-2">
-					<button on:click={saveTemplate} disabled={saving || !hasChanges} class="btn btn-primary">
+					<button onclick={saveTemplate} disabled={saving || !hasChanges} class="btn btn-primary">
 						<Save size={16} />
 						{saving ? 'Saving...' : 'Save Template'}
 					</button>
 
-					<button on:click={togglePreview} class="btn btn-secondary">
+					<button onclick={togglePreview} class="btn btn-secondary">
 						{#if showPreview}
 							<EyeOff size={16} />
 							Hide Preview

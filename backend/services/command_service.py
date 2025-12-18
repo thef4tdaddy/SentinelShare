@@ -127,7 +127,7 @@ class CommandService:
                 server.send_message(msg)
                 print(f"📨 Confirmation sent to {target_email}")
         except Exception as e:
-            print(f"❌ Failed to send confirmation: {e}")
+            print(f"❌ Failed to send confirmation: {type(e).__name__}")
 
     @staticmethod
     def _send_settings_summary():
