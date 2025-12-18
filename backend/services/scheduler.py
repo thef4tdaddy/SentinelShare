@@ -66,7 +66,7 @@ def process_emails():
         accounts = EmailService.get_all_accounts()
         if accounts:
             print(f"👥 Processing {len(accounts)} accounts...")
-            for acc in accounts:
+            for i, acc in enumerate(accounts):
                 user = acc.get("email")
                 pwd = acc.get("password")
                 server = acc.get("imap_server", "imap.gmail.com")
@@ -81,9 +81,9 @@ def process_emails():
                         all_emails.extend(fetched)
                     except Exception as e:
                         # CodeQL: Avoid logging full exception as it may contain credentials
-                        print(f"❌ Error scanning {redact_email(user)}: {type(e).__name__}")
+                        print(f"❌ Error scanning account #{i+1}: {type(e).__name__}")
                         error_occurred = True
-                        error_msg = f"Error scanning {redact_email(user)}: Connection failed ({type(e).__name__})"
+                        error_msg = f"Error scanning account #{i+1}: Connection failed ({type(e).__name__})"
         else:
             print("⚠️ No email accounts configured.")
 
