@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.routers import history
-from backend.routers.history import router
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 

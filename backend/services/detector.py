@@ -529,9 +529,27 @@ class ReceiptDetector:
             "license plate renewal",
         ]
 
-        if not any(
-            keyword in subject or keyword in body for keyword in strong_keywords
-        ):
+        # Check literal keywords
+        subject_lower = subject.lower()
+        body_lower = body.lower()
+        has_keyword = any(
+            keyword in subject_lower or keyword in body_lower
+            for keyword in strong_keywords
+        )
+
+        # Check regex patterns (handles interleaved text like "Order #123 Confirmation")
+        strong_regex_patterns = [
+            r"order.*confirmation",
+            r"payment.*confirmation",
+            r"purchase.*confirmation",
+        ]
+
+        text = f"{subject} {body}"
+        has_regex = any(
+            re.search(pattern, text, re.IGNORECASE) for pattern in strong_regex_patterns
+        )
+
+        if not (has_keyword or has_regex):
             return False
 
         supporting_evidence = [
