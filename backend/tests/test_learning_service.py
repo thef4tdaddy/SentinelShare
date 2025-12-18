@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 from backend.models import ManualRule, ProcessedEmail
 from backend.services.learning_service import LearningService
-from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine
 
 
 @pytest.fixture(name="session")
