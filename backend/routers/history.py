@@ -118,30 +118,15 @@ def reprocess_email(email_id: int, session: Session = Depends(get_session)):
 
     # 2. Fallback to IMAP if content is gone (retention expired)
     if not body and not html_body:
-        # We need password for the account
-        email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-        pwd = None
-        server = "imap.gmail.com"
-        if email_accounts_json:
-            accounts = json.loads(email_accounts_json.replace("'", '"'))
-            for acc in accounts:
-                if acc.get("email") == email.account_email:
-                    pwd = acc.get("password")
-                    server = acc.get("imap_server", server)
-                    break
-
-        if not pwd and email.account_email == os.environ.get("GMAIL_EMAIL"):
-            pwd = os.environ.get("GMAIL_PASSWORD")
-            server = os.environ.get("IMAP_SERVER", server)
-
-        if not pwd:
+        creds = EmailService.get_credentials_for_account(email.account_email)
+        if not creds:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot fallback to IMAP: Credentials missing for this account",
             )
 
         fetched = EmailService.fetch_email_by_id(
-            email.account_email, pwd, email.email_id, server
+            email.account_email, creds["password"], email.email_id, creds["imap_server"]
         )
         if not fetched:
             raise HTTPException(status_code=404, detail="Email not found in IMAP inbox")

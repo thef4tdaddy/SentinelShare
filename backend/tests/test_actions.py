@@ -410,7 +410,7 @@ class TestQuickAction:
         msg = f"{cmd}:{arg}:{ts}"
         sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
 
-        with patch("backend.database.engine", engine):
+        with patch("backend.routers.actions.engine", engine):
             response = actions.quick_action(cmd, arg, ts, sig)
             assert "Current Settings" in response
             assert "amazon" in response

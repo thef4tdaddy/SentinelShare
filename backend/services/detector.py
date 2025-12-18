@@ -1,6 +1,13 @@
+import fnmatch
+import json
 import os
 import re
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
+
+from sqlmodel import select
+
+from ..models import ManualRule, Preference
+from .email_service import EmailService
 
 
 class ReceiptDetector:
@@ -25,11 +32,6 @@ class ReceiptDetector:
         # STEP -1: Check for Database Overrides (Manual Rules & Preferences)
         if session:
             try:
-                import fnmatch
-
-                from sqlmodel import select
-
-                from ..models import ManualRule, Preference
 
                 # 1. Manual Rules (Priority ordering)
                 rules = session.exec(
@@ -136,11 +138,6 @@ class ReceiptDetector:
 
         # Check Manual Rules
         if session:
-            import fnmatch
-
-            from sqlmodel import select
-
-            from ..models import ManualRule, Preference
 
             rules = session.exec(
                 select(ManualRule).order_by(ManualRule.priority.desc())
@@ -203,18 +200,11 @@ class ReceiptDetector:
             if e
         ]
 
-        # Add emails from EMAIL_ACCOUNTS
-        import json
-
-        try:
-            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-            if accounts_json:
-                accounts = json.loads(accounts_json)
-                for acc in accounts:
-                    if acc.get("email"):
-                        your_emails.append(acc.get("email").lower())
-        except:
-            pass
+        # Add emails from centralized account logic
+        accounts = EmailService.get_all_accounts()
+        for acc in accounts:
+            if acc.get("email"):
+                your_emails.append(acc.get("email").lower())
 
         if any(email in sender for email in your_emails):
             return True

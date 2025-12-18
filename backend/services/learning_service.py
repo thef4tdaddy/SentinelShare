@@ -1,3 +1,5 @@
+import fnmatch
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -68,8 +70,6 @@ class LearningService:
         subject = email_data.get("subject", "").lower()
         sender = email_data.get("from", "").lower()
 
-        import fnmatch
-
         shadow_rules = session.exec(
             select(ManualRule).where(ManualRule.is_shadow_mode == True)
         ).all()
@@ -100,11 +100,16 @@ class LearningService:
         """
         Promote shadow rules to active ManualRule status if they hit 0.9 confidence and 3 matches.
         """
+        auto_promote_confidence = float(
+            os.getenv("AUTO_PROMOTE_CONFIDENCE_THRESHOLD", "0.9")
+        )
+        auto_promote_matches = int(os.getenv("AUTO_PROMOTE_MATCH_COUNT_THRESHOLD", "3"))
+
         candidates = session.exec(
             select(ManualRule)
             .where(ManualRule.is_shadow_mode == True)
-            .where(ManualRule.confidence >= 0.9)
-            .where(ManualRule.match_count >= 3)
+            .where(ManualRule.confidence >= auto_promote_confidence)
+            .where(ManualRule.match_count >= auto_promote_matches)
         ).all()
 
         for rule in candidates:

@@ -49,51 +49,29 @@ def process_emails():
     error_msg = None
 
     try:
-        # 1. Try Multi-Account Config
-        email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-        if email_accounts_json:
-            try:
-                try:
-                    accounts = json.loads(email_accounts_json)
-                except json.JSONDecodeError:
-                    # Try single quote fix (common mistake in .env)
-                    fixed_json = email_accounts_json.replace("'", '"')
-                    accounts = json.loads(fixed_json)
-                if isinstance(accounts, list):
-                    print(f"👥 Processing {len(accounts)} accounts...")
-                    for acc in accounts:
-                        user = acc.get("email")
-                        pwd = acc.get("password")
-                        server = acc.get("imap_server", "imap.gmail.com")
+        # 1. Fetch from all configured accounts using centralized logic
+        accounts = EmailService.get_all_accounts()
+        if accounts:
+            print(f"👥 Processing {len(accounts)} accounts...")
+            for acc in accounts:
+                user = acc.get("email")
+                pwd = acc.get("password")
+                server = acc.get("imap_server", "imap.gmail.com")
 
-                        if user and pwd:
-                            print(f"   Scanning {user}...")
-                            fetched = EmailService.fetch_recent_emails(
-                                user, pwd, server
-                            )
-                            # Tag each email with the source account
-                            for email_data in fetched:
-                                email_data["account_email"] = user
-                            all_emails.extend(fetched)
-            except Exception as e:
-                print(f"❌ Critical Error parsing EMAIL_ACCOUNTS JSON: {e}")
-                print(f"   Raw Value: [REDACTED]")
-                error_occurred = True
-                error_msg = f"JSON parsing error: {str(e)}"
-
-        # 2. Fallback to Legacy Single Account (if no accounts processed yet)
-        if not all_emails and not email_accounts_json:
-            user = os.environ.get("GMAIL_EMAIL")
-            pwd = os.environ.get("GMAIL_PASSWORD")
-            server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
-
-            if user and pwd:
-                print(f"👤 Processing single account {user}...")
-                fetched = EmailService.fetch_recent_emails(user, pwd, server)
-                # Tag each email with the source account
-                for email_data in fetched:
-                    email_data["account_email"] = user
-                all_emails = fetched
+                if user and pwd:
+                    print(f"   Scanning {user}...")
+                    try:
+                        fetched = EmailService.fetch_recent_emails(user, pwd, server)
+                        # Tag each email with the source account
+                        for email_data in fetched:
+                            email_data["account_email"] = user
+                        all_emails.extend(fetched)
+                    except Exception as e:
+                        print(f"❌ Error scanning {user}: {e}")
+                        error_occurred = True
+                        error_msg = f"Error scanning {user}: {str(e)}"
+        else:
+            print("⚠️ No email accounts configured.")
 
         emails = all_emails
 

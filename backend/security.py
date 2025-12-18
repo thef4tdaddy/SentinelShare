@@ -29,7 +29,13 @@ def decrypt_content(encrypted_content: str) -> str:
         return ""
     f = get_fernet()
     try:
+        from cryptography.fernet import InvalidToken
+
         return f.decrypt(encrypted_content.encode()).decode()
-    except Exception as e:
+    except (InvalidToken, ValueError) as e:
         print(f"Error decrypting content: {e}")
+        return ""
+    except Exception as e:
+        # Fallback for unexpected errors but log them
+        print(f"Unexpected error decrypting content: {e}")
         return ""

@@ -1,14 +1,17 @@
 import hashlib
 import hmac
 import html
+import json
 import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
+from typing import Optional
 
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
-from backend.database import get_session
-from backend.models import ManualRule, ProcessedEmail
+from backend.database import engine, get_session
+from backend.models import ManualRule, Preference, ProcessedEmail
 from backend.services.command_service import CommandService
+from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
@@ -77,10 +80,6 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         message = f"🚫 Blocked Category: {safe_arg}"
 
     elif cmd.upper() == "SETTINGS":
-        from backend.database import engine
-        from backend.models import Preference
-        from sqlmodel import Session, select
-
         with Session(engine) as session:
             prefs = session.exec(select(Preference)).all()
 
@@ -240,59 +239,22 @@ def toggle_ignored_email(
         raise HTTPException(status_code=500, detail="WIFE_EMAIL not configured")
 
     # Try to fetch the original email content
-    import json
-
-    from backend.services.email_service import EmailService
 
     # 1. Get credentials for the source account
-    email_user = None
-    email_pass = None
-    imap_server = "imap.gmail.com"  # Default
+    creds = EmailService.get_credentials_for_account(email.account_email)
 
-    account_email = email.account_email
-
-    # Check env vars first (legacy single account)
-    if not account_email or (
-        os.environ.get("SENDER_EMAIL")
-        and account_email.lower() == os.environ.get("SENDER_EMAIL").lower()
-    ):
+    if not creds:
+        # Fallback to SENDER_EMAIL if specific account not found
         email_user = os.environ.get("SENDER_EMAIL")
         email_pass = os.environ.get("SENDER_PASSWORD")
-    elif (
-        os.environ.get("GMAIL_EMAIL")
-        and account_email.lower() == os.environ.get("GMAIL_EMAIL").lower()
-    ):
-        email_user = os.environ.get("GMAIL_EMAIL")
-        email_pass = os.environ.get("GMAIL_PASSWORD")
-    elif (
-        os.environ.get("ICLOUD_EMAIL")
-        and account_email.lower() == os.environ.get("ICLOUD_EMAIL").lower()
-    ):
-        email_user = os.environ.get("ICLOUD_EMAIL")
-        email_pass = os.environ.get("ICLOUD_PASSWORD")
-        imap_server = "imap.mail.me.com"
-
-    # Check EMAIL_ACCOUNTS
-    if not email_user:
-        try:
-            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-            if accounts_json:
-                accounts = json.loads(accounts_json)
-                for acc in accounts:
-                    acc_email = acc.get("email")
-                    if acc_email and acc_email.lower() == account_email.lower():
-                        email_user = acc.get("email")
-                        email_pass = acc.get("password")
-                        imap_server = acc.get("imap_server", "imap.gmail.com")
-                        break
-        except:
-            pass
-
-    # Default to primary if we can't find specific ones (last resort/fallback)
-    if not email_user:
-        print(f"⚠️ Account not found for {account_email}, falling back to SENDER_EMAIL")
-        email_user = os.environ.get("SENDER_EMAIL")
-        email_pass = os.environ.get("SENDER_PASSWORD")
+        imap_server = "imap.gmail.com"
+        print(
+            f"⚠️ Account not found for {email.account_email}, falling back to SENDER_EMAIL"
+        )
+    else:
+        email_user = creds["email"]
+        email_pass = creds["password"]
+        imap_server = creds["imap_server"]
 
     first_attempt_user = email_user
 

@@ -125,46 +125,19 @@ def update_email_template(
 def test_connections():
     results = []
 
-    # 1. Try Multi-Account Config
-    email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
+    accounts = EmailService.get_all_accounts()
+    for acc in accounts:
+        user = acc.get("email")
+        pwd = acc.get("password")
+        server = acc.get("imap_server")
 
-    if email_accounts_json:
-        try:
-            accounts = json.loads(email_accounts_json)
-        except json.JSONDecodeError:
-            # Try single quote fix
-            try:
-                fixed_json = email_accounts_json.replace("'", '"')
-                accounts = json.loads(fixed_json)
-            except:
-                accounts = []
-
-        if isinstance(accounts, list):
-            for acc in accounts:
-                user = acc.get("email")
-                pwd = acc.get("password")
-                server = acc.get("imap_server", "imap.gmail.com")
-
-                if user:
-                    res = EmailService.test_connection(user, pwd, server)
-                    results.append(
-                        {
-                            "account": user,
-                            "success": res["success"],
-                            "error": res["error"],
-                        }
-                    )
-
-    # 2. Fallback to Legacy Single Account (if no accounts found/processed yet)
-    if not results:
-        user = os.environ.get("GMAIL_EMAIL")
-        pwd = os.environ.get("GMAIL_PASSWORD")
-        server = os.environ.get("IMAP_SERVER", "imap.gmail.com")
-
-        if user:
-            res = EmailService.test_connection(user, pwd, server)
-            results.append(
-                {"account": user, "success": res["success"], "error": res["error"]}
-            )
+        res = EmailService.test_connection(user, pwd, server)
+        results.append(
+            {
+                "account": user,
+                "success": res["success"],
+                "error": res["error"],
+            }
+        )
 
     return results
