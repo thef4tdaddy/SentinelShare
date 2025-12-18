@@ -251,6 +251,7 @@ def toggle_ignored_email(
         print(
             f"⚠️ Account not found for {email.account_email}, falling back to SENDER_EMAIL"
         )
+        # NOTE: Do not log sensitive credentials, passwords, or account dicts.
     else:
         email_user = creds["email"]
         email_pass = creds["password"]
@@ -261,7 +262,8 @@ def toggle_ignored_email(
     # 2. Fetch content
     original_content = None
     if email_user and email_pass:
-        print(f"DEBUG: Fetching email {email.email_id} for user on {imap_server}")
+        # Do not log credentials or server: Only log account identifier
+        print(f"DEBUG: Fetching email {email.email_id} for user {email_user}")
         original_content = EmailService.fetch_email_by_id(
             email_user, email_pass, email.email_id, imap_server
         )
