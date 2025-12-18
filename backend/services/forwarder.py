@@ -196,5 +196,5 @@ class EmailForwarder:
             print(f"✅ Email forwarded to {target_email}")
             return True
         except Exception as e:
-            print(f"❌ Error forwarding email: {e}")
+            print(f"❌ Error forwarding email: {type(e).__name__}")
             return False

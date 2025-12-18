@@ -60,7 +60,7 @@ def process_emails():
             session.refresh(processing_run)
             run_id = processing_run.id
     except Exception as e:
-        print(f"❌ Error creating processing run record: {e}")
+        print(f"❌ Error creating processing run record: {type(e).__name__}")
         return
 
     all_emails = []
@@ -89,7 +89,7 @@ def process_emails():
                         all_emails.extend(fetched)
                     except Exception as e:
                         # CodeQL: Avoid logging full exception as it may contain credentials
-                        print(f"❌ Error scanning account #{i+1}: {type(e).__name__}")
+                        print(f"❌ Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
                         error_occurred = True
                         error_msg = f"Error scanning account #{i+1}: Connection failed ({type(e).__name__})"
         else:
@@ -180,7 +180,7 @@ def process_emails():
                     )
                     session.add(processed)
                     session.commit()
-                    print(f"💾 Saved command status: {status}")
+                    print(f"❌ Failed to send confirmation: {status}")
                     continue
 
                 # Detect (passing session for manual rules/preferences)
@@ -248,7 +248,7 @@ def process_emails():
                 session.commit()
 
     except Exception as e:
-        print(f"❌ Error during email processing: {e}")
+        print(f"❌ Error during email processing: {type(e).__name__}")
         # Update run with error only if run_id was successfully created
         if run_id is not None:
             with Session(engine) as session:
@@ -292,7 +292,7 @@ def cleanup_expired_emails():
             if count > 0:
                 print(f"✅ Cleaned up {count} expired email bodies.")
     except Exception as e:
-        print(f"❌ Error during cleanup: {e}")
+        print(f"❌ Error during cleanup: {type(e).__name__}")
 
 
 def stop_scheduler():

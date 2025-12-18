@@ -64,7 +64,7 @@ class ReceiptDetector:
                         print(f"🚫 Preference match (Blocked): {pref.item}")
                         return False
             except Exception as e:
-                print(f"⚠️ Error checking database rules: {e}")
+                print(f"⚠️ Error checking database rules: {type(e).__name__}")
 
         # STEP 0: EXCLUDE reply emails and forwards first
         if ReceiptDetector.is_reply_or_forward(subject, sender):
