@@ -78,7 +78,7 @@ def get_email_history(
         query = query.where(and_(*filters))
 
     # Order by processed_at descending
-    query = query.order_by(ProcessedEmail.processed_at.desc())
+    query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
 
     # Get total count
     count_query = select(func.count()).select_from(ProcessedEmail)
@@ -200,7 +200,7 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
     ignored_emails = session.exec(
         select(ProcessedEmail)
         .where(ProcessedEmail.status == "ignored")
-        .where(ProcessedEmail.processed_at >= day_ago)
+        .where(ProcessedEmail.processed_at >= day_ago)  # type: ignore
         .where(ProcessedEmail.encrypted_body is not None)
     ).all()
 
@@ -209,8 +209,8 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
     target_email = os.environ.get("WIFE_EMAIL")
 
     for email in ignored_emails:
-        body = decrypt_content(email.encrypted_body)
-        html_body = decrypt_content(email.encrypted_html)
+        body = decrypt_content(email.encrypted_body or "")
+        html_body = decrypt_content(email.encrypted_html or "")
 
         email_data = {
             "subject": email.subject,
