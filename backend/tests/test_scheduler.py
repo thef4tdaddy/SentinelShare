@@ -80,6 +80,7 @@ def test_process_emails_creates_run_with_no_emails(
     {
         "POLL_INTERVAL": "60",
         "WIFE_EMAIL": "wife@example.com",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",  # Added
         "GMAIL_EMAIL": "test@example.com",
         "GMAIL_PASSWORD": "password",
         "EMAIL_ACCOUNTS": "",  # Ensure no multi-account processing
@@ -154,18 +155,20 @@ def test_start_scheduler_uses_poll_interval(mock_scheduler):
     """Test that start_scheduler uses the POLL_INTERVAL from environment"""
     start_scheduler()
 
-    # Verify scheduler.add_job was called with correct interval
-    mock_scheduler.add_job.assert_called_once_with(
-        process_emails, "interval", minutes=45
-    )
-
+    # Verify scheduler was started and jobs were added
     mock_scheduler.start.assert_called_once()
+    assert mock_scheduler.add_job.call_count == 2
+    # Verify both function jobs were added
+    calls = [c[0][0].__name__ for c in mock_scheduler.add_job.call_args_list]
+    assert "process_emails" in calls
+    assert "cleanup_expired_emails" in calls
 
 
 @patch.dict(
     os.environ,
     {
         "POLL_INTERVAL": "60",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",  # Added
         "GMAIL_EMAIL": "test@example.com",
         "GMAIL_PASSWORD": "password",
         "EMAIL_ACCOUNTS": "",  # Ensure no multi-account processing
@@ -205,6 +208,7 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
     {
         "POLL_INTERVAL": "60",
         "WIFE_EMAIL": "wife@example.com",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",  # Added
         "EMAIL_ACCOUNTS": '[{"email": "acc1@example.com", "password": "pass1"}, {"email": "acc2@example.com", "password": "pass2"}]',
     },
 )

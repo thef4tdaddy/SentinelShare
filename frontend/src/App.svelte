@@ -3,6 +3,7 @@
 	import Navbar from './components/Navbar.svelte';
 	import Dashboard from './pages/Dashboard.svelte';
 	import History from './pages/History.svelte';
+	import Preferences from './pages/Preferences.svelte';
 	import Settings from './pages/Settings.svelte';
 	import Login from './pages/Login.svelte';
 	import './app.css';
@@ -15,11 +16,9 @@
 			if (res.ok) {
 				currentView = 'dashboard';
 			} else {
-				// If 401, server says we need to login
 				currentView = 'login';
 			}
 		} catch (e) {
-			// Network error or other issue
 			console.error('Auth check failed', e);
 			currentView = 'login';
 		}
@@ -49,6 +48,8 @@
 				<Dashboard />
 			{:else if currentView === 'history'}
 				<History />
+			{:else if currentView === 'preferences'}
+				<Preferences />
 			{:else if currentView === 'settings'}
 				<Settings />
 			{/if}

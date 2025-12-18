@@ -21,6 +21,9 @@ class ProcessedEmail(SQLModel, table=True):
     category: Optional[str] = None  # "amazon", "receipt", "spam", etc.
     amount: Optional[float] = None
     reason: Optional[str] = None  # Why it was blocked or forwarded
+    encrypted_body: Optional[str] = None
+    encrypted_html: Optional[str] = None
+    retention_expires_at: Optional[datetime] = None
 
 
 class Stats(SQLModel, table=True):
@@ -51,6 +54,9 @@ class ManualRule(SQLModel, table=True):
     subject_pattern: Optional[str] = None  # Wildcard supported
     priority: int = 10
     purpose: Optional[str] = None
+    confidence: float = 1.0  # 0.0 to 1.0
+    is_shadow_mode: bool = False  # If True, rule doesn't affect forwarding
+    match_count: int = 0  # To track successful matches in shadow mode
     created_at: datetime = Field(default_factory=utc_now)
 
 

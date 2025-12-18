@@ -37,10 +37,10 @@
 		</div>
 
 		<div class="flex gap-3 justify-end pt-2">
-			<button on:click={onCancel} class="btn btn-secondary">
+			<button onclick={onCancel} class="btn btn-secondary">
 				{cancelText}
 			</button>
-			<button on:click={onConfirm} class="btn {danger ? 'btn-danger' : 'btn-primary'}">
+			<button onclick={onConfirm} class="btn {danger ? 'btn-danger' : 'btn-primary'}">
 				{confirmText}
 			</button>
 		</div>

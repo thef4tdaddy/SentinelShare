@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Union
 
 class ReceiptDetector:
     @staticmethod
-    def is_receipt(email: Any) -> bool:
+    def is_receipt(email: Any, session: Any = None) -> bool:
         """
         Determines if an email is a receipt based on subject, body, and sender.
-        Expects 'email' object to have 'subject', 'body', and 'sender' (or 'from') attributes or keys.
+        Optional 'session' allows checking against database ManualRule and Preference.
         """
         subject = (
             getattr(email, "subject", None) or email.get("subject", "") or ""
@@ -21,6 +21,56 @@ class ReceiptDetector:
             or email.get("from", "")
             or ""
         ).lower()
+
+        # STEP -1: Check for Database Overrides (Manual Rules & Preferences)
+        if session:
+            try:
+                import fnmatch
+
+                from sqlmodel import select
+
+                from ..models import ManualRule, Preference
+
+                # 1. Manual Rules (Priority ordering)
+                rules = session.exec(
+                    select(ManualRule).order_by(ManualRule.priority.desc())
+                ).all()
+                for rule in rules:
+                    matches = True
+                    if rule.email_pattern:
+                        if not fnmatch.fnmatch(sender, rule.email_pattern.lower()):
+                            matches = False
+                    if matches and rule.subject_pattern:
+                        if not fnmatch.fnmatch(subject, rule.subject_pattern.lower()):
+                            matches = False
+
+                    if matches:
+                        print(f"✅ Manual rule match: {rule.purpose or 'No purpose'}")
+                        return True
+
+                # 2. Preferences (Always Forward)
+                always_forward = session.exec(
+                    select(Preference).where(Preference.type == "Always Forward")
+                ).all()
+                for pref in always_forward:
+                    p_item = pref.item.lower()
+                    if p_item in sender or p_item in subject:
+                        print(f"✅ Preference match (Always Forward): {pref.item}")
+                        return True
+
+                # 3. Preferences (Blocked Sender / Category)
+                blocked = session.exec(
+                    select(Preference).where(
+                        Preference.type.in_(["Blocked Sender", "Blocked Category"])
+                    )
+                ).all()
+                for pref in blocked:
+                    p_item = pref.item.lower()
+                    if p_item in sender or p_item in subject:
+                        print(f"🚫 Preference match (Blocked): {pref.item}")
+                        return False
+            except Exception as e:
+                print(f"⚠️ Error checking database rules: {e}")
 
         # STEP 0: EXCLUDE reply emails and forwards first
         if ReceiptDetector.is_reply_or_forward(subject, sender):
@@ -59,6 +109,68 @@ class ReceiptDetector:
 
         print(f"❌ Not a receipt: {subject}")
         return False
+
+    @staticmethod
+    def debug_is_receipt(email: Any, session: Any = None) -> Dict[str, Any]:
+        """
+        Detailed trace of the logic for debugging or history analysis.
+        """
+        subject = (
+            getattr(email, "subject", None) or email.get("subject", "") or ""
+        ).lower()
+        body = (getattr(email, "body", None) or email.get("body", "") or "").lower()
+        sender = (
+            getattr(email, "sender", None)
+            or email.get("from", None)
+            or email.get("sender", "")
+            or ""
+        ).lower()
+
+        trace = {
+            "subject": subject,
+            "sender": sender,
+            "steps": [],
+            "final_decision": False,
+            "matched_by": None,
+        }
+
+        # Check Manual Rules
+        if session:
+            import fnmatch
+
+            from sqlmodel import select
+
+            from ..models import ManualRule, Preference
+
+            rules = session.exec(
+                select(ManualRule).order_by(ManualRule.priority.desc())
+            ).all()
+            for rule in rules:
+                matches = True
+                if rule.email_pattern:
+                    if not fnmatch.fnmatch(sender, rule.email_pattern.lower()):
+                        matches = False
+                if matches and rule.subject_pattern:
+                    if not fnmatch.fnmatch(subject, rule.subject_pattern.lower()):
+                        matches = False
+
+                if matches:
+                    trace["steps"].append(
+                        {
+                            "step": "Manual Rule",
+                            "result": True,
+                            "detail": f"Matched rule: {rule.purpose}",
+                        }
+                    )
+                    trace["final_decision"] = True
+                    trace["matched_by"] = "Manual Rule"
+                    return trace
+
+        # ... (rest of trace logic would follow same structure as is_receipt)
+        # Simplified for now, will expand as needed.
+        decision = ReceiptDetector.is_receipt(email, session)
+        trace["final_decision"] = decision
+        return trace
 
     @staticmethod
     def is_reply_or_forward(subject: str, sender: str) -> bool:
@@ -440,6 +552,8 @@ class ReceiptDetector:
             r"total:?\s*\$[0-9,]+\.[0-9]{2}",
             r"amount:?\s*\$[0-9,]+\.[0-9]{2}",
             r"paid:?\s*\$[0-9,]+\.[0-9]{2}",
+            r"view your order",
+            r"arriving (tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
         ]
 
         text = f"{subject} {body}"
@@ -465,6 +579,7 @@ class ReceiptDetector:
             (r"due\s*date", 1),
             (r"autopay", 1),
             (r"direct\s*debit", 1),
+            (r"^ordered:", 2),
         ]
 
         for pattern, points in indicators:

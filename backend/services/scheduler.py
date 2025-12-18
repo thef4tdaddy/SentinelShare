@@ -12,6 +12,9 @@ from sqlmodel import Session, select
 scheduler = BackgroundScheduler()
 
 import json
+from datetime import timedelta
+
+from backend.security import encrypt_content
 
 
 def process_emails():
@@ -159,7 +162,7 @@ def process_emails():
                         status = "ignored"
                         reason = "Command from wife (no action)"
 
-                    # Log it
+                    # Log it (with encryption and retention if needed, though commands usually don't need body retention)
                     processed = ProcessedEmail(
                         email_id=msg_id or "unknown",
                         subject=email_data.get("subject", ""),
@@ -170,15 +173,24 @@ def process_emails():
                         account_email=account_email,
                         category="command",
                         reason=reason,
+                        retention_expires_at=datetime.now(timezone.utc)
+                        + timedelta(hours=24),
+                        encrypted_body=encrypt_content(email_data.get("body", "")),
+                        encrypted_html=encrypt_content(email_data.get("html_body", "")),
                     )
                     session.add(processed)
                     session.commit()
                     print(f"💾 Saved command status: {status}")
                     continue
 
-                # Detect
-                is_receipt = ReceiptDetector.is_receipt(email_data)
+                # Detect (passing session for manual rules/preferences)
+                is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
                 category = ReceiptDetector.categorize_receipt(email_data)
+
+                # Shadow Mode Testing (Learning)
+                from backend.services.learning_service import LearningService
+
+                LearningService.run_shadow_mode(session, email_data)
 
                 print(
                     f"   🔍 Analyzing: {email_data.get('subject')} | From: {email_data.get('from')}"
@@ -208,10 +220,14 @@ def process_emails():
                     account_email=account_email,
                     category=category,
                     reason=reason,
+                    retention_expires_at=datetime.now(timezone.utc)
+                    + timedelta(hours=24),
+                    encrypted_body=encrypt_content(email_data.get("body", "")),
+                    encrypted_html=encrypt_content(email_data.get("html_body", "")),
                 )
                 session.add(processed)
                 session.commit()
-                print(f"💾 Saved email status: {status} (Account: {account_email})")
+                print(f"💾 Saved status: {status} (Account: {account_email})")
 
             # Update the processing run with final counts
             run = session.get(ProcessingRun, run_id)
@@ -223,6 +239,12 @@ def process_emails():
                 run.status = "error" if error_occurred else "completed"
                 run.error_message = error_msg
                 session.add(run)
+
+                # Run rule promotion logic
+                from backend.services.learning_service import LearningService
+
+                LearningService.auto_promote_rules(session)
+
                 session.commit()
 
     except Exception as e:
@@ -242,8 +264,35 @@ def process_emails():
 def start_scheduler():
     poll_interval = int(os.environ.get("POLL_INTERVAL", "60"))
     scheduler.add_job(process_emails, "interval", minutes=poll_interval)
+    # Register the cleanup job
+    scheduler.add_job(cleanup_expired_emails, "interval", hours=1)
     scheduler.start()
     print(f"⏰ Scheduler started. Polling every {poll_interval} minutes.")
+
+
+def cleanup_expired_emails():
+    """Cleanup encrypted bodies and HTML for emails older than 24 hours."""
+    print("🧹 Cleaning up expired email bodies...")
+    try:
+        with Session(engine) as session:
+            now = datetime.now(timezone.utc)
+            expired_emails = session.exec(
+                select(ProcessedEmail).where(ProcessedEmail.retention_expires_at < now)
+            ).all()
+
+            count = 0
+            for email in expired_emails:
+                if email.encrypted_body or email.encrypted_html:
+                    email.encrypted_body = None
+                    email.encrypted_html = None
+                    session.add(email)
+                    count += 1
+
+            session.commit()
+            if count > 0:
+                print(f"✅ Cleaned up {count} expired email bodies.")
+    except Exception as e:
+        print(f"❌ Error during cleanup: {e}")
 
 
 def stop_scheduler():

@@ -1,10 +1,11 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import pytest
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.routers import history
 from backend.routers.history import router
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
 
@@ -580,3 +581,101 @@ def test_processing_run_pagination(session: Session):
     first_ids = {run.id for run in first_page}
     second_ids = {run.id for run in second_page}
     assert len(first_ids.intersection(second_ids)) == 0
+
+
+class TestHistoryReprocess:
+    """Test reprocessing endpoints"""
+
+    def test_reprocess_all_ignored(self, session: Session, monkeypatch):
+        # Create an ignored email within 24 hours with encrypted body
+        from backend.security import encrypt_content
+
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="ignored1",
+            subject="Ignored Subject",
+            sender="news@example.com",
+            received_at=now - timedelta(hours=1),
+            status="ignored",
+            encrypted_body=encrypt_content("This is a receipt that was ignored"),
+            account_email="test@example.com",
+        )
+        session.add(email)
+        session.commit()
+
+        # Mock dependencies
+        monkeypatch.setenv("WIFE_EMAIL", "wife@example.com")
+        with patch(
+            "backend.services.detector.ReceiptDetector.is_receipt", return_value=True
+        ), patch(
+            "backend.services.detector.ReceiptDetector.categorize_receipt",
+            return_value="Shopping",
+        ), patch(
+            "backend.services.forwarder.EmailForwarder.forward_email", return_value=True
+        ):
+
+            from backend.routers.history import reprocess_all_ignored
+
+            result = reprocess_all_ignored(session=session)
+
+            assert result["reprocessed"] == 1
+            session.refresh(email)
+            assert email.status == "forwarded"
+            assert email.category == "Shopping"
+
+    def test_reprocess_specific_email(self, session: Session, monkeypatch):
+        from backend.security import encrypt_content
+
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="spec1",
+            subject="Manual Reprocess",
+            sender="manual@example.com",
+            received_at=now,
+            status="ignored",
+            encrypted_body=encrypt_content("Body content"),
+            account_email="test@example.com",
+        )
+        session.add(email)
+        session.commit()
+
+        with patch(
+            "backend.services.detector.ReceiptDetector.is_receipt", return_value=True
+        ), patch(
+            "backend.services.forwarder.EmailForwarder.forward_email", return_value=True
+        ):
+
+            from backend.routers.history import reprocess_email
+
+            result = reprocess_email(email_id=email.id, session=session)
+
+            assert "analysis" in result
+            assert result["suggested_status"] == "forwarded"
+
+    def test_submit_feedback(self, session: Session):
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="feedback1",
+            subject="Feedback needed",
+            sender="feedback@example.com",
+            received_at=now,
+            status="blocked",  # Added status
+            account_email="test@example.com",
+        )
+        session.add(email)
+        session.commit()
+
+        from backend.routers.history import submit_feedback
+
+        result = submit_feedback(email_id=email.id, is_receipt=True, session=session)
+
+        assert result["status"] == "success"
+
+        # Check if shadow rule was created
+        from backend.models import ManualRule
+
+        rule = session.exec(
+            select(ManualRule).where(ManualRule.is_shadow_mode == True)
+        ).first()
+        assert rule is not None
+        assert rule.email_pattern == "*@example.com"

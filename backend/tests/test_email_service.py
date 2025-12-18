@@ -206,3 +206,82 @@ class TestEmailService:
         assert len(emails) == 1
         # The subject should be decoded
         assert emails[0]["subject"] == "Test Subject"
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_fetch_email_by_id_success(self, mock_imap):
+        """Test successful fetching of a single email by ID"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+        mock_mail.select.return_value = ("OK", [])
+        mock_mail.search.return_value = ("OK", [b"1"])
+
+        # Create a mock email message
+        msg = MIMEText("Test body content")
+        msg["Subject"] = "Test Subject"
+        msg["Message-ID"] = "<test123@example.com>"
+
+        mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
+
+        result = EmailService.fetch_email_by_id(
+            "user@test.com", "pass", "<test123@example.com>", "imap.test.com"
+        )
+
+        assert result is not None
+        assert result["subject"] == "Test Subject"
+        assert result["body"] == "Test body content"
+
+    def test_fetch_email_by_id_missing_params(self):
+        """Test fetch_email_by_id with missing parameters"""
+        assert EmailService.fetch_email_by_id(None, "pass", "id") is None
+        assert EmailService.fetch_email_by_id("user", None, "id") is None
+        assert EmailService.fetch_email_by_id("user", "pass", None) is None
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_connection_success(self, mock_imap):
+        """Test successful email connection test"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+
+        result = EmailService.test_connection("user", "pass", "imap.test.com")
+        assert result["success"] is True
+        assert result["error"] is None
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_connection_failure(self, mock_imap):
+        """Test failed email connection test"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.side_effect = Exception("Auth failed")
+
+        result = EmailService.test_connection("user", "pass", "imap.test.com")
+        assert result["success"] is False
+        assert "Unable to connect to email server" == result["error"]
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_fetch_email_by_id_multipart_html(self, mock_imap):
+        """Test fetching a multipart email with HTML content by ID"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+        mock_mail.select.return_value = ("OK", [])
+        mock_mail.search.return_value = ("OK", [b"1"])
+
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "HTML Multi"
+        msg["Message-ID"] = "<html-multi@test.com>"
+
+        html_part = MIMEText("<html><body>HTML Content</body></html>", "html")
+        msg.attach(html_part)
+
+        mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
+
+        result = EmailService.fetch_email_by_id("user", "pass", "<html-multi@test.com>")
+
+        assert result is not None
+        assert "HTML Content" in result["body"]  # BS should have converted it
+        assert "<html>" in result["html_body"]

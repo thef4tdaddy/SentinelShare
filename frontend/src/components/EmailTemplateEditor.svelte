@@ -158,12 +158,12 @@
 
 				<!-- Action Buttons -->
 				<div class="flex gap-3 pt-2">
-					<button on:click={saveTemplate} disabled={saving || !hasChanges} class="btn btn-primary">
+					<button onclick={saveTemplate} disabled={saving || !hasChanges} class="btn btn-primary">
 						<Save size={16} />
 						{saving ? 'Saving...' : 'Save Template'}
 					</button>
 
-					<button on:click={togglePreview} class="btn btn-secondary">
+					<button onclick={togglePreview} class="btn btn-secondary">
 						{#if showPreview}
 							<EyeOff size={16} />
 							Hide Preview
