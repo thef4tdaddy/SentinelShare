@@ -80,7 +80,7 @@ def process_emails():
                 server = acc.get("imap_server", "imap.gmail.com")
 
                 if user and pwd:
-                    print(f"   Scanning {redact_email(user)}...")
+                    print(f"   Scanning account #{i+1}...")
                     try:
                         fetched = EmailService.fetch_recent_emails(user, pwd, server)
                         # Tag each email with the source account
