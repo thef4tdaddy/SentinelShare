@@ -17,6 +17,19 @@ from datetime import timedelta
 from backend.security import encrypt_content
 
 
+def redact_email(email):
+    """
+    Redacts the middle part of an email for safer logging, e.g. "j****e@domain.com"
+    """
+    if not isinstance(email, str) or "@" not in email:
+        return "[REDACTED]"
+    name, domain = email.split("@", 1)
+    if len(name) <= 2:
+        redacted = "*" * len(name)
+    else:
+        redacted = name[0] + "*" * (len(name)-2) + name[-1]
+    return f"{redacted}@{domain}"
+
 def process_emails():
     print("🔄 Checking for new emails...")
 
@@ -59,7 +72,7 @@ def process_emails():
                 server = acc.get("imap_server", "imap.gmail.com")
 
                 if user and pwd:
-                    print(f"   Scanning {user}...")
+                    print(f"   Scanning {redact_email(user)}...")
                     try:
                         fetched = EmailService.fetch_recent_emails(user, pwd, server)
                         # Tag each email with the source account
@@ -68,9 +81,9 @@ def process_emails():
                         all_emails.extend(fetched)
                     except Exception as e:
                         # CodeQL: Avoid logging full exception as it may contain credentials
-                        print(f"❌ Error scanning {user}: {type(e).__name__}")
+                        print(f"❌ Error scanning {redact_email(user)}: {type(e).__name__}")
                         error_occurred = True
-                        error_msg = f"Error scanning {user}: Connection failed ({type(e).__name__})"
+                        error_msg = f"Error scanning {redact_email(user)}: Connection failed ({type(e).__name__})"
         else:
             print("⚠️ No email accounts configured.")
 
