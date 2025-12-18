@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.0.1...receipt-forwarder-root-v1.1.0) (2025-12-18)
+
+
+### Features
+
+* implement dynamic versioning and fix lint errors ([92ad321](https://github.com/thef4tdaddy/SentinelShare/commit/92ad3217a04acf2b99ca0eb704ff03cf3425e8f6))
+* improve visual fidelity of forwarded emails by preserving HTML ([8fc317f](https://github.com/thef4tdaddy/SentinelShare/commit/8fc317f1d2348c618943fea6bcea46caa56a57d0))
+* Unified Backend Coverage Restoration and Frontend Modernization ([#91](https://github.com/thef4tdaddy/SentinelShare/issues/91)) ([3f21655](https://github.com/thef4tdaddy/SentinelShare/commit/3f2165527f31cbb70935361ab2896697e3dafd3c))
+
+
+### Bug Fixes
+
+* **detector:** add renewal keywords and government exemption ([98636da](https://github.com/thef4tdaddy/SentinelShare/commit/98636da397328ce698f0e6bf5c930435b5d3d3d9))
+* **detector:** prioritize strong receipt indicators and add 'ordered' keyword ([1289e24](https://github.com/thef4tdaddy/SentinelShare/commit/1289e24470aaa677d943a68ae9da8ec2db38992b))
+* isolate scheduler tests from environment variables ([ad999c7](https://github.com/thef4tdaddy/SentinelShare/commit/ad999c74fc9cff26967ad9903ee6a16384d98e70))
+* resolve backend test errors and CI coverage targeting ([465a8a5](https://github.com/thef4tdaddy/SentinelShare/commit/465a8a556cf254ea03ec6183b158a278e8dc706f))
+* resolve linting errors in test files ([c5dfd94](https://github.com/thef4tdaddy/SentinelShare/commit/c5dfd944145ada95aa3f3b22964d149377fd4cc4))
+* restore frontend test script and robustify workflow execution ([d0cd3c7](https://github.com/thef4tdaddy/SentinelShare/commit/d0cd3c7958c521ed1ecc5799488491d06246fbf3))
+
 ## [1.0.1](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.0.0...receipt-forwarder-root-v1.0.1) (2025-12-12)
 
 
