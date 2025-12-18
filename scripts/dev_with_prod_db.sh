@@ -44,13 +44,40 @@ if [ -z "$PROD_DB_URL" ]; then
     exit 1
 fi
 
-# Export user input as the environment variable
+# Load local .env for other secrets (like DASHBOARD_PASSWORD) if it exists
+if [ -f .env ]; then
+    echo "Loading local .env..."
+    export $(grep -v '^#' .env | xargs)
+fi
+
+# Export user input as the environment variable (OVERRIDING .env if it was set there)
 export DATABASE_URL="$PROD_DB_URL"
 
 echo ""
-echo "Starting backend connected to remote DB..."
+echo "Starting backend and frontend..."
 echo "To stop, press Ctrl+C."
 echo ""
 
-# Run the backend with hot-reload enabled
-uvicorn backend.main:app --reload
+# Function to kill processes on exit
+cleanup() {
+    echo ""
+    echo "Stopping services..."
+    kill "$BACKEND_PID" 2>/dev/null
+    kill "$FRONTEND_PID" 2>/dev/null
+    exit
+}
+
+trap cleanup SIGINT
+
+# Start Backend
+uvicorn backend.main:app --reload &
+BACKEND_PID=$!
+echo "Backend started (PID $BACKEND_PID)"
+
+# Start Frontend
+(cd frontend && npm run dev) &
+FRONTEND_PID=$!
+echo "Frontend started (PID $FRONTEND_PID)"
+
+# Wait for both
+wait
