@@ -1,11 +1,9 @@
 import hashlib
 import hmac
-import json
 import os
 import smtplib
 import urllib.parse
 from datetime import datetime, timezone
-from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from urllib.parse import urlparse
@@ -71,7 +69,7 @@ class EmailForwarder:
                 domain = from_header.split("@")[1].split(">")[0].strip()
                 # Extract main name "amazon"
                 simple_name = domain.split(".")[0].capitalize()
-            except:
+            except Exception:
                 pass
 
         # Prepare content
@@ -174,7 +172,7 @@ class EmailForwarder:
                     subject=original_email_data.get("subject", ""),
                     **{"from": from_header},
                 )
-            except Exception as e:
+            except Exception:
                 # Absolute fallback
                 final_html = f"<html><body>{body_content_html}</body></html>"
 

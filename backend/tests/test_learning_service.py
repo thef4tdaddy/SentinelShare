@@ -60,5 +60,5 @@ def test_auto_promotion(session):
 
     # Reload and check promotion
     session.refresh(rule)
-    assert rule.is_shadow_mode == False
+    assert not rule.is_shadow_mode
     assert "(AUTO)" in rule.purpose

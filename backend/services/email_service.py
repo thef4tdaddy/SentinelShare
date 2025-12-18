@@ -3,7 +3,6 @@ import imaplib
 import json
 import logging
 import os
-from datetime import datetime
 from email.header import decode_header
 from typing import Optional
 
@@ -102,7 +101,7 @@ class EmailService:
             mail.login(email_user, email_pass)
             mail.logout()
             return {"success": True, "error": None}
-        except Exception as e:
+        except Exception:
             logging.exception("Error when testing email connection")
             return {"success": False, "error": "Unable to connect to email server"}
 
@@ -184,14 +183,14 @@ class EmailService:
                                 if content_type == "text/plain":
                                     try:
                                         body = part.get_payload(decode=True).decode()
-                                    except:
+                                    except Exception:
                                         pass
                                 elif content_type == "text/html":
                                     try:
                                         html_body = part.get_payload(
                                             decode=True
                                         ).decode()
-                                    except:
+                                    except Exception:
                                         pass
                         else:
                             content_type = msg.get_content_type()
@@ -201,7 +200,7 @@ class EmailService:
                                     html_body = payload
                                 else:
                                     body = payload
-                            except:
+                            except Exception:
                                 pass
 
                         # Fallback to HTML if no plain text, or if plain text is empty/useless
@@ -297,12 +296,12 @@ class EmailService:
                         if content_type == "text/plain":
                             try:
                                 body = part.get_payload(decode=True).decode()
-                            except:
+                            except Exception:
                                 pass
                         elif content_type == "text/html":
                             try:
                                 html_body = part.get_payload(decode=True).decode()
-                            except:
+                            except Exception:
                                 pass
                 else:
                     payload = msg.get_payload(decode=True).decode()

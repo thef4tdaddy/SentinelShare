@@ -1,9 +1,16 @@
+import os
 from contextlib import asynccontextmanager
 
-from backend.database import create_db_and_tables
-from backend.models import ProcessedEmail
+from backend.routers import actions, auth, dashboard, history, settings
 from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
+
+# actually CI says backend.models.ProcessedEmail imported but unused.
+# backend.database.create_db_and_tables imported but unused.
 
 
 @asynccontextmanager
@@ -16,8 +23,6 @@ async def lifespan(app: FastAPI):
         run_migrations()
     except Exception as e:
         print(f"Startup Migration Error: {e}")
-        # Fallback to legacy creation if migrations fail (e.g. Alembic missing)
-        # create_db_and_tables()
 
     print("Startup: Database checks complete.")
     start_scheduler()
@@ -26,14 +31,6 @@ async def lifespan(app: FastAPI):
     stop_scheduler()
     print("Shutdown: App stopping.")
 
-
-import os
-
-from backend.routers import actions, auth, dashboard, history, settings
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from starlette.middleware.sessions import SessionMiddleware
-from starlette.requests import Request
 
 app = FastAPI(title="Receipt Forwarder API", lifespan=lifespan)
 
@@ -114,6 +111,4 @@ def read_root():
     }
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+# Removed redefined health_check

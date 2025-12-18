@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail, ProcessingRun
@@ -42,7 +42,7 @@ def parse_iso_date(date_str: str) -> datetime:
     """
     try:
         return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-    except (ValueError, AttributeError) as e:
+    except (ValueError, AttributeError):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid date format: {date_str}. Expected ISO 8601 format (e.g., 2025-12-10T10:00:00Z)",
@@ -69,16 +69,16 @@ def get_email_history(
         filters.append(ProcessedEmail.status == status.value)
     if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))
 
     # Order by processed_at descending
-    query = query.order_by(ProcessedEmail.processed_at.desc())
+    query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
 
     # Get total count
     count_query = select(func.count()).select_from(ProcessedEmail)
@@ -111,12 +111,13 @@ def reprocess_email(email_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Email not found")
 
     # 1. Get content from encrypted storage
-    body = decrypt_content(email.encrypted_body)
-    html_body = decrypt_content(email.encrypted_html)
+    body = decrypt_content(email.encrypted_body) if email.encrypted_body else ""
+    html_body = decrypt_content(email.encrypted_html) if email.encrypted_html else ""
 
     # 2. Fallback to IMAP if content is gone (retention expired)
     if not body and not html_body:
-        creds = EmailService.get_credentials_for_account(email.account_email)
+        acc_email = email.account_email or ""
+        creds = EmailService.get_credentials_for_account(acc_email)
         if not creds:
             raise HTTPException(
                 status_code=400,
@@ -199,8 +200,8 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
     ignored_emails = session.exec(
         select(ProcessedEmail)
         .where(ProcessedEmail.status == "ignored")
-        .where(ProcessedEmail.processed_at >= day_ago)
-        .where(ProcessedEmail.encrypted_body != None)
+        .where(ProcessedEmail.processed_at >= day_ago)  # type: ignore
+        .where(ProcessedEmail.encrypted_body is not None)
     ).all()
 
     reprocessed_count = 0
@@ -208,8 +209,8 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
     target_email = os.environ.get("WIFE_EMAIL")
 
     for email in ignored_emails:
-        body = decrypt_content(email.encrypted_body)
-        html_body = decrypt_content(email.encrypted_html)
+        body = decrypt_content(email.encrypted_body or "")
+        html_body = decrypt_content(email.encrypted_html or "")
 
         email_data = {
             "subject": email.subject,
@@ -255,10 +256,10 @@ def get_history_stats(
     filters = []
     if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))
@@ -275,10 +276,11 @@ def get_history_stats(
     total_amount = sum(e.amount for e in emails if e.amount)
 
     # Group by status
-    status_breakdown = {}
+    status_breakdown: Dict[str, int] = {}
     for email in emails:
         status = email.status
-        status_breakdown[status] = status_breakdown.get(status, 0) + 1
+        if status:
+            status_breakdown[status] = status_breakdown.get(status, 0) + 1
 
     return {
         "total": total,
@@ -296,7 +298,7 @@ def get_recent_runs(
 ):
     """Get aggregated information about recent processing runs"""
     # Query the actual ProcessingRun table
-    query = select(ProcessingRun).order_by(ProcessingRun.started_at.desc()).limit(limit)
+    query = select(ProcessingRun).order_by(ProcessingRun.started_at.desc()).limit(limit)  # type: ignore
     runs_db = session.exec(query).all()
 
     runs = []
@@ -335,7 +337,7 @@ def get_processing_runs(
     """Get processing run history with pagination"""
     statement = (
         select(ProcessingRun)
-        .order_by(ProcessingRun.started_at.desc())
+        .order_by(ProcessingRun.started_at.desc())  # type: ignore
         .offset(skip)
         .limit(limit)
     )

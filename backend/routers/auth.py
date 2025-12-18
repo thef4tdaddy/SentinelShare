@@ -1,8 +1,7 @@
 import os
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

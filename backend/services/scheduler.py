@@ -1,20 +1,17 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from backend.database import engine, get_session
+from apscheduler.schedulers.background import \
+    BackgroundScheduler  # type: ignore
+from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
+from backend.security import encrypt_content
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
-
-
-from datetime import timedelta
-
-from backend.security import encrypt_content
 
 
 def redact_email(email):

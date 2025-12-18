@@ -1,5 +1,3 @@
-import json
-import os
 from typing import List
 
 from backend.constants import DEFAULT_EMAIL_TEMPLATE

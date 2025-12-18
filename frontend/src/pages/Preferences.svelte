@@ -53,7 +53,7 @@
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-	<div class="card bg-gradient-to-br from-indigo-50 to-white border-indigo-100">
+	<div class="card bg-linear-to-br from-indigo-50 to-white border-indigo-100">
 		<div class="flex items-center gap-3 mb-4">
 			<div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
 				<Zap size={20} />
@@ -69,7 +69,7 @@
 		</div>
 	</div>
 
-	<div class="card bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
+	<div class="card bg-linear-to-br from-emerald-50 to-white border-emerald-100">
 		<div class="flex items-center gap-3 mb-4">
 			<div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
 				<TrendingUp size={20} />

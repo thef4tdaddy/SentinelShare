@@ -60,7 +60,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         mock_server.starttls.assert_called_once()
         mock_server.login.assert_called_once_with("sender@example.com", "password123")
         mock_server.send_message.assert_called_once()
@@ -77,7 +77,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == False
+        assert not result
         mock_smtp.assert_not_called()
 
     @patch("backend.services.forwarder.smtplib.SMTP")
@@ -100,7 +100,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         mock_server.login.assert_called_once_with("account1@gmail.com", "pass1")
 
     @patch("backend.services.forwarder.smtplib.SMTP")
@@ -123,7 +123,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         # Should use smtp.mail.me.com for iCloud
         mock_smtp.assert_called_with("smtp.mail.me.com", 587)
 
@@ -146,7 +146,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == False
+        assert not result
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(
@@ -162,7 +162,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         # Should use "No Subject" as default
 
     @patch("backend.services.forwarder.smtplib.SMTP")
@@ -183,7 +183,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         # Verify send_message was called with a message
         call_args = mock_server.send_message.call_args
         assert call_args is not None
@@ -208,7 +208,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         # Should infer smtp.custom.com from imap.custom.com
         mock_smtp.assert_called_with("smtp.custom.com", 587)
 
@@ -231,7 +231,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == False
+        assert not result
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(os.environ, {"EMAIL_ACCOUNTS": "invalid json"}, clear=True)
@@ -246,7 +246,7 @@ class TestEmailForwarder:
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
         # Should fail since no valid credentials
-        assert result == False
+        assert not result
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(
@@ -277,7 +277,7 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result
         # Verify the message was sent
         mock_server.send_message.assert_called_once()
 
@@ -310,4 +310,4 @@ class TestEmailForwarder:
 
         result = EmailForwarder.forward_email(original_email, "target@example.com")
 
-        assert result == True
+        assert result

@@ -1,4 +1,3 @@
-import pytest
 from backend.services.detector import ReceiptDetector
 
 
@@ -39,7 +38,7 @@ def test_false_negative_receipt_with_promo_footer():
     is_receipt = ReceiptDetector.is_receipt(email)
 
     # We WANT this to be True
-    assert is_receipt == True, "Failed to detect receipt with promo footer"
+    assert is_receipt, "Failed to detect receipt with promo footer"
 
 
 def test_false_negative_digital_subscription():
@@ -56,9 +55,7 @@ def test_false_negative_digital_subscription():
         """,
         sender="billing@service.com",
     )
-    assert (
-        ReceiptDetector.is_receipt(email) == True
-    ), "Failed to detect subscription renewal"
+    assert ReceiptDetector.is_receipt(email), "Failed to detect subscription renewal"
 
 
 def test_false_negative_user_example_ordered_subject():
@@ -77,6 +74,4 @@ def test_false_negative_user_example_ordered_subject():
         """,
         sender="auto-confirm@amazon.com",
     )
-    assert (
-        ReceiptDetector.is_receipt(email) == True
-    ), "Failed to detect 'Ordered:' subject"
+    assert ReceiptDetector.is_receipt(email), "Failed to detect 'Ordered:' subject"

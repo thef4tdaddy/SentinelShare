@@ -30,7 +30,9 @@ const ALLOWED = new Set([
   'tsconfig.json',
   'tsconfig.node.json',
   'vite.config.ts',
-  'vitest.config.ts' // Added
+  'vitest.config.ts', // Added
+  'coverage', // Vitest coverage
+  '.ruff_cache' // Backend linting cache
 ]);
 
 // Ignored patterns (e.g., temporary files)

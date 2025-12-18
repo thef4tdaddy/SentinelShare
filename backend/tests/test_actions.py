@@ -105,6 +105,7 @@ class TestToggleIgnored:
                 "backend.routers.actions.EmailForwarder.forward_email",
                 return_value=True,
             ):
+                assert email.id is not None
                 request = actions.ToggleIgnoredRequest(email_id=email.id)
                 result = actions.toggle_ignored_email(request, session)
 

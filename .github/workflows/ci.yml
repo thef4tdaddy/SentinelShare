@@ -1,6 +1,7 @@
 name: CI
 permissions:
   contents: read
+  pull-requests: write
 
 on:
   push:
@@ -11,13 +12,17 @@ on:
 jobs:
   frontend-check:
     runs-on: ubuntu-latest
+    outputs:
+      lint_status: ${{ steps.lint.outcome }}
+      typecheck_status: ${{ steps.typecheck.outcome }}
+      build_status: ${{ steps.build.outcome }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
@@ -52,6 +57,11 @@ jobs:
 
   backend-check:
     runs-on: ubuntu-latest
+    outputs:
+      ruff_status: ${{ steps.ruff.outcome }}
+
+      mypy_status: ${{ steps.mypy.outcome }}
+      pytest_status: ${{ steps.pytest.outcome }}
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +93,7 @@ jobs:
       - name: Run Tests
         id: pytest
         working-directory: backend
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50 tests/ || true
+        run: pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ || true
 
       - name: Check Status
         if: always()
@@ -92,3 +102,54 @@ jobs:
             echo "One or more steps failed."
             exit 1
           fi
+
+  comment-on-failure:
+    needs: [frontend-check, backend-check]
+    if: failure() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run_id = context.runId;
+            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+
+            // Frontend Results
+            const f_lint = '${{ needs.frontend-check.outputs.lint_status }}';
+            const f_type = '${{ needs.frontend-check.outputs.typecheck_status }}';
+            const f_build = '${{ needs.frontend-check.outputs.build_status }}';
+
+            // Backend Results
+            const b_ruff = '${{ needs.backend-check.outputs.ruff_status }}';
+            const b_mypy = '${{ needs.backend-check.outputs.mypy_status }}';
+            const b_test = '${{ needs.backend-check.outputs.pytest_status }}';
+
+            const icon = (status) => status === 'success' ? '✅' : (status === 'skipped' ? '⚪' : '❌');
+
+            const body = `### ❌ CI Failure
+
+            The pipeline failed. Here is the breakdown:
+
+            #### 🎨 Frontend
+            | Check | Status |
+            |-------|--------|
+            | ESLint | ${icon(f_lint)} |
+            | Typecheck | ${icon(f_type)} |
+            | Build | ${icon(f_build)} |
+
+            #### 🐍 Backend
+            | Check | Status |
+            |-------|--------|
+            | Ruff (Lint) | ${icon(b_ruff)} |
+            | Mypy (Types) | ${icon(b_mypy)} |
+            | Pytest (Tests) | ${icon(b_test)} |
+
+            [View Full Logs](${run_url})`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: context.issue.number,
+              body
+            });

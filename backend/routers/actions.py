@@ -5,7 +5,6 @@ import json
 import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
-from typing import Optional
 
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
@@ -47,7 +46,7 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
         now_ts = datetime.now(timezone.utc).timestamp()
         if now_ts - link_ts > 7 * 24 * 3600:  # 7 days
             return "<h1>❌ Link Expired</h1><p>This action link is too old.</p>"
-    except:
+    except Exception:
         return "<h1>❌ Invalid Timestamp</h1>"
 
     # Execute Command
@@ -201,7 +200,7 @@ def toggle_ignored_email(
 
     # Create a manual rule based on the email sender
     # Extract email address from sender using RFC 5322 compliant parser
-    sender = email.sender
+    sender = email.sender or ""
     # parseaddr returns (realname, email_address)
     _, email_pattern = parseaddr(sender)
 
@@ -219,9 +218,8 @@ def toggle_ignored_email(
     ).first()
     if not existing_rule:
         # Truncate subject intelligently with ellipsis
-        truncated_subject = (
-            email.subject[:47] + "..." if len(email.subject) > 50 else email.subject
-        )
+        subj = email.subject or ""
+        truncated_subject = subj[:47] + "..." if len(subj) > 50 else subj
         manual_rule = ManualRule(
             email_pattern=email_pattern,
             subject_pattern=None,
@@ -241,7 +239,7 @@ def toggle_ignored_email(
     # Try to fetch the original email content
 
     # 1. Get credentials for the source account
-    creds = EmailService.get_credentials_for_account(email.account_email)
+    creds = EmailService.get_credentials_for_account(str(email.account_email))
 
     if not creds:
         # Fallback to SENDER_EMAIL if specific account not found
@@ -270,7 +268,7 @@ def toggle_ignored_email(
 
     # 2b. Universal Fallback: If not found, try all other accounts
     if not original_content:
-        print(f"DEBUG: Email not found in initial account, trying all accounts...")
+        print("DEBUG: Email not found in initial account, trying all accounts...")
         try:
             accounts_json = os.environ.get("EMAIL_ACCOUNTS")
             if accounts_json:
@@ -297,7 +295,7 @@ def toggle_ignored_email(
                         )
                         if original_content:
                             print(
-                                f"DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
+                                "DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
                             )
                             break
         except Exception as e:
@@ -306,7 +304,7 @@ def toggle_ignored_email(
     # 3. Construct body
     if original_content:
         # Use the fetched content
-        body_text = original_content.get("body", "")
+        original_content.get("body", "")
         # If we have HTML but no text, maybe use HTML?
         # EmailForwarder usually takes 'body' as text/html depending on structure.
         # But here we pass a single 'body' string.

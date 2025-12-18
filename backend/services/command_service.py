@@ -1,10 +1,7 @@
 import os
-import re
-from typing import Optional
 
 from backend.database import engine
 from backend.models import Preference
-from backend.services.forwarder import EmailForwarder
 from sqlmodel import Session, select
 
 
@@ -29,7 +26,7 @@ class CommandService:
         Returns True if a command was found and executed.
         """
         body = (email_data.get("body") or "").strip()
-        subject = (email_data.get("subject") or "").strip()
+        (email_data.get("subject") or "").strip()
 
         # Simple parser: Look for specific keywords at the start of lines or arguably just the first word
         # supported: STOP <item>, MORE <item>, SETTINGS
@@ -115,7 +112,7 @@ class CommandService:
 
         try:
             msg = MIMEMultipart()
-            msg["From"] = sender_email
+            msg["From"] = sender_email or ""
             msg["To"] = target_email
             msg["Subject"] = "SentinelShare Command Confirmed"
 
@@ -123,7 +120,7 @@ class CommandService:
 
             with smtplib.SMTP(smtp_server, smtp_port) as server:
                 server.starttls()
-                server.login(sender_email, password)
+                server.login(sender_email or "", password or "")
                 server.send_message(msg)
                 print(f"📨 Confirmation sent to {target_email}")
         except Exception as e:
