@@ -229,7 +229,8 @@ class EmailService:
             return emails_data
 
         except Exception as e:
-            print(f"❌ IMAP Error: {e}")
+            # CodeQL: Avoid logging full exception details
+            print(f"❌ IMAP Error: {type(e).__name__}")
             return []
 
     @staticmethod

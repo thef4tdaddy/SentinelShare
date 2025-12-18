@@ -67,9 +67,10 @@ def process_emails():
                             email_data["account_email"] = user
                         all_emails.extend(fetched)
                     except Exception as e:
-                        print(f"❌ Error scanning {user}: {e}")
+                        # CodeQL: Avoid logging full exception as it may contain credentials
+                        print(f"❌ Error scanning {user}: {type(e).__name__}")
                         error_occurred = True
-                        error_msg = f"Error scanning {user}: {str(e)}"
+                        error_msg = f"Error scanning {user}: Connection failed ({type(e).__name__})"
         else:
             print("⚠️ No email accounts configured.")
 

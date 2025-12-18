@@ -196,7 +196,7 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
 
             run = runs[0]
             assert run.status == "error"
-            assert "IMAP connection failed" in run.error_message
+            assert "Connection failed (Exception)" in run.error_message
             assert run.completed_at is not None
     finally:
         # Restore original engine
