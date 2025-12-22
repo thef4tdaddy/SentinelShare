@@ -62,3 +62,47 @@ def test_auto_promotion(session):
     session.refresh(rule)
     assert not rule.is_shadow_mode
     assert "(AUTO)" in rule.purpose
+
+
+def test_run_shadow_mode_email_pattern_no_match(session):
+    """Test that shadow rule doesn't match when email pattern doesn't match sender (line 83)."""
+    # Setup a shadow rule with specific email pattern
+    rule = ManualRule(
+        email_pattern="*@store.com", is_shadow_mode=True, confidence=0.5, match_count=0
+    )
+    session.add(rule)
+    session.commit()
+
+    # Simulate an email that doesn't match the email pattern
+    email_data = {"from": "support@different-store.com", "subject": "Thank you"}
+
+    LearningService.run_shadow_mode(session, email_data)
+
+    # Reload rule and verify it wasn't matched
+    session.refresh(rule)
+    assert rule.match_count == 0  # Should not increment
+    assert rule.confidence == 0.5  # Should not change
+
+
+def test_run_shadow_mode_subject_pattern_no_match(session):
+    """Test that shadow rule doesn't match when subject pattern doesn't match (line 89)."""
+    # Setup a shadow rule with both email and subject patterns
+    rule = ManualRule(
+        email_pattern="*@store.com",
+        subject_pattern="*order*",
+        is_shadow_mode=True,
+        confidence=0.5,
+        match_count=0,
+    )
+    session.add(rule)
+    session.commit()
+
+    # Simulate an email where email pattern matches but subject pattern doesn't
+    email_data = {"from": "support@store.com", "subject": "Just a greeting"}
+
+    LearningService.run_shadow_mode(session, email_data)
+
+    # Reload rule and verify it wasn't matched
+    session.refresh(rule)
+    assert rule.match_count == 0  # Should not increment
+    assert rule.confidence == 0.5  # Should not change
