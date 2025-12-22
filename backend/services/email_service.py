@@ -222,8 +222,8 @@ class EmailService:
 
             for e_id in email_ids:
                 try:
-                    # Fetch the email body (RFC822)
-                    _, msg_data = mail.fetch(e_id, "(RFC822)")
+                    # Fetch the email body (BODY[])
+                    _, msg_data = mail.fetch(e_id, "(BODY[])")
                     for response_part in msg_data:
                         if isinstance(response_part, tuple):
                             msg = email.message_from_bytes(response_part[1])
@@ -297,6 +297,7 @@ class EmailService:
                                     "account_email": username,  # Fixed: was email_user
                                 }
                             )
+
                 except Exception as e:
                     print(f"❌ Error fetching email {e_id}: {e}")
                     continue
