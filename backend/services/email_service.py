@@ -235,7 +235,7 @@ class EmailService:
             return fetched_emails
 
         except Exception as e:
-            print(f"❌ IMAP Connection Error: {e}")
+            print(f"❌ IMAP Connection Error: {type(e).__name__}")
             return []
 
     @staticmethod
