@@ -1,8 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.background import \
-    BackgroundScheduler  # type: ignore
+from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content
@@ -131,44 +130,98 @@ def process_emails():
                 return
 
             for email_data in emails:
-                # Check if already processed (deduplication by Message-ID)
-                msg_id = email_data.get("message_id")
-                if msg_id:
-                    existing = session.exec(
-                        select(ProcessedEmail).where(ProcessedEmail.email_id == msg_id)
-                    ).first()
-                    if existing:
-                        print(f"⚠️ Email {msg_id} already processed. Skipping.")
+                try:
+                    # Check if already processed (deduplication by Message-ID)
+                    msg_id = email_data.get("message_id")
+                    if msg_id:
+                        existing = session.exec(
+                            select(ProcessedEmail).where(
+                                ProcessedEmail.email_id == msg_id
+                            )
+                        ).first()
+                        if existing:
+                            print(f"⚠️ Email {msg_id} already processed. Skipping.")
+                            continue
+
+                    # This is a new email to process
+                    emails_processed_count += 1
+
+                    # Get the account this email belongs to
+                    account_email = email_data.get("account_email", "unknown")
+
+                    # Checks for Command (Reply from Wife)
+                    from backend.services.command_service import CommandService
+
+                    if CommandService.is_command_email(email_data):
+                        print(
+                            f"   💬 Detected command email from {email_data.get('from')}"
+                        )
+                        if CommandService.process_command(email_data):
+                            status = "command_executed"
+                            reason = "User command"
+                        else:
+                            status = "ignored"
+                            reason = "Command from wife (no action)"
+
+                        # Log it (with encryption and retention if needed, though commands usually don't need body retention)
+                        processed = ProcessedEmail(
+                            email_id=msg_id or "unknown",
+                            subject=email_data.get("subject", ""),
+                            sender=email_data.get("from", ""),
+                            received_at=datetime.now(timezone.utc),
+                            processed_at=datetime.now(timezone.utc),
+                            status=status,
+                            account_email=account_email,
+                            category="command",
+                            reason=reason,
+                            retention_expires_at=datetime.now(timezone.utc)
+                            + timedelta(hours=24),
+                            encrypted_body=encrypt_content(email_data.get("body", "")),
+                            encrypted_html=encrypt_content(
+                                email_data.get("html_body", "")
+                            ),
+                        )
+                        session.add(processed)
+                        session.commit()
+                        print(f"✅ Command processed with status: {status}")
                         continue
 
-                # This is a new email to process
-                emails_processed_count += 1
+                    # Detect (passing session for manual rules/preferences)
+                    is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
+                    category = ReceiptDetector.categorize_receipt(email_data)
 
-                # Get the account this email belongs to
-                account_email = email_data.get("account_email", "unknown")
+                    # Shadow Mode Testing (Learning)
+                    from backend.services.learning_service import LearningService
 
-                # Checks for Command (Reply from Wife)
-                from backend.services.command_service import CommandService
+                    LearningService.run_shadow_mode(session, email_data)
 
-                if CommandService.is_command_email(email_data):
-                    print(f"   💬 Detected command email from {email_data.get('from')}")
-                    if CommandService.process_command(email_data):
-                        status = "command_executed"
-                        reason = "User command"
-                    else:
-                        status = "ignored"
-                        reason = "Command from wife (no action)"
+                    print(
+                        f"   🔍 Analyzing: {email_data.get('subject')} | From: {email_data.get('from')}"
+                    )
+                    print(f"      -> Is Receipt: {is_receipt} | Category: {category}")
 
-                    # Log it (with encryption and retention if needed, though commands usually don't need body retention)
+                    status = "ignored"
+                    reason = "Not a receipt"
+
+                    if is_receipt:
+                        # Forward
+                        print(f"      🚀 Forwarding to {target_email}...")
+                        success = EmailForwarder.forward_email(email_data, target_email)
+                        status = "forwarded" if success else "error"
+                        reason = "Detected as receipt" if success else "SMTP Error"
+                        if success:
+                            emails_forwarded_count += 1
+
+                    # Save to DB
                     processed = ProcessedEmail(
                         email_id=msg_id or "unknown",
                         subject=email_data.get("subject", ""),
                         sender=email_data.get("from", ""),
-                        received_at=datetime.now(timezone.utc),
+                        received_at=datetime.now(timezone.utc),  # Approximate
                         processed_at=datetime.now(timezone.utc),
                         status=status,
                         account_email=account_email,
-                        category="command",
+                        category=category,
                         reason=reason,
                         retention_expires_at=datetime.now(timezone.utc)
                         + timedelta(hours=24),
@@ -177,54 +230,24 @@ def process_emails():
                     )
                     session.add(processed)
                     session.commit()
-                    print(f"❌ Failed to send confirmation: {status}")
-                    continue
+                    print(f"💾 Saved status: {status} (Account: {account_email})")
 
-                # Detect (passing session for manual rules/preferences)
-                is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
-                category = ReceiptDetector.categorize_receipt(email_data)
+                except Exception as e:
+                    import traceback
 
-                # Shadow Mode Testing (Learning)
-                from backend.services.learning_service import LearningService
-
-                LearningService.run_shadow_mode(session, email_data)
-
-                print(
-                    f"   🔍 Analyzing: {email_data.get('subject')} | From: {email_data.get('from')}"
-                )
-                print(f"      -> Is Receipt: {is_receipt} | Category: {category}")
-
-                status = "ignored"
-                reason = "Not a receipt"
-
-                if is_receipt:
-                    # Forward
-                    print(f"      🚀 Forwarding to {target_email}...")
-                    success = EmailForwarder.forward_email(email_data, target_email)
-                    status = "forwarded" if success else "error"
-                    reason = "Detected as receipt" if success else "SMTP Error"
-                    if success:
-                        emails_forwarded_count += 1
-
-                # Save to DB
-                processed = ProcessedEmail(
-                    email_id=msg_id or "unknown",
-                    subject=email_data.get("subject", ""),
-                    sender=email_data.get("from", ""),
-                    received_at=datetime.now(timezone.utc),  # Approximate
-                    processed_at=datetime.now(timezone.utc),
-                    status=status,
-                    account_email=account_email,
-                    category=category,
-                    reason=reason,
-                    retention_expires_at=datetime.now(timezone.utc)
-                    + timedelta(hours=24),
-                    encrypted_body=encrypt_content(email_data.get("body", "")),
-                    encrypted_html=encrypt_content(email_data.get("html_body", "")),
-                )
-                session.add(processed)
-                session.commit()
-                print(f"💾 Saved status: {status} (Account: {account_email})")
+                    print(
+                        f"❌ Error processing individual email {email_data.get('subject', 'unknown')}: {e}"
+                    )
+                    traceback.print_exc()
+                    session.rollback()  # Ensure session isn't broken for next email
+                    # Mark that an error occurred during this run and update error message
+                    error_occurred = True
+                    subject = email_data.get("subject", "unknown")
+                    if error_msg:
+                        error_msg += f"; error processing email '{subject}'"
+                    else:
+                        error_msg = f"Error processing email '{subject}'"
+                    # Continue to next email
 
             # Update the processing run with final counts
             run = session.get(ProcessingRun, run_id)

@@ -2,9 +2,15 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependencies"
   - package-ecosystem: "pip"
     directory: "/"
+    target-branch: "develop"
     schedule:
       interval: "weekly"
+    labels:
+      - "dependencies"

@@ -1,0 +1,45 @@
+name: Dependabot Triage
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Label Critical/High Priority (Security or Major)
+        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-major' || steps.metadata.outputs.security-severity == 'critical' || steps.metadata.outputs.security-severity == 'high' }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "priority: high"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Label Medium Priority (Minor)
+        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-minor' && steps.metadata.outputs.security-severity == '' }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "priority: medium"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Label Low Priority (Patch)
+        if: ${{ steps.metadata.outputs.update-type == 'version-update:semver-patch' && steps.metadata.outputs.security-severity == '' }}
+        run: |
+          gh pr edit "$PR_URL" --add-label "priority: low"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

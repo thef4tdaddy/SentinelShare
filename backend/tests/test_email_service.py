@@ -27,7 +27,7 @@ class TestEmailService:
 
         # Execute
         emails = EmailService.fetch_recent_emails(
-            "test@example.com", "password123", "imap.gmail.com", limit=20
+            "test@example.com", "password123", "imap.gmail.com"
         )
 
         # Assert
@@ -100,10 +100,10 @@ class TestEmailService:
         mock_mail.fetch.return_value = ("OK", [(b"", msg.as_bytes())])
 
         emails = EmailService.fetch_recent_emails(
-            "test@example.com", "password123", "imap.gmail.com", limit=5
+            "test@example.com", "password123", "imap.gmail.com"
         )
 
-        # Should fetch BATCH_LIMIT (100) instead of limit param (5) because we use SINCE strategy now
+        # Should fetch all 100 emails since batch limit is 100 by default
         assert len(emails) == 100
         assert mock_mail.fetch.call_count == 100
 
