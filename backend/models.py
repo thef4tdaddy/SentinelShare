@@ -74,3 +74,19 @@ class ProcessingRun(SQLModel, table=True):
     check_interval_minutes: Optional[int] = (
         None  # The configured interval at the time of run
     )
+
+
+class LearningCandidate(SQLModel, table=True):
+    """
+    Represents a potential rule discovered by the Retroactive Learning scanner.
+    Stores patterns, not email content, to respect privacy.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sender: str
+    subject_pattern: Optional[str] = None
+    confidence: float
+    type: str = "Receipt"
+    matches: int = 1  # How many emails matched this pattern during scan
+    example_subject: Optional[str] = None  # One example subject for context
+    created_at: datetime = Field(default_factory=utc_now)

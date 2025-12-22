@@ -1,7 +1,8 @@
 import os
 from contextlib import asynccontextmanager
 
-from backend.routers import actions, auth, dashboard, history, settings
+from backend.routers import (actions, auth, dashboard, history, learning,
+                             settings)
 from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
@@ -66,6 +67,7 @@ app.include_router(dashboard.router)
 app.include_router(settings.router)
 app.include_router(history.router)
 app.include_router(actions.router)
+app.include_router(learning.router)
 
 # Session Middleware (Required for Auth) - Added LAST to be OUTERMOST (runs first)
 app.add_middleware(
