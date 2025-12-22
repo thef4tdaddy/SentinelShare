@@ -64,6 +64,6 @@
     "lucide-svelte": "^0.556.0"
   },
   "optionalDependencies": {
-    "@rollup/rollup-darwin-arm64": "^4.53.3"
+    "@rollup/rollup-darwin-arm64": "^4.54.0"
   }
 }
