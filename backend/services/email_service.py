@@ -209,9 +209,10 @@ class EmailService:
 
                             # Fallback: If no plain text body, use HTML strip or just raw HTML (simplified)
                             if not body and html_body:
-                                # For now, just use HTML as body if plain missing, or leave empty
-                                # In a real app, use BeautifulSoup to strip tags
-                                pass
+                                from bs4 import BeautifulSoup
+
+                                soup = BeautifulSoup(html_body, "html.parser")
+                                body = soup.get_text(separator=" ", strip=True)
 
                             fetched_emails.append(
                                 {
