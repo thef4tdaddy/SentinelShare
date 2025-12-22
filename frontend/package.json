@@ -61,7 +61,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.3.1",
-    "lucide-svelte": "^0.556.0"
+    "lucide-svelte": "^0.562.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.53.3"
