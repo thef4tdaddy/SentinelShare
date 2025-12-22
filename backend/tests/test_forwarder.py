@@ -317,15 +317,20 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
-    def test_zzz_forward_email_leaves_template_in_db(self, mock_smtp):
-        """Test that creates a template without cleaning it up"""
-        # NOTE: This test is prefixed with "zzz_" to ensure it runs late in the test order.
-        # It intentionally leaves a template in the DB to set up the precondition
-        # for testing the fixture's cleanup logic.
+    def test_zzz_1_setup_preexisting_template(self, mock_smtp):
+        """Creates a template in DB without cleaning it up (Part 1 of 2-part test)"""
+        # This is part 1 of a 2-part test sequence to cover lines 23-24 of the fixture.
+        # Test name is prefixed with "zzz_1_" to ensure it runs in a known order,
+        # as pytest runs tests within a class in lexicographic (alphabetical) order.
+        #
+        # Coverage Goal: Set up precondition for the fixture's pre-test cleanup.
+        # The next test (test_zzz_2_*) will use clean_email_template fixture which
+        # will trigger lines 23-24 when it finds this pre-existing template.
+        
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
-        # Create a template that will persist
+        # Create a template that intentionally persists after this test
         with Session(engine) as session:
             template = "Leftover template: {body}"
             setting = GlobalSettings(
@@ -334,6 +339,14 @@ class TestEmailForwarder:
             session.add(setting)
             session.commit()
 
+        # Verify it was created
+        with Session(engine) as session:
+            setting = session.exec(
+                select(GlobalSettings).where(GlobalSettings.key == "email_template")
+            ).first()
+            assert setting is not None
+
+        # Perform a normal email forwarding operation
         original_email = {
             "subject": "Test",
             "from": "test@example.com",
@@ -348,17 +361,29 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
-    def test_zzz_forward_email_with_fixture_cleanup(
+    def test_zzz_2_fixture_cleanup_of_preexisting_template(
         self, mock_smtp, clean_email_template
     ):
-        """Test that uses fixture after previous test left a template"""
-        # NOTE: This test is prefixed with "zzz_" to ensure it runs after
-        # test_zzz_forward_email_leaves_template_in_db.
-        # The clean_email_template fixture will clean up the leftover template,
-        # ensuring lines 23-24 in the fixture are executed.
+        """Tests fixture cleanup when template exists (Part 2 of 2-part test)"""
+        # This is part 2 of a 2-part test sequence to cover lines 23-24 of the fixture.
+        # Test name is prefixed with "zzz_2_" to ensure it runs after test_zzz_1_*.
+        #
+        # Coverage Goal: Exercise the fixture's pre-test cleanup (lines 22-24).
+        # The previous test left a template in the DB, so when this test's fixture
+        # runs, it will find that template and delete it (triggering lines 23-24).
+        
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
+        # The fixture should have cleaned up the pre-existing template
+        # Verify it's gone
+        with Session(engine) as session:
+            setting = session.exec(
+                select(GlobalSettings).where(GlobalSettings.key == "email_template")
+            ).first()
+            assert setting is None, "Fixture should have cleaned up the pre-existing template"
+
+        # Perform a normal email forwarding operation
         original_email = {
             "subject": "Test",
             "from": "test@example.com",
