@@ -184,8 +184,24 @@ class EmailService:
             email_ids = messages[0].split()
             total_emails = len(email_ids)
 
-            # Apply batch limit to prevent timeouts
-            batch_limit = int(os.environ.get("EMAIL_BATCH_LIMIT", "100"))
+            # Apply batch limit to prevent timeouts with validation
+            default_batch_limit = 100
+            raw_batch_limit = os.environ.get("EMAIL_BATCH_LIMIT")
+            try:
+                if raw_batch_limit is None:
+                    batch_limit = default_batch_limit
+                else:
+                    batch_limit = int(raw_batch_limit)
+                    if batch_limit <= 0:
+                        raise ValueError("EMAIL_BATCH_LIMIT must be a positive integer")
+            except (ValueError, TypeError):
+                logging.warning(
+                    "Invalid EMAIL_BATCH_LIMIT value %r; falling back to %d",
+                    raw_batch_limit,
+                    default_batch_limit,
+                )
+                batch_limit = default_batch_limit
+
             if total_emails > batch_limit:
                 print(
                     f"⚠️ Limiting fetched emails to the last {batch_limit} out of {total_emails} "
