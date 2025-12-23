@@ -11,6 +11,7 @@ lerna-debug.log*
 # Testing
 /coverage
 coverage/
+coverage.json
 
 # Production
 build
