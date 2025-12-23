@@ -8,6 +8,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture
+def frontend_dist_path():
+    """Get the path to the frontend dist directory."""
+    # Get the repo root by going up from backend/tests
+    test_dir = Path(__file__).parent
+    repo_root = test_dir.parent.parent
+    return repo_root / "frontend" / "dist"
+
+
 def test_health_check():
     from backend.main import app
 
@@ -123,21 +132,17 @@ def test_auth_middleware_authenticated(monkeypatch):
             del os.environ["DASHBOARD_PASSWORD"]
 
 
-def test_frontend_dist_mounting():
+def test_frontend_dist_mounting(frontend_dist_path):
     """Test frontend static files and SPA serving (lines 87-100, 106-108)"""
-    # Create the actual frontend/dist directory temporarily
-    frontend_dir = Path("/home/runner/work/SentinelShare/SentinelShare/frontend")
-    dist_path = frontend_dir / "dist"
-    
     # Check if dist already exists
-    dist_existed = dist_path.exists()
+    dist_existed = frontend_dist_path.exists()
     
     try:
         # Create dist directory and files
-        dist_path.mkdir(parents=True, exist_ok=True)
+        frontend_dist_path.mkdir(parents=True, exist_ok=True)
         
         # Create assets directory
-        assets_path = dist_path / "assets"
+        assets_path = frontend_dist_path / "assets"
         assets_path.mkdir(exist_ok=True)
         
         # Create a dummy asset file
@@ -145,7 +150,7 @@ def test_frontend_dist_mounting():
         asset_file.write_text("console.log('test');")
         
         # Create index.html
-        index_file = dist_path / "index.html"
+        index_file = frontend_dist_path / "index.html"
         index_file.write_text("<html><body>Test</body></html>")
         
         # Import fresh to pick up the dist directory
@@ -170,25 +175,23 @@ def test_frontend_dist_mounting():
         assert response.status_code == 200
         
         # Test that api/ paths in catch-all return error (line 97)
+        # When dist exists, the catch-all returns a JSON error with 200 status
         response = client.get("/api/unknown-endpoint")
         assert response.status_code == 200
-        # Should return the error dict
         assert response.json() == {"error": "API endpoint not found"}
         
     finally:
         # Clean up - remove the dist directory if it didn't exist before
-        if not dist_existed and dist_path.exists():
-            import shutil
-            shutil.rmtree(dist_path)
+        if not dist_existed and frontend_dist_path.exists():
+            shutil.rmtree(frontend_dist_path)
 
 
-def test_root_endpoint_without_dist():
+def test_root_endpoint_without_dist(frontend_dist_path):
     """Test root endpoint when frontend dist doesn't exist (line 108)"""
-    dist_path = Path("/home/runner/work/SentinelShare/SentinelShare/frontend/dist")
-    dist_existed = dist_path.exists()
+    dist_existed = frontend_dist_path.exists()
     
     if dist_existed:
-        shutil.rmtree(dist_path)
+        shutil.rmtree(frontend_dist_path)
     
     try:
         # Force reimport
@@ -210,15 +213,16 @@ def test_root_endpoint_without_dist():
     finally:
         # Restore if needed
         if dist_existed:
-            dist_path.mkdir(parents=True, exist_ok=True)
+            frontend_dist_path.mkdir(parents=True, exist_ok=True)
+
+
+def test_spa_catch_all_api_passthrough(frontend_dist_path):
     """Test that SPA catch-all properly handles api/ paths (lines 96-97)"""
     # Clean up dist if it exists from previous test
-    dist_path = Path("/home/runner/work/SentinelShare/SentinelShare/frontend/dist")
-    dist_existed = dist_path.exists()
+    dist_existed = frontend_dist_path.exists()
     
     if dist_existed:
-        import shutil
-        shutil.rmtree(dist_path)
+        shutil.rmtree(frontend_dist_path)
     
     try:
         # Force reimport to ensure dist check happens
@@ -233,12 +237,11 @@ def test_root_endpoint_without_dist():
         # Create a test client
         client = TestClient(app)
         
-        # The catch-all should let API errors through
-        # This tests line 96-97 where it checks if path starts with "api/"
+        # When dist doesn't exist, API errors should return FastAPI's standard 404
+        # This is different from when dist exists (which returns {"error": "..."})
         response = client.get("/api/does-not-exist")
-        # Should return 404 or error, but not serve index.html
         assert response.status_code == 404
     finally:
         # Restore dist if it existed before
         if dist_existed:
-            dist_path.mkdir(parents=True, exist_ok=True)
+            frontend_dist_path.mkdir(parents=True, exist_ok=True)
