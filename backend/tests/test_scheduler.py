@@ -290,3 +290,10 @@ def test_multi_account_email_tagging(
     finally:
         # Restore original engine
         scheduler_module.engine = original_engine
+
+
+def test_session_fixture_creates_db(session):
+    """Test that the session fixture properly creates a database session"""
+    # Verify the session is functional by querying for ProcessingRuns
+    runs = session.exec(select(ProcessingRun)).all()
+    assert len(runs) == 0  # New database should be empty
