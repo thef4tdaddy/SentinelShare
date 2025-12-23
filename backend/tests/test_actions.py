@@ -217,6 +217,52 @@ class TestToggleIgnored:
 
         assert "Could not extract email pattern" in str(exc_info.value)
 
+    def test_toggle_ignored_email_existing_rule(self, session):
+        """Test toggling ignored email when manual rule already exists"""
+        # Create an existing manual rule
+        existing_rule = ManualRule(
+            email_pattern="existing@company.com",
+            subject_pattern=None,
+            priority=100,
+            purpose="Pre-existing rule",
+        )
+        session.add(existing_rule)
+        session.commit()
+
+        # Create an ignored email with matching sender
+        email = ProcessedEmail(
+            email_id="existing-email@test.com",
+            subject="Newsletter from Company",
+            sender="existing@company.com",
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+            status="ignored",
+            account_email="user1@example.com",
+            category=None,
+            reason="Not a receipt",
+        )
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+
+        with patch.dict("os.environ", {"WIFE_EMAIL": "wife@example.com"}):
+            with patch(
+                "backend.routers.actions.EmailForwarder.forward_email",
+                return_value=True,
+            ):
+                request = actions.ToggleIgnoredRequest(email_id=email.id)
+                result = actions.toggle_ignored_email(request, session)
+
+                assert result["success"] is True
+                # Verify no new rule was created (should reuse existing)
+                rules = session.exec(
+                    select(ManualRule).where(
+                        ManualRule.email_pattern == "existing@company.com"
+                    )
+                ).all()
+                assert len(rules) == 1
+                assert rules[0].purpose == "Pre-existing rule"
+
 
 class TestAccountSelection:
     """Tests for account credential extraction and fallback in toggle_ignored_email"""
@@ -334,6 +380,92 @@ class TestAccountSelection:
                         sample_ignored_email.email_id,
                         "imap.mail.me.com",
                     )
+
+    def test_account_selection_fallback_skips_already_tried(
+        self, session, sample_ignored_email
+    ):
+        """Test that fallback logic skips the account that was already tried"""
+        import json
+
+        accounts_json = json.dumps(
+            [
+                {
+                    "email": "sender@test.com",
+                    "password": "p1",
+                    "imap_server": "imap.test.com",
+                },
+                {"email": "fallback@test.com", "password": "f1"},
+            ]
+        )
+
+        with patch.dict(
+            "os.environ",
+            {
+                "WIFE_EMAIL": "wife@example.com",
+                "EMAIL_ACCOUNTS": accounts_json,
+                "SENDER_EMAIL": "sender@test.com",
+                "SENDER_PASSWORD": "p1",
+            },
+        ):
+            # Set sample_ignored_email.account_email to match SENDER_EMAIL
+            sample_ignored_email.account_email = "sender@test.com"
+            session.add(sample_ignored_email)
+            session.commit()
+
+            with patch(
+                "backend.services.email_service.EmailService.fetch_email_by_id"
+            ) as mock_fetch:
+                # First attempt (sender@test.com) fails, fallback succeeds
+                mock_fetch.side_effect = [None, {"body": "found"}]
+                with patch(
+                    "backend.routers.actions.EmailForwarder.forward_email",
+                    return_value=True,
+                ):
+                    request = actions.ToggleIgnoredRequest(
+                        email_id=sample_ignored_email.id
+                    )
+                    actions.toggle_ignored_email(request, session)
+
+                    # Should call twice: once for initial, once for fallback
+                    # But should skip sender@test.com in the loop since it was already tried
+                    assert mock_fetch.call_count == 2
+                    # Second call should be for fallback@test.com
+                    calls = mock_fetch.call_args_list
+                    assert calls[1][0][0] == "fallback@test.com"
+
+    def test_account_selection_fallback_exception_handling(
+        self, session, sample_ignored_email
+    ):
+        """Test that fallback handles JSON parsing errors gracefully"""
+        with patch.dict(
+            "os.environ",
+            {
+                "WIFE_EMAIL": "wife@example.com",
+                "EMAIL_ACCOUNTS": "invalid-json{[",
+                "SENDER_EMAIL": "test@test.com",
+                "SENDER_PASSWORD": "pass",
+            },
+        ):
+            sample_ignored_email.account_email = "test@test.com"
+            session.add(sample_ignored_email)
+            session.commit()
+
+            with patch(
+                "backend.services.email_service.EmailService.fetch_email_by_id"
+            ) as mock_fetch:
+                mock_fetch.return_value = None  # First attempt fails
+                with patch(
+                    "backend.routers.actions.EmailForwarder.forward_email",
+                    return_value=True,
+                ):
+                    request = actions.ToggleIgnoredRequest(
+                        email_id=sample_ignored_email.id
+                    )
+                    # Should not raise exception, should continue with placeholder body
+                    result = actions.toggle_ignored_email(request, session)
+                    assert result["success"] is True
+                    # Should only call fetch once (initial attempt)
+                    assert mock_fetch.call_count == 1
 
 
 class TestQuickAction:
@@ -468,3 +600,66 @@ class TestQuickAction:
 
         response = actions.quick_action(cmd, arg, ts, sig)
         assert "Link Expired" in response
+
+    def test_quick_action_invalid_timestamp(self, monkeypatch):
+        """Test handling of invalid timestamp format"""
+        import hashlib
+        import hmac
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+        from backend.routers import actions
+
+        actions.SECRET = secret
+
+        ts = "invalid-timestamp"
+        cmd = "STOP"
+        arg = "amazon.com"
+        msg = f"{cmd}:{arg}:{ts}"
+        sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+        response = actions.quick_action(cmd, arg, ts, sig)
+        assert "Invalid Timestamp" in response
+
+    def test_quick_settings_empty(self, monkeypatch, session, engine):
+        """Test SETTINGS command with no preferences"""
+        import hashlib
+        import hmac
+        import time
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+        from backend.routers import actions
+
+        actions.SECRET = secret
+
+        ts = str(time.time())
+        cmd = "SETTINGS"
+        arg = "none"
+        msg = f"{cmd}:{arg}:{ts}"
+        sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+        with patch("backend.routers.actions.engine", engine):
+            response = actions.quick_action(cmd, arg, ts, sig)
+            assert "No active preferences found yet" in response
+
+    def test_quick_action_unknown_command(self, monkeypatch):
+        """Test handling of unknown command"""
+        import hashlib
+        import hmac
+        import time
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+        from backend.routers import actions
+
+        actions.SECRET = secret
+
+        ts = str(time.time())
+        cmd = "UNKNOWN_CMD"
+        arg = "test"
+        msg = f"{cmd}:{arg}:{ts}"
+        sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+        response = actions.quick_action(cmd, arg, ts, sig)
+        assert "Unknown Command" in response
