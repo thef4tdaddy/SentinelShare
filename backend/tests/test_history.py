@@ -7,6 +7,12 @@ from backend.routers import history
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
+# Test constants
+MOCK_IMAP_CREDENTIALS = {
+    "password": "test_password",
+    "imap_server": "imap.example.com",
+}
+
 
 @pytest.fixture(name="session")
 def session_fixture():
@@ -723,11 +729,11 @@ class TestHistoryReprocess:
         from backend.routers.history import reprocess_email
         from fastapi import HTTPException
 
+        assert email.id is not None
         with patch(
             "backend.services.email_service.EmailService.get_credentials_for_account",
             return_value=None,
         ):
-            assert email.id is not None
             with pytest.raises(HTTPException) as exc_info:
                 reprocess_email(email_id=email.id, session=session)
 
@@ -754,19 +760,14 @@ class TestHistoryReprocess:
         from backend.routers.history import reprocess_email
         from fastapi import HTTPException
 
-        mock_creds = {
-            "password": "test_password",
-            "imap_server": "imap.example.com",
-        }
-
+        assert email.id is not None
         with patch(
             "backend.services.email_service.EmailService.get_credentials_for_account",
-            return_value=mock_creds,
+            return_value=MOCK_IMAP_CREDENTIALS,
         ), patch(
             "backend.services.email_service.EmailService.fetch_email_by_id",
             return_value=None,
         ):
-            assert email.id is not None
             with pytest.raises(HTTPException) as exc_info:
                 reprocess_email(email_id=email.id, session=session)
 
@@ -790,16 +791,12 @@ class TestHistoryReprocess:
 
         from backend.routers.history import reprocess_email
 
-        mock_creds = {
-            "password": "test_password",
-            "imap_server": "imap.example.com",
-        }
-
         mock_fetched = {"body": "Fetched body content", "html_body": "<p>HTML</p>"}
 
+        assert email.id is not None
         with patch(
             "backend.services.email_service.EmailService.get_credentials_for_account",
-            return_value=mock_creds,
+            return_value=MOCK_IMAP_CREDENTIALS,
         ), patch(
             "backend.services.email_service.EmailService.fetch_email_by_id",
             return_value=mock_fetched,
@@ -810,7 +807,6 @@ class TestHistoryReprocess:
             "backend.services.detector.ReceiptDetector.categorize_receipt",
             return_value="shopping",
         ):
-            assert email.id is not None
             result = reprocess_email(email_id=email.id, session=session)
 
             assert result["suggested_status"] == "forwarded"
