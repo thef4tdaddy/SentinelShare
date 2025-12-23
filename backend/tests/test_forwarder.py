@@ -9,6 +9,21 @@ from sqlmodel import Session, select
 
 
 @pytest.fixture
+def preexisting_template_for_cleanup_test():
+    """Creates a pre-existing template specifically for testing fixture cleanup"""
+    create_db_and_tables()
+    with Session(engine) as session:
+        template = "Pre-existing template for testing: {body}"
+        setting = GlobalSettings(
+            key="email_template", value=template, description="Pre-existing for test"
+        )
+        session.add(setting)
+        session.commit()
+    # Don't clean up - let clean_email_template do it
+    return None
+
+
+@pytest.fixture
 def clean_email_template():
     """Fixture to clean up email template before and after tests"""
     # Ensure tables exist
@@ -317,66 +332,22 @@ class TestEmailForwarder:
         os.environ,
         {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
     )
-    def test_zzz_1_setup_preexisting_template(self, mock_smtp):
-        """Creates a template in DB without cleaning it up (Part 1 of 2-part test)"""
-        # This is part 1 of a 2-part test sequence to cover lines 23-24 of the fixture.
-        # Test name is prefixed with "zzz_1_" to ensure it runs in a known order,
-        # as pytest runs tests within a class in lexicographic (alphabetical) order.
-        #
-        # Coverage Goal: Set up precondition for the fixture's pre-test cleanup.
-        # The next test (test_zzz_2_*) will use clean_email_template fixture which
-        # will trigger lines 23-24 when it finds this pre-existing template.
-        
-        mock_server = Mock()
-        mock_smtp.return_value.__enter__.return_value = mock_server
-
-        # Create a template that intentionally persists after this test
-        with Session(engine) as session:
-            template = "Leftover template: {body}"
-            setting = GlobalSettings(
-                key="email_template", value=template, description="Leftover"
-            )
-            session.add(setting)
-            session.commit()
-
-        # Verify it was created
-        with Session(engine) as session:
-            setting = session.exec(
-                select(GlobalSettings).where(GlobalSettings.key == "email_template")
-            ).first()
-            assert setting is not None
-
-        # Perform a normal email forwarding operation
-        original_email = {
-            "subject": "Test",
-            "from": "test@example.com",
-            "body": "Test Body",
-        }
-
-        result = EmailForwarder.forward_email(original_email, "target@example.com")
-        assert result
-
-    @patch("backend.services.forwarder.smtplib.SMTP")
-    @patch.dict(
-        os.environ,
-        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
-    )
-    def test_zzz_2_fixture_cleanup_of_preexisting_template(
-        self, mock_smtp, clean_email_template
+    def test_fixture_cleans_up_preexisting_template(
+        self, mock_smtp, preexisting_template_for_cleanup_test, clean_email_template
     ):
-        """Tests fixture cleanup when template exists (Part 2 of 2-part test)"""
-        # This is part 2 of a 2-part test sequence to cover lines 23-24 of the fixture.
-        # Test name is prefixed with "zzz_2_" to ensure it runs after test_zzz_1_*.
+        """Test that clean_email_template fixture removes pre-existing templates"""
+        # This test exercises lines 23-24 in the clean_email_template fixture.
+        # The preexisting_template_for_cleanup_test fixture creates a template,
+        # then clean_email_template runs and should clean it up (triggering lines 23-24).
         #
-        # Coverage Goal: Exercise the fixture's pre-test cleanup (lines 22-24).
-        # The previous test left a template in the DB, so when this test's fixture
-        # runs, it will find that template and delete it (triggering lines 23-24).
+        # This approach removes the ordering dependency - the fixtures are explicitly
+        # ordered by pytest (preexisting_template_for_cleanup_test runs before clean_email_template
+        # because clean_email_template is listed after it in the parameter list).
         
         mock_server = Mock()
         mock_smtp.return_value.__enter__.return_value = mock_server
 
-        # The fixture should have cleaned up the pre-existing template
-        # Verify it's gone
+        # The clean_email_template fixture should have cleaned up the pre-existing template
         with Session(engine) as session:
             setting = session.exec(
                 select(GlobalSettings).where(GlobalSettings.key == "email_template")
