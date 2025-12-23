@@ -77,7 +77,17 @@ class ReceiptDetector:
             return True
 
         # STEP 1: HARD EXCLUDE spam/promotional emails
-        if ReceiptDetector.is_promotional_email(subject, body, sender):
+        # Use an allowlist for known receipt-like promotional emails (e.g. subscription renewals)
+        promo_allowlist_patterns = [
+            "xbox",
+            "game pass",
+            "subscription renewal",
+            "renewal receipt",
+        ]
+        if ReceiptDetector.is_promotional_email(subject, body, sender) and not any(
+            pattern in subject or pattern in body or pattern in sender
+            for pattern in promo_allowlist_patterns
+        ):
             print(f"🚫 Excluded promotional email: {subject}")
             return False
 
@@ -506,12 +516,21 @@ class ReceiptDetector:
 
     @staticmethod
     def has_strong_receipt_indicators(subject: str, body: str) -> bool:
+        # Definitive phrases that don't need supporting evidence
+        definitive_patterns = [
+            r"payment\s+receipt",
+            r"order\s+confirmation",
+            r"purchase\s+confirmation",
+            r"receipt\s+for\s+your\s+payment",
+        ]
+
+        subject_lower = subject.lower()
+        if any(re.search(p, subject_lower) for p in definitive_patterns):
+            return True
+
         strong_keywords = [
             "receipt",
             "invoice",
-            "order confirmation",
-            "payment confirmation",
-            "purchase confirmation",
             "order complete",
             "payment received",
             "order summary",

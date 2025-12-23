@@ -122,3 +122,150 @@ class LearningService:
             )
 
         session.commit()
+
+    @staticmethod
+    def scan_history(session: Session, days: int = 30) -> int:
+        """
+        Scans email history for the last N days to find missed receipts.
+        Creates LearningCandidate entries for findings.
+        Returns the number of new candidates found.
+        """
+        from backend.models import LearningCandidate, ProcessedEmail
+        from backend.services.detector import ReceiptDetector
+        from backend.services.email_service import EmailService
+
+        print(f"🕵️‍♂️ Starting Retroactive Scan (Last {days} days)...")
+        # settings = EmailService.load_settings()
+        # email_accounts = settings.get("email_accounts", [])
+
+        # Use existing method
+        email_accounts = EmailService.get_all_accounts()
+
+        if not email_accounts:
+            print("⚠️ No email accounts configured.")
+            return 0
+
+        total_new_candidates = 0
+
+        # Calculate cutoff date
+        # cutoff_date = utc_now() - timedelta(days=days)
+
+        for idx, acct in enumerate(email_accounts):
+            provider = acct.get("provider", "gmail")
+            user = acct["email"]
+            pwd = acct["password"]
+
+            # Create a non-sensitive label for logging that is not derived from credentials
+            account_label = f"account-{idx+1}"
+
+            # Use EmailService logic but force the lookback
+            # We need to act like fetch_recent_emails but strictly for this window
+            # Implementation re-use: we can instantiate EmailService or use a specialized fetch
+            # For simplicity & privacy, we fetch headers + body here using the same robust logic
+
+            try:
+                # Re-use EmailService's fetching logic logic via a temporary instance or direct call
+                # Ideally, EmailService should expose a 'fetch_emails(since_date)' method
+                # Since it relies on env var, we might need a small refactor or just direct usage
+                # For now, let's assume we can use the existing fetch_recent_emails but we might need
+                # to temporarily override the lookback or add a param to it.
+                # Let's add a `custom_lookback_days` param to fetch_recent_emails in a separate step if needed.
+                # Or better, we just reproduce the fetch logic here to ensure it's isolated.
+
+                # ... actually, better to reuse code.
+                # Let's call EmailService.fetch_recent_emails but we need to ensure it returns EVERYTHING
+                # not just "unseen" if that was a restriction.
+                # Current fetch_recent_emails uses SINCE date, which is perfect.
+                # We just need to make sure we don't filter out things we already have...
+                # Actually fetch_recent_emails DOESN'T filter by DB presence, it just returns list of dicts.
+
+                # So:
+                # 1. Fetch all emails from last N days
+                # simplistic provider mapping
+                imap_server = "imap.gmail.com"
+                if "outlook" in provider.lower() or "hotmail" in provider.lower():
+                    imap_server = "outlook.office365.com"
+                elif "yahoo" in provider.lower():
+                    imap_server = "imap.mail.yahoo.com"
+                elif "icloud" in provider.lower():
+                    imap_server = "imap.mail.me.com"
+
+                fetched = EmailService.fetch_recent_emails(
+                    username=user,
+                    password=pwd,
+                    imap_server=imap_server,
+                    lookback_days=days,
+                )
+
+                print(f"   > Account {account_label}: Fetched {len(fetched)} emails.")
+
+                for email_data in fetched:
+                    msg_id = email_data.get("message_id")
+                    subject = email_data.get("subject", "")
+                    body = email_data.get("body", "")
+                    sender = email_data.get("from", "")
+
+                    # Check if already processed
+                    existing = session.exec(
+                        select(ProcessedEmail).where(ProcessedEmail.email_id == msg_id)
+                    ).first()
+
+                    if existing:
+                        continue  # Already handled
+
+                    # Not in DB? Check if it looks like a receipt
+                    # Construct minimal email dict for detector
+                    email_obj = {
+                        "subject": subject,
+                        "body": body,
+                        "sender": sender,
+                        "from": sender,
+                    }
+                    is_receipt = ReceiptDetector.is_receipt(email_obj)
+
+                    if is_receipt:
+                        # FOUND ONE!
+                        # Check if we already have a candidate for this pattern
+                        # Deduplication strategy: Group by Sender + Subject (simplified)
+
+                        # Generate a "suggested rule" to extract patterns
+                        # We can reuse generate_rule_from_email if we mock a ProcessedEmail
+
+                        dummy_email = ProcessedEmail(
+                            sender=sender, subject=subject, body=body
+                        )
+                        rule_suggestion = LearningService.generate_rule_from_email(
+                            dummy_email
+                        )
+
+                        if rule_suggestion:
+                            # Check for existing candidate
+                            existing_cand = session.exec(
+                                select(LearningCandidate)
+                                .where(LearningCandidate.sender == sender)
+                                .where(
+                                    LearningCandidate.subject_pattern
+                                    == rule_suggestion["subject_pattern"]
+                                )
+                            ).first()
+
+                            if existing_cand:
+                                existing_cand.matches += 1
+                                session.add(existing_cand)
+                            else:
+                                new_cand = LearningCandidate(
+                                    sender=sender,
+                                    subject_pattern=rule_suggestion["subject_pattern"],
+                                    confidence=rule_suggestion["confidence"],
+                                    example_subject=subject,
+                                    type="Receipt",
+                                )
+                                session.add(new_cand)
+                                total_new_candidates += 1
+
+            except Exception as e:
+                # Avoid logging potentially sensitive account identifiers; log only generic error info
+                print(f"❌ Error during retroactive scan: {type(e).__name__}: {e}")
+
+        session.commit()
+        return total_new_candidates

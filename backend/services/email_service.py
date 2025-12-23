@@ -113,6 +113,7 @@ class EmailService:
         imap_server="imap.gmail.com",
         imap_port=993,
         search_criterion=None,
+        lookback_days=None,
     ):
         """
         Fetch recent emails from an IMAP server.
@@ -123,14 +124,14 @@ class EmailService:
             imap_server: IMAP server hostname (default: "imap.gmail.com")
             imap_port: IMAP server port (default: 993)
             search_criterion: Optional custom IMAP search criterion string.
-                            If None, defaults to emails from the last N days,
-                            where N is set by EMAIL_LOOKBACK_DAYS env var (default: 3)
+            lookback_days: Optional integer number of days to look back.
+                          If None, defaults to emails from the last N days,
+                          where N is set by EMAIL_LOOKBACK_DAYS env var (default: 3)
 
         Returns:
             List of email dictionaries containing message_id, subject, body,
             html_body, from, date, reply_to, and account_email fields.
             Returns empty list on error or if no credentials provided.
-
         Environment Variables:
             EMAIL_LOOKBACK_DAYS: Number of days to look back for emails (default: 3).
                                Must be a positive integer.
@@ -139,23 +140,26 @@ class EmailService:
         """
         print("🔌 Connecting to IMAP server...")
 
-        # Use configurable lookback days with validation
-        default_lookback_days = 3
-        raw_lookback = os.environ.get("EMAIL_LOOKBACK_DAYS")
-        try:
-            if raw_lookback is None:
+        # Determine lookback days
+        if lookback_days is None:
+            default_lookback_days = 3
+            raw_lookback = os.environ.get("EMAIL_LOOKBACK_DAYS")
+            try:
+                if raw_lookback is None:
+                    lookback_days = default_lookback_days
+                else:
+                    lookback_days = int(raw_lookback)
+                    if lookback_days <= 0:
+                        raise ValueError(
+                            "EMAIL_LOOKBACK_DAYS must be a positive integer"
+                        )
+            except (ValueError, TypeError):
+                logging.warning(
+                    "Invalid EMAIL_LOOKBACK_DAYS value %r; falling back to %d",
+                    raw_lookback,
+                    default_lookback_days,
+                )
                 lookback_days = default_lookback_days
-            else:
-                lookback_days = int(raw_lookback)
-                if lookback_days <= 0:
-                    raise ValueError("EMAIL_LOOKBACK_DAYS must be a positive integer")
-        except (ValueError, TypeError):
-            logging.warning(
-                "Invalid EMAIL_LOOKBACK_DAYS value %r; falling back to %d",
-                raw_lookback,
-                default_lookback_days,
-            )
-            lookback_days = default_lookback_days
 
         if not username or not password:
             print("❌ IMAP Credentials missing")
@@ -222,8 +226,8 @@ class EmailService:
 
             for e_id in email_ids:
                 try:
-                    # Fetch the email body (RFC822)
-                    _, msg_data = mail.fetch(e_id, "(RFC822)")
+                    # Fetch the email body (BODY[])
+                    _, msg_data = mail.fetch(e_id, "(BODY[])")
                     for response_part in msg_data:
                         if isinstance(response_part, tuple):
                             msg = email.message_from_bytes(response_part[1])

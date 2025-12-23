@@ -49,10 +49,10 @@
 
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
-				'preferences'
+				'rules'
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
-				onclick={() => onViewChange('preferences')}
+				onclick={() => onViewChange('rules')}
 			>
 				<ShieldCheck size={18} />
 				Rules

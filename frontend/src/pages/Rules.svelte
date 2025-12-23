@@ -2,6 +2,7 @@
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
 	import { Zap, Eye, Trash2, TrendingUp, ShieldCheck } from 'lucide-svelte';
+	import SuggestedRules from '../components/SuggestedRules.svelte';
 
 	interface Rule {
 		id: number;
@@ -45,7 +46,7 @@
 
 <div class="mb-8">
 	<h2 class="text-2xl font-bold text-text-main mb-1">
-		Sendee Preferences {#if loading}(Loading...){/if}
+		Automation Rules {#if loading}(Loading...){/if}
 	</h2>
 	<p class="text-text-secondary text-sm">
 		Manage automated detection rules, adaptive learning, and shadow mode candidates.
@@ -103,6 +104,9 @@
 		</div>
 	</div>
 </div>
+
+<!-- Suggested Rules Component -->
+<SuggestedRules onRuleAdded={loadRules} />
 
 <div class="card">
 	<div class="flex items-center justify-between mb-6">

@@ -6,6 +6,6 @@
  */
 
 export default {
-  // Example:
-  // 'rule-name': 'off', // Reason: ...
+  // Allow html tags for email template editor as it renders sanitized HTML email previews
+  'svelte/no-at-html-tags': 'off',
 };

@@ -4,6 +4,9 @@ import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify('1.1.0'),
+  },
   plugins: [svelte({ hot: false }), tailwindcss()],
   test: {
     environment: 'jsdom',

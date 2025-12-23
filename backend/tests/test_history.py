@@ -7,6 +7,12 @@ from backend.routers import history
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
+# Test constants
+MOCK_IMAP_CREDENTIALS = {
+    "password": "test_password",
+    "imap_server": "imap.example.com",
+}
+
 
 @pytest.fixture(name="session")
 def session_fixture():
@@ -372,6 +378,18 @@ class TestHistoryDateFiltering:
         assert result["forwarded"] == 1
         assert result["blocked"] == 1
 
+    def test_stats_with_date_to_filter(self, session: Session, sample_emails):
+        """Test statistics with date_to filter"""
+        from backend.routers.history import get_history_stats
+
+        now = datetime.now(timezone.utc)
+        date_to = (now - timedelta(minutes=35)).isoformat()
+
+        result = get_history_stats(date_to=date_to, session=session)
+
+        # Should only count email4 and email5 (older than 35 minutes)
+        assert result["total"] == 2
+
     def test_stats_with_invalid_date(self, session: Session, sample_emails):
         """Test that stats endpoint returns 400 for invalid dates"""
         from backend.routers.history import get_history_stats
@@ -681,3 +699,124 @@ class TestHistoryReprocess:
         rule = session.exec(select(ManualRule).where(ManualRule.is_shadow_mode)).first()
         assert rule is not None
         assert rule.email_pattern == "*@example.com"
+
+    def test_reprocess_email_not_found(self, session: Session):
+        """Test reprocessing a non-existent email"""
+        from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            reprocess_email(email_id=99999, session=session)
+
+        assert exc_info.value.status_code == 404
+        assert "Email not found" in exc_info.value.detail
+
+    def test_reprocess_email_imap_fallback_no_credentials(self, session: Session):
+        """Test reprocessing email when encrypted body is missing and no IMAP credentials"""
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="no_body_email",
+            subject="Email without body",
+            sender="test@example.com",
+            received_at=now,
+            status="ignored",
+            account_email="unknown@example.com",
+            # No encrypted_body or encrypted_html
+        )
+        session.add(email)
+        session.commit()
+
+        from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
+
+        assert email.id is not None
+        with patch(
+            "backend.services.email_service.EmailService.get_credentials_for_account",
+            return_value=None,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                reprocess_email(email_id=email.id, session=session)
+
+            assert exc_info.value.status_code == 400
+            assert "Credentials missing" in exc_info.value.detail
+
+    def test_reprocess_email_imap_fallback_email_not_found(self, session: Session):
+        """Test reprocessing email when IMAP fetch returns None"""
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="missing_imap_email",
+            subject="Email not in IMAP",
+            sender="test@example.com",
+            received_at=now,
+            status="ignored",
+            account_email="test@example.com",
+            # No encrypted_body or encrypted_html
+        )
+        session.add(email)
+        session.commit()
+
+        from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
+
+        assert email.id is not None
+        with patch(
+            "backend.services.email_service.EmailService.get_credentials_for_account",
+            return_value=MOCK_IMAP_CREDENTIALS,
+        ), patch(
+            "backend.services.email_service.EmailService.fetch_email_by_id",
+            return_value=None,
+        ):
+            with pytest.raises(HTTPException) as exc_info:
+                reprocess_email(email_id=email.id, session=session)
+
+            assert exc_info.value.status_code == 404
+            assert "Email not found in IMAP inbox" in exc_info.value.detail
+
+    def test_reprocess_email_imap_fallback_success(self, session: Session):
+        """Test successful IMAP fallback when encrypted body is missing"""
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="imap_fallback_success",
+            subject="IMAP Fallback Test",
+            sender="test@example.com",
+            received_at=now,
+            status="ignored",
+            account_email="test@example.com",
+            # No encrypted_body or encrypted_html
+        )
+        session.add(email)
+        session.commit()
+
+        from backend.routers.history import reprocess_email
+
+        mock_fetched = {"body": "Fetched body content", "html_body": "<p>HTML</p>"}
+
+        assert email.id is not None
+        with patch(
+            "backend.services.email_service.EmailService.get_credentials_for_account",
+            return_value=MOCK_IMAP_CREDENTIALS,
+        ), patch(
+            "backend.services.email_service.EmailService.fetch_email_by_id",
+            return_value=mock_fetched,
+        ), patch(
+            "backend.services.detector.ReceiptDetector.debug_is_receipt",
+            return_value={"final_decision": True},
+        ), patch(
+            "backend.services.detector.ReceiptDetector.categorize_receipt",
+            return_value="shopping",
+        ):
+            result = reprocess_email(email_id=email.id, session=session)
+
+            assert result["suggested_status"] == "forwarded"
+            assert result["category"] == "shopping"
+
+    def test_submit_feedback_email_not_found(self, session: Session):
+        """Test submitting feedback for a non-existent email"""
+        from backend.routers.history import submit_feedback
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            submit_feedback(email_id=99999, is_receipt=True, session=session)
+
+        assert exc_info.value.status_code == 404
+        assert "Email not found" in exc_info.value.detail

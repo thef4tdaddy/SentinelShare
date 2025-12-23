@@ -3,7 +3,7 @@
 	import Navbar from './components/Navbar.svelte';
 	import Dashboard from './pages/Dashboard.svelte';
 	import History from './pages/History.svelte';
-	import Preferences from './pages/Preferences.svelte';
+	import Rules from './pages/Rules.svelte';
 	import Settings from './pages/Settings.svelte';
 	import Login from './pages/Login.svelte';
 	import './app.css';
@@ -48,8 +48,8 @@
 				<Dashboard />
 			{:else if currentView === 'history'}
 				<History />
-			{:else if currentView === 'preferences'}
-				<Preferences />
+			{:else if currentView === 'rules'}
+				<Rules />
 			{:else if currentView === 'settings'}
 				<Settings />
 			{/if}

@@ -6,7 +6,7 @@ describe('Navbar Component', () => {
 	it('renders the app title', () => {
 		const onViewChange = vi.fn();
 		render(Navbar, { currentView: 'dashboard', onViewChange });
-		expect(screen.getByAltText('SentinelShare')).toBeTruthy();
+		expect(screen.getByAltText('SentinelShare Logo')).toBeTruthy();
 	});
 
 	it('renders dashboard and settings buttons', () => {

@@ -45,6 +45,12 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ['src/components/EmailTemplateEditor.svelte'],
+    rules: {
+      'svelte/no-at-html-tags': 'off'
+    }
+  },
 
   // Custom Rules (Shared)
   {
@@ -52,8 +58,8 @@ export default tseslint.config(
     rules: {
       ...architectureRules,
       ...strictTypingRules,
-      ...exclusions,
       'svelte/no-at-html-tags': 'warn', 
+      ...exclusions,
     },
   },
 

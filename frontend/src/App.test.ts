@@ -27,7 +27,7 @@ describe('App Component', () => {
 		render(App);
 		// Wait for loading to finish
 		await waitFor(() => {
-			expect(screen.getByAltText('SentinelShare')).toBeTruthy();
+			expect(screen.getByAltText('SentinelShare Logo')).toBeTruthy();
 		});
 	});
 
