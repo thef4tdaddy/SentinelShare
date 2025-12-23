@@ -1,6 +1,5 @@
 import os
 import sys
-from datetime import datetime, timedelta
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,7 +38,7 @@ def debug_emails():
 
         try:
             print("   🔌 Connecting to mail server...")
-            emails = EmailService.fetch_recent_emails(user, password, server)
+            emails = EmailService.fetch_recent_emails(username=user, password=password, imap_server=server)
             print(f"   📬 Fetched {len(emails)} emails.")
 
             if not emails:
@@ -55,7 +54,7 @@ def debug_emails():
                 is_receipt = ReceiptDetector.is_receipt(email)
                 category = ReceiptDetector.categorize_receipt(email)
 
-                print(f"\n   ---------------------------------------------------")
+                print("\n   ---------------------------------------------------")
                 print(f"   > Is Promotional? {is_promo}")
                 print(f"   > Is Receipt?     {is_receipt}")
                 print(f"   > Category:       {category}")
