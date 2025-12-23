@@ -20,7 +20,6 @@ def preexisting_template_for_cleanup_test():
         session.add(setting)
         session.commit()
     # Don't clean up - let clean_email_template do it
-    return None
 
 
 @pytest.fixture
