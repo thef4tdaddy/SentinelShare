@@ -150,16 +150,13 @@ class LearningService:
         # Calculate cutoff date
         # cutoff_date = utc_now() - timedelta(days=days)
 
-        for acct in email_accounts:
+        for idx, acct in enumerate(email_accounts):
             provider = acct.get("provider", "gmail")
             user = acct["email"]
             pwd = acct["password"]
 
-            # Create a non-sensitive label for logging (avoid logging full email or tainted structures)
-            if isinstance(user, str) and "@" in user:
-                account_label = user.split("@", 1)[1]  # log only the domain part
-            else:
-                account_label = "configured-account"
+            # Create a non-sensitive label for logging that is not derived from credentials
+            account_label = f"account-{idx+1}"
 
             # Use EmailService logic but force the lookback
             # We need to act like fetch_recent_emails but strictly for this window
