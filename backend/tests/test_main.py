@@ -67,69 +67,53 @@ def test_migration_error_handling():
             assert response.status_code == 200
 
 
-def test_auth_middleware_unauthenticated_no_password():
+def test_auth_middleware_unauthenticated_no_password(monkeypatch):
     """Test auth middleware when not authenticated and no DASHBOARD_PASSWORD set (lines 56-57)"""
     from backend.main import app
 
     # Ensure DASHBOARD_PASSWORD is not set
-    original_password = os.environ.get("DASHBOARD_PASSWORD")
-    if "DASHBOARD_PASSWORD" in os.environ:
-        del os.environ["DASHBOARD_PASSWORD"]
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
 
-    try:
-        client = TestClient(app)
-        # Should allow access to protected routes when no password is set
-        response = client.get("/api/dashboard/emails")
-        # It may return 200 or other status depending on the endpoint logic,
-        # but should NOT return 401
-        assert response.status_code != 401
-    finally:
-        # Restore original password
-        if original_password:
-            os.environ["DASHBOARD_PASSWORD"] = original_password
+    client = TestClient(app)
+    # Should allow access to protected routes when no password is set
+    response = client.get("/api/dashboard/emails")
+    # It may return 200 or other status depending on the endpoint logic,
+    # but should NOT return 401
+    assert response.status_code != 401
 
 
-def test_auth_middleware_unauthenticated_with_password():
+def test_auth_middleware_unauthenticated_with_password(monkeypatch):
     """Test auth middleware when not authenticated but DASHBOARD_PASSWORD is set (line 59)"""
     from backend.main import app
 
     # Set DASHBOARD_PASSWORD
-    os.environ["DASHBOARD_PASSWORD"] = "test_password"
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "test_password")
 
-    try:
-        client = TestClient(app)
-        # Should deny access to protected routes when password is set but not authenticated
-        response = client.get("/api/dashboard/emails")
-        assert response.status_code == 401
-        assert response.json()["detail"] == "Unauthorized"
-    finally:
-        # Clean up
-        if "DASHBOARD_PASSWORD" in os.environ:
-            del os.environ["DASHBOARD_PASSWORD"]
+    client = TestClient(app)
+    # Should deny access to protected routes when password is set but not authenticated
+    response = client.get("/api/dashboard/emails")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Unauthorized"
 
 
-def test_auth_middleware_authenticated():
+def test_auth_middleware_authenticated(monkeypatch):
     """Test auth middleware when authenticated (line 61)"""
     from backend.main import app
 
-    os.environ["DASHBOARD_PASSWORD"] = "test_password"
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "test_password")
 
-    try:
-        client = TestClient(app)
-        # First, authenticate via login endpoint
-        response = client.post(
-            "/api/auth/login", json={"password": "test_password"}
-        )
-        assert response.status_code == 200
+    client = TestClient(app)
+    # First, authenticate via login endpoint
+    response = client.post(
+        "/api/auth/login", json={"password": "test_password"}
+    )
+    assert response.status_code == 200
 
-        # Now access protected route - should work
-        response = client.get("/api/dashboard/emails")
-        # Should not return 401 since we're authenticated
-        # May return other status codes based on endpoint logic
-        assert response.status_code in [200, 404, 500]  # But not 401
-    finally:
-        if "DASHBOARD_PASSWORD" in os.environ:
-            del os.environ["DASHBOARD_PASSWORD"]
+    # Now access protected route - should work
+    response = client.get("/api/dashboard/emails")
+    # Should not return 401 since we're authenticated
+    # May return other status codes based on endpoint logic
+    assert response.status_code in [200, 404, 500]  # But not 401
 
 
 def test_frontend_dist_mounting(frontend_dist_path):
