@@ -81,7 +81,8 @@ def approve_candidate(candidate_id: int, session: Session = Depends(get_session)
 @router.delete("/ignore/{candidate_id}")
 def ignore_candidate(candidate_id: int, session: Session = Depends(get_session)):
     candidate = session.get(LearningCandidate, candidate_id)
-    if candidate:
-        session.delete(candidate)
-        session.commit()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    session.delete(candidate)
+    session.commit()
     return {"message": "Candidate ignored"}
