@@ -741,7 +741,7 @@ class TestHistoryReprocess:
             assert "Credentials missing" in exc_info.value.detail
 
     def test_reprocess_email_imap_fallback_email_not_found(
-        self, session: Session, monkeypatch
+        self, session: Session
     ):
         """Test reprocessing email when IMAP fetch returns None"""
         now = datetime.now(timezone.utc)
