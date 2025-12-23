@@ -36,25 +36,28 @@ def test_check_auth_failure():
 
 def test_login_no_password_configured(monkeypatch):
     monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-    response = client.post("/api/auth/login", json={"password": "anypass"})
+    fresh_client = TestClient(app)
+    response = fresh_client.post("/api/auth/login", json={"password": "anypass"})
     assert response.status_code == 500
     assert response.json()["error"] == "Auth not configured"
 
 
 def test_logout(monkeypatch):
     monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
+    fresh_client = TestClient(app)
+    
     # Login first
-    client.post("/api/auth/login", json={"password": "testpass"})
+    fresh_client.post("/api/auth/login", json={"password": "testpass"})
 
     # Verify authenticated
-    response = client.get("/api/auth/me")
+    response = fresh_client.get("/api/auth/me")
     assert response.status_code == 200
 
     # Logout
-    response = client.post("/api/auth/logout")
+    response = fresh_client.post("/api/auth/logout")
     assert response.status_code == 200
     assert response.json()["status"] == "logged_out"
 
     # Verify no longer authenticated
-    response = client.get("/api/auth/me")
+    response = fresh_client.get("/api/auth/me")
     assert response.status_code == 401
