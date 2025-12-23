@@ -13,6 +13,17 @@ except ImportError:
 from backend.services.email_service import EmailService
 from backend.services.detector import ReceiptDetector
 
+def mask_email(email_str):
+    if not email_str:
+        return "N/A"
+    try:
+        user_part, domain_part = email_str.split("@")
+        if len(user_part) <= 2:
+            return f"{user_part[0]}***@{domain_part}"
+        return f"{user_part[0]}***{user_part[-1]}@{domain_part}"
+    except Exception:
+        return "***@***"
+
 def debug_emails():
     print("🔍 Starting Debug Email Fetch...")
     
@@ -28,7 +39,7 @@ def debug_emails():
 
     for acc in accounts:
         user = acc.get("email")
-        print(f"\n📧 Account: {user}")
+        print(f"\n📧 Account: {mask_email(user)}")
         password = acc.get("password")
         server = acc.get("imap_server", "imap.gmail.com")
 
