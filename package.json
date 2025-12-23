@@ -1,6 +1,6 @@
 {
   "name": "receipt-forwarder-root",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "scripts": {
     "build": "cd frontend && npm install --include=dev && npm run build",
     "heroku-postbuild": "npm run build",
