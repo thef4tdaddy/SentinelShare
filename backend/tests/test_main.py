@@ -45,9 +45,9 @@ def test_migration_error_handling():
         # Re-import app to trigger lifespan
         import importlib
 
-        import backend.main
+        module = importlib.import_module("backend.main")
 
-        importlib.reload(backend.main)
+        importlib.reload(module)
         from backend.main import app
 
         # The app should still start even if migrations fail
