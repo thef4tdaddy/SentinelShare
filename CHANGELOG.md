@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.1...sentinel-share-v1.3.2) (2025-12-24)
+
+
+### Bug Fixes
+
+* **ui:** resolve missing rules, version display, and api endpoints ([2d390e7](https://github.com/thef4tdaddy/SentinelShare/commit/2d390e7369468e0776fd0c71a582b9f53c8d7b6a))
+
 ## [1.3.1](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.0...sentinel-share-v1.3.1) (2025-12-24)
 
 
