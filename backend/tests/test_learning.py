@@ -8,8 +8,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
-client = TestClient(app)
-
 
 @pytest.fixture(name="session")
 def session_fixture():
@@ -21,11 +19,20 @@ def session_fixture():
         # Dependency override to force API to use this test session
         from backend.database import get_session
 
+        # Override must be set here so it applies to client created later
         app.dependency_overrides[get_session] = lambda: session
 
         yield session
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(name="client")
+def client_fixture(session):
+    """Create a test client that uses the session fixture's app overrides"""
+    # The session fixture sets up the overrides on the global app object
+    with TestClient(app) as client:
+        yield client
 
 
 # Mock Email Data
@@ -100,7 +107,7 @@ def test_scan_deduplication(session: Session):
             assert candidates[0].matches == 2
 
 
-def test_approve_candidate_api(session: Session, monkeypatch):
+def test_approve_candidate_api(session: Session, client: TestClient, monkeypatch):
     # Set dashboard password for auth
     monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
 
@@ -135,7 +142,7 @@ def test_approve_candidate_api(session: Session, monkeypatch):
     assert deleted_candidate is None
 
 
-def test_ignore_candidate_api(session: Session, monkeypatch):
+def test_ignore_candidate_api(session: Session, client: TestClient, monkeypatch):
     monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
 
     candidate = LearningCandidate(
