@@ -107,3 +107,119 @@ def test_trigger_poll(session: Session):
     result = trigger_poll(bg_tasks, session=session)
     assert result["status"] == "triggered"
     bg_tasks.add_task.assert_called_once()
+
+
+def test_delete_preference_success(session: Session):
+    """Test successfully deleting a preference (lines 33-35)"""
+    from backend.routers.settings import (create_preference, delete_preference,
+                                          get_preferences)
+
+    # Create a preference first
+    pref = Preference(item="test_delete", type="Blocked Category")
+    created = create_preference(pref, session=session)
+
+    # Delete it
+    result = delete_preference(created.id, session=session)
+    assert result["ok"] is True
+
+    # Verify it's gone
+    prefs = get_preferences(session=session)
+    assert len(prefs) == 0
+
+
+def test_delete_preference_not_found(session: Session):
+    """Test deleting a non-existent preference raises 404"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import delete_preference
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_preference(999, session=session)
+    assert exc_info.value.status_code == 404
+    assert "Preference not found" in str(exc_info.value.detail)
+
+
+def test_delete_rule_not_found(session: Session):
+    """Test deleting a non-existent rule raises 404"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import delete_rule
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_rule(999, session=session)
+    assert exc_info.value.status_code == 404
+    assert "Rule not found" in str(exc_info.value.detail)
+
+
+def test_update_email_template_empty(session: Session):
+    """Test updating email template with empty string raises 400"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
+
+    # Test with empty string
+    with pytest.raises(HTTPException) as exc_info:
+        update_email_template(EmailTemplateUpdate(template=""), session=session)
+    assert exc_info.value.status_code == 400
+    assert "Template cannot be empty" in str(exc_info.value.detail)
+
+    # Test with whitespace only
+    with pytest.raises(HTTPException) as exc_info:
+        update_email_template(EmailTemplateUpdate(template="   "), session=session)
+    assert exc_info.value.status_code == 400
+    assert "Template cannot be empty" in str(exc_info.value.detail)
+
+
+def test_update_email_template_too_long(session: Session):
+    """Test updating email template with too long content raises 400"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
+
+    # Create a template longer than 10,000 characters
+    long_template = "x" * 10001
+
+    with pytest.raises(HTTPException) as exc_info:
+        update_email_template(
+            EmailTemplateUpdate(template=long_template), session=session
+        )
+    assert exc_info.value.status_code == 400
+    assert "Template too long" in str(exc_info.value.detail)
+
+
+def test_update_email_template_create_new(session: Session):
+    """Test creating a new email template setting (lines 110-115)"""
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
+
+    # First time creating the template - should hit the else branch on lines 110-115
+    result = update_email_template(
+        EmailTemplateUpdate(template="Brand new template"), session=session
+    )
+
+    assert result["template"] == "Brand new template"
+    assert "message" in result
+    assert result["message"] == "Template updated successfully"
+
+
+def test_update_email_template_existing(session: Session):
+    """Test updating an existing email template setting (line 108)"""
+    from backend.routers.settings import (EmailTemplateUpdate,
+                                          get_email_template,
+                                          update_email_template)
+
+    # First, create a template
+    update_email_template(
+        EmailTemplateUpdate(template="Initial template"), session=session
+    )
+
+    # Now update it - should hit line 108 (setting.value = data.template)
+    result = update_email_template(
+        EmailTemplateUpdate(template="Updated template"), session=session
+    )
+
+    assert result["template"] == "Updated template"
+    assert result["message"] == "Template updated successfully"
+
+    # Verify it was actually updated
+    current = get_email_template(session=session)
+    assert current["template"] == "Updated template"
