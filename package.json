@@ -1,5 +1,5 @@
 {
-  "name": "receipt-forwarder-root",
+  "name": "sentinel-share",
   "version": "1.2.0",
   "scripts": {
     "build": "cd frontend && npm install --include=dev && npm run build",

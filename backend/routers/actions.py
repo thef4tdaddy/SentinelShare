@@ -1,4 +1,3 @@
-import hashlib
 import hmac
 import html
 import json
@@ -9,23 +8,22 @@ from email.utils import parseaddr
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
+from backend.security import generate_hmac_signature, verify_dashboard_token
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
-
-SECRET = os.environ.get("SECRET_KEY", "default-insecure-secret-please-change")
 
 
 def verify_signature(cmd: str, arg: str, ts: str, sig: str) -> bool:
     # Simple HMAC verification
     msg = f"{cmd}:{arg}:{ts}"
-    expected = hmac.new(SECRET.encode(), msg.encode(), hashlib.sha256).hexdigest()
+    expected = generate_hmac_signature(msg)
     return hmac.compare_digest(expected, sig)
 
 
@@ -172,8 +170,85 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
             </body>
          </html>
          """
-    else:
-        return "<h1>❌ Unknown Command</h1>"
+
+    return """
+     <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <div style="font-size: 50px;">❓</div>
+            <h1>Unknown Command</h1>
+            <p style="font-size: 18px; color: #555;">The requested action is not recognized.</p>
+            <p><a href="/history">Go to Dashboard</a></p>
+        </body>
+     </html>
+     """
+
+
+@router.get("/verify-dashboard")
+def verify_dashboard(token: str):
+    """Verify a token and return access details."""
+    email = verify_dashboard_token(token)
+    if not email:
+        raise HTTPException(status_code=403, detail="Invalid or expired token")
+
+    return {"success": True, "email": email}
+
+
+class UpdatePreferencesRequest(BaseModel):
+    token: str
+    blocked_senders: list[str]
+    allowed_senders: list[str]
+
+
+@router.post("/update-preferences")
+def update_preferences(
+    request: UpdatePreferencesRequest, session: Session = Depends(get_session)
+):
+    """Allows a sendee to update their preferences via a signed token."""
+    email = verify_dashboard_token(request.token)
+    if not email:
+        raise HTTPException(status_code=403, detail="Invalid or expired token")
+
+    # For now, we manage global preferences, but we could filter by recipient in the future.
+    # The user request implies a general dashboard for preferences.
+
+    # 1. Clear existing for these items to avoid duplicates
+    items_to_handle = request.blocked_senders + request.allowed_senders
+    if items_to_handle:
+        existing = session.exec(
+            select(Preference).where(Preference.item.in_(items_to_handle))  # type: ignore
+        ).all()
+        for p in existing:
+            session.delete(p)
+        session.commit()
+
+    # 2. Add new ones
+    for s in request.blocked_senders:
+        session.add(Preference(item=s, type="Blocked Sender"))
+    for s in request.allowed_senders:
+        session.add(Preference(item=s, type="Always Forward"))
+
+    session.commit()
+    return {"success": True}
+
+
+@router.get("/preferences-for-sendee")
+def get_preferences_for_sendee(token: str, session: Session = Depends(get_session)):
+    """Get current preferences for a sendee."""
+    email = verify_dashboard_token(token)
+    if not email:
+        raise HTTPException(status_code=403, detail="Invalid or expired token")
+
+    prefs = session.exec(
+        select(Preference).where(
+            col(Preference.type).in_(["Blocked Sender", "Always Forward"])
+        )
+    ).all()
+    return {
+        "success": True,
+        "email": email,
+        "blocked": [p.item for p in prefs if p.type == "Blocked Sender"],
+        "allowed": [p.item for p in prefs if p.type == "Always Forward"],
+    }
 
 
 class ToggleIgnoredRequest(BaseModel):
@@ -341,6 +416,7 @@ A manual rule has been created to forward future emails from this sender."""
         "from": email.sender,  # We populate 'from' field in the forwarded email template usually
         "body": final_body,
         "account_email": email.account_email,
+        "date": email.received_at,  # format_email_date will handle datetime objects
     }
 
     try:

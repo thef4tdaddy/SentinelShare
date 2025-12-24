@@ -31,7 +31,7 @@ describe('SuggestedRules Component', () => {
 	it('renders loading state initially', () => {
 		vi.mocked(api.learning.getCandidates).mockReturnValue(new Promise(() => {})); // Never resolves
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
-		expect(screen.getByText('Loading suggestions...')).toBeTruthy();
+		expect(screen.getByText('Discovering matching patterns...')).toBeTruthy();
 	});
 
 	it('renders empty state when no candidates', async () => {

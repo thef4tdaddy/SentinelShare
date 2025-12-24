@@ -1,13 +1,17 @@
 import os
+import traceback
 from datetime import datetime, timedelta, timezone
 
-from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
+from apscheduler.schedulers.background import \
+    BackgroundScheduler  # type: ignore
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
-from backend.security import encrypt_content
+from backend.security import encrypt_content, get_email_content_hash
+from backend.services.command_service import CommandService
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
+from backend.services.learning_service import LearningService
 from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
@@ -131,17 +135,30 @@ def process_emails():
 
             for email_data in emails:
                 try:
-                    # Check if already processed (deduplication by Message-ID)
+                    # Check if already processed (deduplication by Message-ID OR Content Hash)
                     msg_id = email_data.get("message_id")
+                    content_hash = get_email_content_hash(email_data)
+
+                    existing = None
                     if msg_id:
                         existing = session.exec(
                             select(ProcessedEmail).where(
                                 ProcessedEmail.email_id == msg_id
                             )
                         ).first()
-                        if existing:
-                            print(f"⚠️ Email {msg_id} already processed. Skipping.")
-                            continue
+
+                    if not existing:
+                        existing = session.exec(
+                            select(ProcessedEmail).where(
+                                ProcessedEmail.content_hash == content_hash
+                            )
+                        ).first()
+
+                    if existing:
+                        print(
+                            f"⚠️ Email {msg_id or content_hash[:8]} already processed. Skipping."
+                        )
+                        continue
 
                     # This is a new email to process
                     emails_processed_count += 1
@@ -150,7 +167,6 @@ def process_emails():
                     account_email = email_data.get("account_email", "unknown")
 
                     # Checks for Command (Reply from Wife)
-                    from backend.services.command_service import CommandService
 
                     if CommandService.is_command_email(email_data):
                         print(
@@ -174,6 +190,7 @@ def process_emails():
                             account_email=account_email,
                             category="command",
                             reason=reason,
+                            content_hash=content_hash,
                             retention_expires_at=datetime.now(timezone.utc)
                             + timedelta(hours=24),
                             encrypted_body=encrypt_content(email_data.get("body", "")),
@@ -189,9 +206,6 @@ def process_emails():
                     # Detect (passing session for manual rules/preferences)
                     is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
                     category = ReceiptDetector.categorize_receipt(email_data)
-
-                    # Shadow Mode Testing (Learning)
-                    from backend.services.learning_service import LearningService
 
                     LearningService.run_shadow_mode(session, email_data)
 
@@ -223,6 +237,7 @@ def process_emails():
                         account_email=account_email,
                         category=category,
                         reason=reason,
+                        content_hash=content_hash,
                         retention_expires_at=datetime.now(timezone.utc)
                         + timedelta(hours=24),
                         encrypted_body=encrypt_content(email_data.get("body", "")),
@@ -233,15 +248,11 @@ def process_emails():
                     print(f"💾 Saved status: {status} (Account: {account_email})")
 
                 except Exception as e:
-                    import traceback
-
                     print(
                         f"❌ Error processing individual email {email_data.get('subject', 'unknown')}: {e}"
                     )
                     traceback.print_exc()
-                    # Close and replace the session to avoid a broken session affecting subsequent emails
-                    session.close()
-                    session = Session(engine)
+                    session.rollback()
                     # Mark that an error occurred during this run and update error message
                     error_occurred = True
                     subject = email_data.get("subject", "unknown")
@@ -263,8 +274,6 @@ def process_emails():
                 session.add(run)
 
                 # Run rule promotion logic
-                from backend.services.learning_service import LearningService
-
                 LearningService.auto_promote_rules(session)
 
                 session.commit()

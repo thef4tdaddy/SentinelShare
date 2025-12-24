@@ -22,8 +22,8 @@
 		loading = true;
 		try {
 			// Reuse settings endpoint but we will enhance it if needed
-			const res = await fetchJson('/api/settings/manual-rules');
-			rules = res;
+			const res = await fetchJson('/settings/manual-rules');
+			rules = Array.isArray(res) ? res : [];
 		} catch (e) {
 			console.error('Failed to load rules', e);
 		} finally {
@@ -34,7 +34,7 @@
 	async function deleteRule(id: number) {
 		if (!confirm('Are you sure you want to delete this rule?')) return;
 		try {
-			await fetchJson(`/api/settings/manual-rule/${id}`, { method: 'DELETE' });
+			await fetchJson(`/settings/manual-rule/${id}`, { method: 'DELETE' });
 			await loadRules();
 		} catch (e) {
 			console.error('Failed to delete rule', e);
@@ -93,12 +93,16 @@
 		<div class="space-y-2">
 			<div class="flex justify-between text-sm">
 				<span class="text-text-secondary">Candidates:</span>
-				<span class="font-mono font-bold">{rules.filter((r) => r.is_shadow_mode).length}</span>
+				<span class="font-mono font-bold"
+					>{Array.isArray(rules) ? rules.filter((r) => r.is_shadow_mode).length : 0}</span
+				>
 			</div>
 			<div class="flex justify-between text-sm">
 				<span class="text-text-secondary">Auto-Applied:</span>
 				<span class="font-mono font-bold text-emerald-600"
-					>{rules.filter((r) => !r.is_shadow_mode && r.purpose?.includes('(AUTO)')).length}</span
+					>{Array.isArray(rules)
+						? rules.filter((r) => !r.is_shadow_mode && r.purpose?.includes('(AUTO)')).length
+						: 0}</span
 				>
 			</div>
 		</div>

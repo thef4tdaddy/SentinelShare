@@ -14,6 +14,7 @@ class ProcessedEmail(SQLModel, table=True):
     email_id: Optional[str] = Field(
         default=None, index=True, unique=True
     )  # Message-ID header
+    content_hash: Optional[str] = Field(default=None, index=True)
     subject: Optional[str] = None
     sender: Optional[str] = None
     received_at: Optional[datetime] = None

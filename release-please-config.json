@@ -2,11 +2,7 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "receipt-forwarder-root"
-    },
-    "frontend": {
-      "release-type": "node",
-      "package-name": "frontend"
+      "package-name": "sentinel-share"
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please-action/v4/schema.json"

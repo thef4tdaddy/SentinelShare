@@ -37,8 +37,8 @@ describe('PreferenceList Component - Preferences Type', () => {
 		render(PreferenceList, { type: 'preferences' });
 
 		await waitFor(() => {
-			expect(screen.getByText('amazon')).toBeTruthy();
-			expect(screen.getByText('spam')).toBeTruthy();
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('spam').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -98,7 +98,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		render(PreferenceList, { type: 'preferences' });
 
 		await waitFor(() => {
-			expect(screen.getByText('amazon')).toBeTruthy();
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
 		});
 
 		const deleteButton = screen.getByTitle('Delete');
@@ -129,7 +129,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		render(PreferenceList, { type: 'preferences' });
 
 		await waitFor(() => {
-			expect(screen.getByText('amazon')).toBeTruthy();
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
 		});
 
 		const deleteButton = screen.getByTitle('Delete');
@@ -176,7 +176,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		render(PreferenceList, { type: 'preferences' });
 
 		await waitFor(() => {
-			expect(screen.getByText('amazon')).toBeTruthy();
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
 		});
 
 		const deleteButton = screen.getByTitle('Delete');
@@ -238,8 +238,8 @@ describe('PreferenceList Component - Rules Type', () => {
 		render(PreferenceList, { type: 'rules' });
 
 		await waitFor(() => {
-			expect(screen.getByText('@amazon.com')).toBeTruthy();
-			expect(screen.getByText('@ebay.com')).toBeTruthy();
+			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('@ebay.com').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -250,7 +250,7 @@ describe('PreferenceList Component - Rules Type', () => {
 		render(PreferenceList, { type: 'rules' });
 
 		await waitFor(() => {
-			expect(screen.getByText('@amazon.com')).toBeTruthy();
+			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
 			const dashes = screen.getAllByText('-');
 			expect(dashes.length).toBeGreaterThan(0);
 		});

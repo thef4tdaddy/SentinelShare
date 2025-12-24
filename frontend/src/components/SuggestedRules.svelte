@@ -12,9 +12,11 @@
 	async function loadCandidates() {
 		loading = true;
 		try {
-			candidates = await api.learning.getCandidates();
+			const res = await api.learning.getCandidates();
+			candidates = Array.isArray(res) ? res : [];
 		} catch (e) {
 			console.error('Failed to load suggestions', e);
+			candidates = [];
 		} finally {
 			loading = false;
 		}
@@ -39,7 +41,7 @@
 		processingId = candidate.id;
 		try {
 			await api.learning.approve(candidate.id);
-			candidates = candidates.filter((c) => c.id !== candidate.id);
+			candidates = Array.isArray(candidates) ? candidates.filter((c) => c.id !== candidate.id) : [];
 			onRuleAdded();
 		} catch (e) {
 			console.error('Failed to approve', e);
@@ -53,7 +55,7 @@
 		processingId = candidate.id;
 		try {
 			await api.learning.ignore(candidate.id);
-			candidates = candidates.filter((c) => c.id !== candidate.id);
+			candidates = Array.isArray(candidates) ? candidates.filter((c) => c.id !== candidate.id) : [];
 		} catch (e) {
 			console.error('Failed to ignore', e);
 		} finally {
@@ -64,12 +66,16 @@
 	onMount(loadCandidates);
 </script>
 
-<div class="bg-gray-800 rounded-lg p-6 mb-6 border border-gray-700">
-	<div class="flex justify-between items-center mb-4">
-		<h2 class="text-xl font-semibold text-white flex items-center gap-2">
-			<span>✨ Suggested Rules</span>
+<div class="bg-indigo-50/30 rounded-xl p-6 mb-8 border-2 border-primary/20 shadow-xs">
+	<div class="flex justify-between items-center mb-5">
+		<h2 class="text-xl font-medium text-primary flex items-center gap-3">
+			<span class="p-1.5 bg-primary/10 rounded-lg text-primary">✨</span>
+			<span class="tracking-tight">Suggested Rules</span>
 			{#if candidates.length > 0}
-				<span class="bg-blue-600 text-xs px-2 py-1 rounded-full">{candidates.length}</span>
+				<span
+					class="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider"
+					>{candidates.length}</span
+				>
 			{/if}
 		</h2>
 		<div class="flex gap-2">
@@ -120,59 +126,67 @@
 	</div>
 
 	{#if loading}
-		<div class="text-gray-400 py-4 text-center">Loading suggestions...</div>
-	{:else if candidates.length === 0}
-		<div class="text-gray-500 py-4 text-center text-sm">
+		<div class="text-primary/40 py-8 text-center text-sm font-medium animate-pulse">
+			Discovering matching patterns...
+		</div>
+	{:else if !Array.isArray(candidates) || candidates.length === 0}
+		<div
+			class="text-text-secondary/60 py-8 text-center text-sm bg-white/50 rounded-lg border border-dashed border-gray-200"
+		>
 			No suggestions found. Try scanning your history for missed receipts.
 		</div>
 	{:else}
-		<div class="space-y-3">
+		<div class="space-y-4">
 			{#each candidates as candidate (candidate.id)}
 				<div
-					class="bg-gray-750 border border-gray-600 rounded-md p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-gray-500"
+					class="bg-white border border-primary/10 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 transition-all hover:shadow-md hover:border-primary/20 group"
 				>
 					<div class="flex-1">
-						<div class="flex items-center gap-2 mb-1">
-							<span class="font-mono text-sm text-yellow-400 bg-yellow-900/30 px-2 rounded">
+						<div class="flex items-center gap-2 mb-2">
+							<span
+								class="font-mono text-sm text-primary font-medium bg-primary/5 px-2.5 py-0.5 rounded-md border border-primary/10"
+							>
 								{candidate.sender}
 							</span>
 							{#if candidate.matches > 1}
-								<span class="text-xs text-green-400 bg-green-900/30 px-2 rounded-full">
-									Matches {candidate.matches} emails
+								<span
+									class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-100 uppercase tracking-tight"
+								>
+									{candidate.matches} matches
 								</span>
 							{/if}
 						</div>
 
 						{#if candidate.subject_pattern}
-							<div class="text-sm text-gray-300">
-								Subject matches: <span class="font-mono text-gray-200"
+							<div class="text-sm text-primary/80 font-normal">
+								Subject matches: <span class="font-mono text-primary font-semibold"
 									>{candidate.subject_pattern}</span
 								>
 							</div>
 						{/if}
 
 						{#if candidate.example_subject}
-							<div class="text-xs text-gray-500 mt-1 italic">
-								Ex: "{candidate.example_subject}"
+							<div class="text-xs text-text-secondary/70 mt-1.5 italic font-light">
+								Recent: "{candidate.example_subject}"
 							</div>
 						{/if}
 					</div>
 
-					<div class="flex gap-2">
+					<div class="flex gap-3 shrink-0">
 						<button
 							on:click={() => ignore(candidate)}
 							disabled={processingId === candidate.id}
-							class="px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
+							class="px-4 py-2 text-sm text-text-secondary hover:text-primary hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50 font-medium"
 						>
 							Ignore
 						</button>
 						<button
 							on:click={() => approve(candidate)}
 							disabled={processingId === candidate.id}
-							class="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1"
+							class="btn btn-accent px-5 py-2 text-sm shadow-sm hover:shadow active:scale-95 flex items-center gap-2"
 						>
 							{#if processingId === candidate.id}
-								...
+								<span class="animate-pulse">Adding...</span>
 							{:else}
 								Add Rule
 							{/if}

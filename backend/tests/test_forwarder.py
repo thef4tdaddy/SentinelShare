@@ -383,7 +383,7 @@ class TestEmailForwarder:
                     return [str(self), BadString("domain.com")]
                 # For any other split (by '>' or '.'), raise an error
                 raise RuntimeError("Simulated split error")
-        
+
         original_email = {
             "subject": "Test",
             "from": BadString("user@domain.com"),
@@ -416,7 +416,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the HTML content was used in the message
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -425,7 +425,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         assert "<h1>HTML Content</h1>" in html_part
 
@@ -453,7 +453,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the normalized URL (without trailing slash) was used in links
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -462,7 +462,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         # The URL should not have a double slash before /api
         assert "https://example.com/api/actions/quick" in html_part
@@ -493,7 +493,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the message contains HTTP links with HMAC signatures
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -502,7 +502,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         # Check for HTTP link format with required parameters
         assert "https://example.com/api/actions/quick?" in html_part
@@ -614,3 +614,150 @@ class TestEmailForwarder:
             # Should still succeed with absolute fallback
             assert result
             mock_server.send_message.assert_called_once()
+
+    def test_format_email_date_with_datetime_object(self):
+        """Test that format_email_date works with datetime objects"""
+        from backend.services.forwarder import format_email_date
+        from datetime import datetime, timezone
+
+        # Test with datetime object
+        dt = datetime(2023, 12, 21, 10, 30, 0, tzinfo=timezone.utc)
+        formatted = format_email_date(dt)
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted
+
+    def test_format_email_date_with_rfc2822_string(self):
+        """Test that format_email_date works with RFC 2822 strings"""
+        from backend.services.forwarder import format_email_date
+
+        # Test with RFC 2822 string
+        formatted = format_email_date("Thu, 21 Dec 2023 10:30:00 +0000")
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted
+
+    def test_format_email_date_with_none(self):
+        """Test that format_email_date returns 'Unknown' for None"""
+        from backend.services.forwarder import format_email_date
+
+        assert format_email_date(None) == "Unknown"
+
+    def test_format_email_date_with_invalid_string(self):
+        """Test that format_email_date returns raw string for invalid input"""
+        from backend.services.forwarder import format_email_date
+
+        result = format_email_date("Invalid Date Format")
+        assert "Invalid Date Format" in result
+
+    def test_format_email_date_with_naive_datetime(self):
+        """Test that format_email_date handles timezone-naive datetime objects by assuming UTC"""
+        from backend.services.forwarder import format_email_date
+        from datetime import datetime
+
+        # Test with timezone-naive datetime object
+        naive_dt = datetime(2023, 12, 21, 10, 30, 0)
+        formatted = format_email_date(naive_dt)
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted  # Should assume UTC and format with +0000
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_includes_received_date(self, mock_smtp):
+        """Test that forwarded email includes the received date from original email"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            "date": "Thu, 21 Dec 2023 10:30:00 +0000",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains the received date
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        # Check that the date appears in the HTML (formatted as "December 21, 2023")
+        assert "December 21, 2023" in html_part
+        assert "Received:" in html_part
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_missing_date_shows_unknown(self, mock_smtp):
+        """Test that forwarded email shows 'Unknown' when date is missing"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            # No date field
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains "Unknown" for the received date
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        assert "Unknown" in html_part
+        assert "Received:" in html_part
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_invalid_date_format_uses_raw_string(self, mock_smtp):
+        """Test that forwarded email uses raw date string when parsing fails"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            "date": "Invalid Date Format",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains the raw date string when parsing fails
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        assert "Invalid Date Format" in html_part
+        assert "Received:" in html_part

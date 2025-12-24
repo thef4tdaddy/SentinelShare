@@ -218,6 +218,7 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
             "body": body,
             "html_body": html_body,
             "message_id": email.email_id,
+            "date": email.received_at,  # format_email_date will handle datetime objects
         }
 
         is_receipt = ReceiptDetector.is_receipt(email_data, session=session)

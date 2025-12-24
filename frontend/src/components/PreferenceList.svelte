@@ -132,8 +132,8 @@
 		</div>
 	</div>
 
-	<!-- List -->
-	<div class="overflow-x-auto">
+	<!-- Desktop List (Table) -->
+	<div class="hidden md:block overflow-x-auto">
 		<table class="w-full text-left text-sm">
 			<thead>
 				<tr class="border-b border-gray-100">
@@ -176,6 +176,35 @@
 				{/each}
 			</tbody>
 		</table>
+	</div>
+
+	<!-- Mobile List (Cards) -->
+	<div class="md:hidden divide-y divide-gray-100">
+		{#each items as item (item.id || Math.random())}
+			<div class="p-4 flex justify-between items-center group active:bg-gray-50 transition-colors">
+				<div class="flex-1 space-y-1">
+					{#each fields as field (field.key)}
+						<div class="flex flex-col">
+							<span class="text-[10px] uppercase font-bold text-gray-400 tracking-tight">
+								{field.label.split('(')[0].trim()}
+							</span>
+							<span class="text-sm font-medium text-text-main">
+								{item[field.key] || '-'}
+							</span>
+						</div>
+					{/each}
+				</div>
+				<button
+					class="p-3 text-gray-400 hover:text-red-500 bg-gray-50 rounded-xl"
+					onclick={() => item.id && deleteItem(item.id)}
+					aria-label="Delete"
+				>
+					<Trash2 size={18} />
+				</button>
+			</div>
+		{:else}
+			<div class="py-12 text-center text-text-secondary text-sm">No items found.</div>
+		{/each}
 	</div>
 </div>
 
