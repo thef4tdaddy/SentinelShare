@@ -239,7 +239,7 @@ def get_preferences_for_sendee(token: str, session: Session = Depends(get_sessio
         raise HTTPException(status_code=403, detail="Invalid or expired token")
 
     prefs = session.exec(
-        select(Preference).where(Preference.type.in_(["Blocked Sender", "Always Forward"]))
+        select(Preference).where(Preference.type.in_(["Blocked Sender", "Always Forward"]))  # type: ignore
     ).all()
     return {
         "success": True,

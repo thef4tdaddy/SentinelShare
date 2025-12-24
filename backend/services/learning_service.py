@@ -151,7 +151,6 @@ class LearningService:
         # cutoff_date = utc_now() - timedelta(days=days)
 
         for idx, acct in enumerate(email_accounts):
-            provider = acct.get("provider", "gmail")
             user = acct["email"]
             pwd = acct["password"]
 
