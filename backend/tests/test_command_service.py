@@ -166,11 +166,13 @@ class TestCommandService:
         mock_server.send_message.assert_called_once()
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_send_confirmation_no_wife_email(self):
+    @patch("smtplib.SMTP")
+    def test_send_confirmation_no_wife_email(self, mock_smtp):
         """Test lines 94-95: _send_confirmation returns early when no WIFE_EMAIL"""
         # Should return early without trying to send
         CommandService._send_confirmation("Test message")
-        # If we get here without error, the early return worked
+        # Explicitly verify that no SMTP connection was attempted
+        mock_smtp.assert_not_called()
 
     @patch.dict(
         os.environ,
