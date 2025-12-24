@@ -614,3 +614,106 @@ class TestEmailForwarder:
             # Should still succeed with absolute fallback
             assert result
             mock_server.send_message.assert_called_once()
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_includes_received_date(self, mock_smtp):
+        """Test that forwarded email includes the received date from original email"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            "date": "Thu, 21 Dec 2023 10:30:00 +0000",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains the received date
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        # Check that the date appears in the HTML (formatted as "December 21, 2023")
+        assert "December 21, 2023" in html_part
+        assert "Received:" in html_part
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_missing_date_shows_unknown(self, mock_smtp):
+        """Test that forwarded email shows 'Unknown' when date is missing"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            # No date field
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains "Unknown" for the received date
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        assert "Unknown" in html_part
+        assert "Received:" in html_part
+
+    @patch("backend.services.forwarder.smtplib.SMTP")
+    @patch.dict(
+        os.environ,
+        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
+    )
+    def test_forward_email_invalid_date_format_uses_raw_string(self, mock_smtp):
+        """Test that forwarded email uses raw date string when parsing fails"""
+        mock_server = Mock()
+        mock_smtp.return_value.__enter__.return_value = mock_server
+
+        original_email = {
+            "subject": "Test Receipt",
+            "from": "shop@example.com",
+            "body": "Order #123",
+            "date": "Invalid Date Format",
+        }
+
+        result = EmailForwarder.forward_email(original_email, "target@example.com")
+
+        assert result
+        mock_server.send_message.assert_called_once()
+
+        # Verify the message contains the raw date string when parsing fails
+        sent_message = mock_server.send_message.call_args[0][0]
+        html_part = None
+        for part in sent_message.walk():
+            if part.get_content_type() == "text/html":
+                html_part = part.get_payload(decode=True).decode()
+                break
+
+        assert html_part is not None
+        assert "Invalid Date Format" in html_part
+        assert "Received:" in html_part

@@ -6,6 +6,7 @@ import urllib.parse
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
@@ -71,6 +72,19 @@ class EmailForwarder:
                 simple_name = domain.split(".")[0].capitalize()
             except Exception:
                 pass
+
+        # Parse the received date from the email
+        received_date_str = "Unknown"
+        date_header = original_email_data.get("date")
+        if date_header:
+            try:
+                # Parse the date using email.utils which handles RFC 2822 format
+                received_dt = parsedate_to_datetime(date_header)
+                # Format the date in a readable format
+                received_date_str = received_dt.strftime("%B %d, %Y at %I:%M %p %Z")
+            except Exception:
+                # If parsing fails, use the raw date string
+                received_date_str = date_header
 
         # Prepare content
         body_content = original_email_data.get("body", "")
@@ -153,6 +167,7 @@ class EmailForwarder:
                 action_type_text=action_type_text,
                 body=body_content_html,
                 subject=original_email_data.get("subject", ""),
+                received_date=received_date_str,
                 **{
                     "from": from_header
                 },  # 'from' is a keyword in python, so we pass it as dict
@@ -170,6 +185,7 @@ class EmailForwarder:
                     action_type_text=action_type_text,
                     body=body_content_html,
                     subject=original_email_data.get("subject", ""),
+                    received_date=received_date_str,
                     **{"from": from_header},
                 )
             except Exception:

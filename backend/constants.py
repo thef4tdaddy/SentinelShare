@@ -23,6 +23,9 @@ DEFAULT_EMAIL_TEMPLATE = """
                 {action_type_text}
             </div>
         </div>
+        <div style="font-size: 12px; color: #71717a; margin-bottom: 12px;">
+            📅 Received: {received_date}
+        </div>
         <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;">
         <div style="font-family: sans-serif;">
             {body}
