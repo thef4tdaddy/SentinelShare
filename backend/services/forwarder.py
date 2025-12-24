@@ -41,6 +41,9 @@ def format_email_date(date_input) -> str:
             # Parse the date string using email.utils which handles RFC 2822 format
             dt = parsedate_to_datetime(date_input)
 
+        # Ensure datetime is timezone-aware; assume UTC if tzinfo is missing
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
         # Format with numeric timezone offset which is more reliable than %Z
         return dt.strftime("%B %d, %Y at %I:%M %p %z")
     except Exception:
