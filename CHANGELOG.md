@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.0...sentinel-share-v1.3.1) (2025-12-24)
+
+
+### Bug Fixes
+
+* **prefs:** enable admin access to unified preferences dashboard ([c05b3c3](https://github.com/thef4tdaddy/SentinelShare/commit/c05b3c37ef376569ab213bd6817585f09bc64cc6))
+
 ## [1.2.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.1.0...receipt-forwarder-root-v1.2.0) (2025-12-23)
 
 
