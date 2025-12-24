@@ -22,7 +22,7 @@
 		loading = true;
 		try {
 			// Reuse settings endpoint but we will enhance it if needed
-			const res = await fetchJson('/api/settings/rules');
+			const res = await fetchJson('/settings/rules');
 			rules = Array.isArray(res) ? res : [];
 		} catch (e) {
 			console.error('Failed to load rules', e);

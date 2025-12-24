@@ -19,8 +19,8 @@
 		error = '';
 		try {
 			const url = token
-				? `/api/actions/preferences-for-sendee?token=${encodeURIComponent(token)}`
-				: '/api/actions/preferences-for-sendee'; // Admin uses session via same endpoint
+				? `/actions/preferences-for-sendee?token=${encodeURIComponent(token)}`
+				: '/actions/preferences-for-sendee'; // Admin uses session via same endpoint
 
 			const res = await fetchJson(url);
 			if (res.success) {
@@ -42,7 +42,7 @@
 		message = '';
 		error = '';
 		try {
-			const res = await fetchJson('/api/actions/update-preferences', {
+			const res = await fetchJson('/actions/update-preferences', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

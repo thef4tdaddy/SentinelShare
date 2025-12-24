@@ -44,7 +44,7 @@
 
 	async function loadItems() {
 		try {
-			items = await fetchJson(`/api/settings/${type}`);
+			items = await fetchJson(`/settings/${type}`);
 		} catch {
 			console.error('Error loading items');
 		}
@@ -53,7 +53,7 @@
 	async function addItem() {
 		try {
 			loading = true;
-			const res = await fetchJson(`/api/settings/${type}`, {
+			const res = await fetchJson(`/settings/${type}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(newItem)
@@ -76,7 +76,7 @@
 		if (itemToDelete === null) return;
 		showDeleteConfirm = false;
 		try {
-			await fetchJson(`/api/settings/${type}/${itemToDelete}`, { method: 'DELETE' });
+			await fetchJson(`/settings/${type}/${itemToDelete}`, { method: 'DELETE' });
 			items = items.filter((i) => i.id !== itemToDelete);
 		} catch {
 			alert('Error deleting item');
