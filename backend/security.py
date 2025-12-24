@@ -1,5 +1,10 @@
+import hashlib
+import hmac
 import os
+from datetime import datetime, timezone
+from typing import Optional
 
+import bleach
 from cryptography.fernet import Fernet
 
 
@@ -38,3 +43,55 @@ def decrypt_content(encrypted_content: str) -> str:
         # Fallback for unexpected errors but log them
         print(f"Unexpected error decrypting content: {e}")
         return ""
+
+
+def get_email_content_hash(email_data):
+    """
+    Generates a hash of the email content to detect duplicates when Message-ID is missing.
+    Uses Sender + Subject + Normalized Body.
+    """
+    sender = (email_data.get("from") or "").lower().strip()
+    subject = (email_data.get("subject") or "").lower().strip()
+
+    # Normalize body by removing HTML tags and excessive whitespace
+    raw_body = email_data.get("body") or email_data.get("html_body") or ""
+    clean_body = bleach.clean(raw_body, tags=[], strip=True)
+    normalized_body = " ".join(clean_body.split()).lower()
+
+    content = f"{sender}|{subject}|{normalized_body}"
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def generate_hmac_signature(msg: str) -> str:
+    """Generate an HMAC-SHA256 signature for a message."""
+    secret = os.getenv("SECRET_KEY", "default-insecure-secret-please-change")
+    return hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
+def generate_dashboard_token(email: str) -> str:
+    """Generate a secure token for the sendee dashboard."""
+    ts = str(int(datetime.now(timezone.utc).timestamp()))
+    msg = f"dashboard:{email}:{ts}"
+    sig = generate_hmac_signature(msg)
+    return f"{email}:{ts}:{sig}"
+
+
+def verify_dashboard_token(token: str) -> Optional[str]:
+    """Verify a dashboard token and return the email if valid."""
+    try:
+        email, ts, sig = token.split(":")
+        msg = f"dashboard:{email}:{ts}"
+        expected = generate_hmac_signature(msg)
+
+        if not hmac.compare_digest(expected, sig):
+            return None
+
+        # Check expiration (e.g., 30 days for dashboard access)
+        link_ts = float(ts)
+        now_ts = datetime.now(timezone.utc).timestamp()
+        if now_ts - link_ts > 30 * 24 * 3600:
+            return None
+
+        return email
+    except Exception:
+        return None

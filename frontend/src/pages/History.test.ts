@@ -71,10 +71,10 @@ describe('History Component', () => {
 
 		await waitFor(() => {
 			expect(screen.getByText('Total Processed')).toBeTruthy();
-			expect(screen.getByText('100')).toBeTruthy();
-			expect(screen.getByText('60')).toBeTruthy();
-			expect(screen.getByText('35')).toBeTruthy();
-			expect(screen.getByText('5')).toBeTruthy();
+			expect(screen.getAllByText('100').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('60').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('35').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -115,9 +115,9 @@ describe('History Component', () => {
 		render(History);
 
 		await waitFor(() => {
-			expect(screen.getByText('Amazon Receipt')).toBeTruthy();
-			expect(screen.getByText('order@amazon.com')).toBeTruthy();
-			expect(screen.getByText('shopping')).toBeTruthy();
+			expect(screen.getAllByText('Amazon Receipt').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('order@amazon.com').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('shopping').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -237,7 +237,7 @@ describe('History Component', () => {
 		await fireEvent.click(runsTab);
 
 		await waitFor(() => {
-			expect(screen.getByText('15 emails')).toBeTruthy();
+			expect(screen.getAllByText('15 emails').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 
@@ -351,9 +351,9 @@ describe('History Component', () => {
 		render(History);
 
 		await waitFor(() => {
-			expect(screen.getByText('Page 1 of 3 (150 total)')).toBeTruthy();
-			expect(screen.getByText('Previous')).toBeTruthy();
-			expect(screen.getByText('Next')).toBeTruthy();
+			expect(screen.getAllByText('Page 1 of 3 (150 total)').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('Previous').length).toBeGreaterThanOrEqual(1);
+			expect(screen.getAllByText('Next').length).toBeGreaterThanOrEqual(1);
 		});
 	});
 

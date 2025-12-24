@@ -6,11 +6,22 @@
 	import Rules from './pages/Rules.svelte';
 	import Settings from './pages/Settings.svelte';
 	import Login from './pages/Login.svelte';
+	import SendeeDashboard from './pages/SendeeDashboard.svelte';
 	import './app.css';
 
 	let currentView = 'loading';
+	let dashboardToken: string | null = null;
 
 	onMount(async () => {
+		// Check for token in URL first (Sendee access)
+		const params = new URLSearchParams(window.location.search);
+		const token = params.get('token');
+		if (token) {
+			dashboardToken = token;
+			currentView = 'sendee';
+			return;
+		}
+
 		try {
 			const res = await fetch('/api/auth/me');
 			if (res.ok) {
@@ -50,6 +61,10 @@
 				<History />
 			{:else if currentView === 'rules'}
 				<Rules />
+			{:else if currentView === 'preferences'}
+				<SendeeDashboard isAdmin={true} />
+			{:else if currentView === 'sendee'}
+				<SendeeDashboard token={dashboardToken} isAdmin={false} />
 			{:else if currentView === 'settings'}
 				<Settings />
 			{/if}

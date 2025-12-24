@@ -129,9 +129,8 @@ def test_delete_preference_success(session: Session):
 
 def test_delete_preference_not_found(session: Session):
     """Test deleting a non-existent preference raises 404"""
-    from fastapi import HTTPException
-
     from backend.routers.settings import delete_preference
+    from fastapi import HTTPException
 
     with pytest.raises(HTTPException) as exc_info:
         delete_preference(999, session=session)
@@ -141,9 +140,8 @@ def test_delete_preference_not_found(session: Session):
 
 def test_delete_rule_not_found(session: Session):
     """Test deleting a non-existent rule raises 404"""
-    from fastapi import HTTPException
-
     from backend.routers.settings import delete_rule
+    from fastapi import HTTPException
 
     with pytest.raises(HTTPException) as exc_info:
         delete_rule(999, session=session)
@@ -153,9 +151,9 @@ def test_delete_rule_not_found(session: Session):
 
 def test_update_email_template_empty(session: Session):
     """Test updating email template with empty string raises 400"""
+    from backend.routers.settings import (EmailTemplateUpdate,
+                                          update_email_template)
     from fastapi import HTTPException
-
-    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Test with empty string
     with pytest.raises(HTTPException) as exc_info:
@@ -172,9 +170,9 @@ def test_update_email_template_empty(session: Session):
 
 def test_update_email_template_too_long(session: Session):
     """Test updating email template with too long content raises 400"""
+    from backend.routers.settings import (EmailTemplateUpdate,
+                                          update_email_template)
     from fastapi import HTTPException
-
-    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Create a template longer than 10,000 characters
     long_template = "x" * 10001
@@ -189,7 +187,8 @@ def test_update_email_template_too_long(session: Session):
 
 def test_update_email_template_create_new(session: Session):
     """Test creating a new email template setting (lines 110-115)"""
-    from backend.routers.settings import EmailTemplateUpdate, update_email_template
+    from backend.routers.settings import (EmailTemplateUpdate,
+                                          update_email_template)
 
     # First time creating the template - should hit the else branch on lines 110-115
     result = update_email_template(

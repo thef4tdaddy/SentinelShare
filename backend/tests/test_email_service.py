@@ -1,5 +1,4 @@
 import os
-import pytest
 from email.mime.text import MIMEText
 from unittest.mock import Mock, patch
 
@@ -297,14 +296,22 @@ class TestEmailService:
         assert "HTML Content" in result["body"]  # BS should have converted it
         assert "<html>" in result["html_body"]
 
-    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": '[{"email":"test1@example.com","password":"pass1"}]'}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"EMAIL_ACCOUNTS": '[{"email":"test1@example.com","password":"pass1"}]'},
+        clear=True,
+    )
     def test_get_all_accounts_with_email_accounts_json(self):
         """Test get_all_accounts with EMAIL_ACCOUNTS JSON"""
         accounts = EmailService.get_all_accounts()
         assert len(accounts) >= 1
         assert any(acc["email"] == "test1@example.com" for acc in accounts)
 
-    @patch.dict(os.environ, {"GMAIL_EMAIL": "gmail@test.com", "GMAIL_PASSWORD": "gmailpass"}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"GMAIL_EMAIL": "gmail@test.com", "GMAIL_PASSWORD": "gmailpass"},
+        clear=True,
+    )
     def test_get_all_accounts_legacy_gmail(self):
         """Test get_all_accounts with legacy GMAIL credentials"""
         accounts = EmailService.get_all_accounts()
@@ -312,7 +319,11 @@ class TestEmailService:
         assert accounts[0]["email"] == "gmail@test.com"
         assert accounts[0]["password"] == "gmailpass"
 
-    @patch.dict(os.environ, {"ICLOUD_EMAIL": "icloud@test.com", "ICLOUD_PASSWORD": "icloudpass"}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"ICLOUD_EMAIL": "icloud@test.com", "ICLOUD_PASSWORD": "icloudpass"},
+        clear=True,
+    )
     def test_get_all_accounts_with_icloud(self):
         """Test get_all_accounts with iCloud credentials"""
         accounts = EmailService.get_all_accounts()
@@ -328,7 +339,11 @@ class TestEmailService:
         result = EmailService.get_credentials_for_account("")
         assert result is None
 
-    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": '[{"email":"found@test.com","password":"pass"}]'}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"EMAIL_ACCOUNTS": '[{"email":"found@test.com","password":"pass"}]'},
+        clear=True,
+    )
     def test_get_credentials_for_account_found(self):
         """Test get_credentials_for_account with existing account"""
         result = EmailService.get_credentials_for_account("found@test.com")
@@ -336,7 +351,11 @@ class TestEmailService:
         assert result["email"] == "found@test.com"
         assert result["password"] == "pass"
 
-    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": '[{"email":"other@test.com","password":"pass"}]'}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"EMAIL_ACCOUNTS": '[{"email":"other@test.com","password":"pass"}]'},
+        clear=True,
+    )
     def test_get_credentials_for_account_not_found(self):
         """Test get_credentials_for_account with non-existent account"""
         result = EmailService.get_credentials_for_account("notfound@test.com")
@@ -429,8 +448,8 @@ class TestEmailService:
         mock_mail.select.return_value = ("OK", [])
         mock_mail.search.return_value = ("OK", [b"1"])
 
-        from email.mime.multipart import MIMEMultipart
         from email.mime.base import MIMEBase
+        from email.mime.multipart import MIMEMultipart
 
         msg = MIMEMultipart()
         msg["Subject"] = "Test"
@@ -489,7 +508,7 @@ class TestEmailService:
 
         mock_mail.fetch.side_effect = [
             Exception("Fetch failed"),
-            ("OK", [(b"", msg.as_bytes())])
+            ("OK", [(b"", msg.as_bytes())]),
         ]
 
         emails = EmailService.fetch_recent_emails("user@test.com", "pass")
@@ -543,7 +562,11 @@ class TestEmailService:
         result = EmailService.fetch_email_by_id("user", "pass", "<test@test.com>")
         assert result is None
 
-    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": "[{'email':'test@test.com','password':'pass'}]"}, clear=True)
+    @patch.dict(
+        os.environ,
+        {"EMAIL_ACCOUNTS": "[{'email':'test@test.com','password':'pass'}]"},
+        clear=True,
+    )
     def test_get_all_accounts_single_quote_json(self):
         """Test get_all_accounts with single-quoted JSON (common mistake)"""
         accounts = EmailService.get_all_accounts()
@@ -576,9 +599,7 @@ class TestEmailService:
 
         # Use custom search criterion to test that branch
         emails = EmailService.fetch_recent_emails(
-            "user@test.com", 
-            "pass", 
-            search_criterion='(SUBJECT "invoice")'
+            "user@test.com", "pass", search_criterion='(SUBJECT "invoice")'
         )
         assert len(emails) == 1
 
@@ -635,8 +656,8 @@ class TestEmailService:
         mock_mail.select.return_value = ("OK", [])
         mock_mail.search.return_value = ("OK", [b"1"])
 
-        from email.mime.multipart import MIMEMultipart
         from email.mime.base import MIMEBase
+        from email.mime.multipart import MIMEMultipart
 
         msg = MIMEMultipart()
         msg["Subject"] = "Test"
@@ -685,9 +706,7 @@ class TestEmailService:
 
         # Use custom search criterion with batch limit
         emails = EmailService.fetch_recent_emails(
-            "user@test.com", 
-            "pass", 
-            search_criterion='(SUBJECT "invoice")'
+            "user@test.com", "pass", search_criterion='(SUBJECT "invoice")'
         )
         # Should limit to 5 emails
         assert len(emails) == 5

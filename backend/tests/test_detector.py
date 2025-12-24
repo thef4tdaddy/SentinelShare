@@ -2,11 +2,10 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-
 from backend.models import ManualRule, Preference
 from backend.services.detector import ReceiptDetector
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
 
 
 # Create in-memory SQLite database for testing
@@ -468,7 +467,9 @@ def test_preference_always_forward_sender(session):
     session.commit()
 
     email = MockEmail(
-        subject="Random email", body="No receipt indicators", sender="service@paypal.com"
+        subject="Random email",
+        body="No receipt indicators",
+        sender="service@paypal.com",
     )
     assert ReceiptDetector.is_receipt(email, session) is True
 
@@ -682,17 +683,11 @@ def test_is_reply_or_forward_personal_emails():
         },
     ):
         # Gmail
-        assert ReceiptDetector.is_reply_or_forward(
-            "Order", "personal@gmail.com"
-        )
+        assert ReceiptDetector.is_reply_or_forward("Order", "personal@gmail.com")
         # iCloud
-        assert ReceiptDetector.is_reply_or_forward(
-            "Order", "personal@icloud.com"
-        )
+        assert ReceiptDetector.is_reply_or_forward("Order", "personal@icloud.com")
         # Sender email
-        assert ReceiptDetector.is_reply_or_forward(
-            "Order", "personal@work.com"
-        )
+        assert ReceiptDetector.is_reply_or_forward("Order", "personal@work.com")
 
 
 @patch("backend.services.detector.EmailService.get_all_accounts")
@@ -704,16 +699,10 @@ def test_is_reply_or_forward_from_email_service_accounts(mock_get_accounts):
         {"email": None},  # Account without email
     ]
 
-    assert ReceiptDetector.is_reply_or_forward(
-        "Order", "account1@example.com"
-    )
-    assert ReceiptDetector.is_reply_or_forward(
-        "Order", "account2@example.com"
-    )
+    assert ReceiptDetector.is_reply_or_forward("Order", "account1@example.com")
+    assert ReceiptDetector.is_reply_or_forward("Order", "account2@example.com")
     # Account not in list should return False
-    assert not ReceiptDetector.is_reply_or_forward(
-        "Order", "other@example.com"
-    )
+    assert not ReceiptDetector.is_reply_or_forward("Order", "other@example.com")
 
 
 # ============================================================================

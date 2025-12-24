@@ -5,13 +5,9 @@ from unittest.mock import MagicMock, patch
 import backend.services.scheduler as scheduler_module
 import pytest
 from backend.models import ProcessedEmail, ProcessingRun
-from backend.services.scheduler import (
-    cleanup_expired_emails,
-    process_emails,
-    redact_email,
-    start_scheduler,
-    stop_scheduler,
-)
+from backend.services.scheduler import (cleanup_expired_emails, process_emails,
+                                        redact_email, start_scheduler,
+                                        stop_scheduler)
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
@@ -304,6 +300,8 @@ def test_session_fixture_creates_db(session):
     # Verify the session is functional by querying for ProcessingRuns
     runs = session.exec(select(ProcessingRun)).all()
     assert len(runs) == 0  # New database should be empty
+
+
 def test_redact_email_normal():
     """Test redact_email with normal email addresses"""
     assert redact_email("john@example.com") == "j**n@example.com"
@@ -386,7 +384,9 @@ def test_process_emails_run_creation_error(mock_session_class, mock_engine_patch
 )
 @patch("backend.services.scheduler.engine")
 @patch("backend.services.scheduler.EmailService.get_all_accounts")
-def test_process_emails_no_accounts_configured(mock_get_accounts, mock_engine_patch, engine):
+def test_process_emails_no_accounts_configured(
+    mock_get_accounts, mock_engine_patch, engine
+):
     """Test that process_emails handles no configured accounts"""
     # Use our test engine in the scheduler module
     original_engine = scheduler_module.engine
@@ -958,7 +958,11 @@ def test_process_emails_multiple_errors(
         mock_is_receipt.return_value = True
         mock_categorize.return_value = "Shopping"
         # First email succeeds, second and third fail
-        mock_forward.side_effect = [True, Exception("SMTP error 1"), Exception("SMTP error 2")]
+        mock_forward.side_effect = [
+            True,
+            Exception("SMTP error 1"),
+            Exception("SMTP error 2"),
+        ]
 
         # Call process_emails
         process_emails()

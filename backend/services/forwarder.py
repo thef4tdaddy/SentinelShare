@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import os
 import smtplib
 import urllib.parse
@@ -12,6 +10,7 @@ from urllib.parse import urlparse
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import engine
 from backend.models import GlobalSettings
+from backend.security import generate_dashboard_token, generate_hmac_signature
 from backend.services.email_service import EmailService
 from sqlmodel import Session, select
 
@@ -136,13 +135,8 @@ class EmailForwarder:
                 # HTTP Link Strategy
                 # /api/actions/quick?cmd=STOP&arg=amazon&ts=123&sig=abc
                 ts = str(datetime.now(timezone.utc).timestamp())
-                secret = os.environ.get(
-                    "SECRET_KEY", "default-insecure-secret-please-change"
-                )
                 msg = f"{command}:{arg}:{ts}"
-                sig = hmac.new(
-                    secret.encode(), msg.encode(), hashlib.sha256
-                ).hexdigest()
+                sig = generate_hmac_signature(msg)
 
                 params = {"cmd": command, "arg": arg, "ts": ts, "sig": sig}
                 return f"{app_url}/api/actions/quick?{urllib.parse.urlencode(params)}"
@@ -160,6 +154,10 @@ class EmailForwarder:
         link_stop = make_link("STOP", simple_name.lower())  # Args usually lowercase
         link_more = make_link("MORE", simple_name.lower())
         link_settings = make_link("SETTINGS", "")
+
+        # Dashboard Token for the recipient
+        token = generate_dashboard_token(target_email)
+        link_dashboard = f"{app_url}/?token={token}" if app_url else link_settings
 
         action_type_text = (
             "Clicking an action opens a web confirmation."
@@ -188,6 +186,7 @@ class EmailForwarder:
                 simple_name=simple_name,
                 link_stop=link_stop,
                 link_more=link_more,
+                link_dashboard=link_dashboard,
                 link_settings=link_settings,
                 action_type_text=action_type_text,
                 body=body_content_html,
@@ -206,6 +205,7 @@ class EmailForwarder:
                     simple_name=simple_name,
                     link_stop=link_stop,
                     link_more=link_more,
+                    link_dashboard=link_dashboard,
                     link_settings=link_settings,
                     action_type_text=action_type_text,
                     body=body_content_html,

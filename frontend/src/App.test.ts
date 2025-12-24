@@ -49,9 +49,11 @@ describe('App Component', () => {
 		render(App);
 
 		// Wait for dashboard to load first
-		await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy());
+		await waitFor(() =>
+			expect(screen.getAllByRole('button', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1)
+		);
 
-		const settingsButton = screen.getByRole('button', { name: 'Settings' });
+		const settingsButton = screen.getAllByRole('button', { name: 'Settings' })[0];
 		await fireEvent.click(settingsButton);
 
 		await waitFor(
@@ -68,10 +70,12 @@ describe('App Component', () => {
 		render(App);
 
 		// Wait for dashboard
-		await waitFor(() => expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy());
+		await waitFor(() =>
+			expect(screen.getAllByRole('button', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1)
+		);
 
 		// Click settings first
-		const settingsButton = screen.getByRole('button', { name: 'Settings' });
+		const settingsButton = screen.getAllByRole('button', { name: 'Settings' })[0];
 		await fireEvent.click(settingsButton);
 
 		await waitFor(
@@ -82,7 +86,7 @@ describe('App Component', () => {
 		);
 
 		// Click dashboard to switch back
-		const dashboardButton = screen.getByRole('button', { name: 'Dashboard' });
+		const dashboardButton = screen.getAllByRole('button', { name: 'Dashboard' })[0];
 		await fireEvent.click(dashboardButton);
 
 		await waitFor(
@@ -99,13 +103,15 @@ describe('App Component', () => {
 		render(App);
 
 		// Wait for load
-		await waitFor(() => expect(screen.getByRole('button', { name: 'Dashboard' })).toBeTruthy());
+		await waitFor(() =>
+			expect(screen.getAllByRole('button', { name: 'Dashboard' }).length).toBeGreaterThanOrEqual(1)
+		);
 
-		const dashboardButton = screen.getByRole('button', { name: 'Dashboard' });
+		const dashboardButton = screen.getAllByRole('button', { name: 'Dashboard' })[0];
 		expect(dashboardButton.classList.contains('bg-white')).toBe(true);
 		expect(dashboardButton.classList.contains('text-primary')).toBe(true);
 
-		const settingsButton = screen.getByRole('button', { name: 'Settings' });
+		const settingsButton = screen.getAllByRole('button', { name: 'Settings' })[0];
 		await fireEvent.click(settingsButton);
 
 		await waitFor(

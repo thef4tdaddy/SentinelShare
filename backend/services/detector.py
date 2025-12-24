@@ -49,7 +49,9 @@ class ReceiptDetector:
                 for pref in always_forward:
                     p_item = pref.item.lower()
                     if p_item in sender or p_item in subject:
-                        print(f"✅ Preference match (Always Forward): {pref.item}")
+                        print(
+                            f"✅ Preference match (Always Forward): {ReceiptDetector._mask_text(pref.item)}"
+                        )
                         return True
 
                 # 3. Preferences (Blocked Sender / Category)
@@ -61,19 +63,25 @@ class ReceiptDetector:
                 for pref in blocked:
                     p_item = pref.item.lower()
                     if p_item in sender or p_item in subject:
-                        print(f"🚫 Preference match (Blocked): {pref.item}")
+                        print(
+                            f"🚫 Preference match (Blocked): {ReceiptDetector._mask_text(pref.item)}"
+                        )
                         return False
             except Exception as e:
                 print(f"⚠️ Error checking database rules: {type(e).__name__}")
 
         # STEP 0: EXCLUDE reply emails and forwards first
         if ReceiptDetector.is_reply_or_forward(subject, sender):
-            print(f"🚫 Excluded reply/forward email: {subject}")
+            print(
+                f"🚫 Excluded reply/forward email: {ReceiptDetector._mask_text(subject)}"
+            )
             return False
 
         # STEP 0.5: Check for strong receipt indicators (OVERRIDES promotional filter)
         if ReceiptDetector.has_strong_receipt_indicators(subject, body):
-            print(f"✅ Strong receipt indicators found: {subject}")
+            print(
+                f"✅ Strong receipt indicators found: {ReceiptDetector._mask_text(subject)}"
+            )
             return True
 
         # STEP 1: HARD EXCLUDE spam/promotional emails
@@ -88,12 +96,16 @@ class ReceiptDetector:
             pattern in subject or pattern in body or pattern in sender
             for pattern in promo_allowlist_patterns
         ):
-            print(f"🚫 Excluded promotional email: {subject}")
+            print(
+                f"🚫 Excluded promotional email: {ReceiptDetector._mask_text(subject)}"
+            )
             return False
 
         # STEP 1.5: EXCLUDE shipping notifications (not receipts)
         if ReceiptDetector.is_shipping_notification(subject, body, sender):
-            print(f"🚫 Excluded shipping notification: {subject}")
+            print(
+                f"🚫 Excluded shipping notification: {ReceiptDetector._mask_text(subject)}"
+            )
             return False
 
         # STEP 3: Check for transactional patterns (order + amount + confirmation)
@@ -101,17 +113,21 @@ class ReceiptDetector:
             subject, body, sender
         )
         if transactional_score >= 3:
-            print(f"✅ High transactional score ({transactional_score}): {subject}")
+            print(
+                f"✅ High transactional score ({transactional_score}): {ReceiptDetector._mask_text(subject)}"
+            )
             return True
 
         # STEP 4: Known receipt senders with transaction confirmation
         if ReceiptDetector.is_known_receipt_sender(
             sender
         ) and ReceiptDetector.has_transaction_confirmation(subject, body):
-            print(f"✅ Known sender with transaction: {subject}")
+            print(
+                f"✅ Known sender with transaction: {ReceiptDetector._mask_text(subject)}"
+            )
             return True
 
-        print(f"❌ Not a receipt: {subject}")
+        print(f"❌ Not a receipt: {ReceiptDetector._mask_text(subject)}")
         return False
 
     @staticmethod
@@ -157,6 +173,15 @@ class ReceiptDetector:
         decision = ReceiptDetector.is_receipt(email, session)
         trace["final_decision"] = decision
         return trace
+
+    @staticmethod
+    def _mask_text(text: str, max_chars: int = 20) -> str:
+        """Helper to mask sensitive text for safe logging."""
+        if not text:
+            return ""
+        if len(text) <= 5:
+            return "***"
+        return f"{text[:3]}...{text[-2:]} ({len(text)} chars)"
 
     @staticmethod
     def _check_manual_rules(
