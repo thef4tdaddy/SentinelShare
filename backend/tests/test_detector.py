@@ -1,4 +1,21 @@
+import os
+from unittest.mock import MagicMock, patch
+
+import pytest
+from sqlmodel import Session, SQLModel, create_engine
+
+from backend.models import ManualRule, Preference
 from backend.services.detector import ReceiptDetector
+
+
+# Create in-memory SQLite database for testing
+@pytest.fixture
+def test_session():
+    """Create a test database session with proper table setup"""
+    engine = create_engine("sqlite:///:memory:")
+    SQLModel.metadata.create_all(engine)
+    with Session(engine) as session:
+        yield session
 
 
 class MockEmail:
@@ -347,3 +364,458 @@ def test_promotional_patterns():
     assert ReceiptDetector.is_promotional_email(
         "", "Visit awstrack.me/link", "marketing@shop.com"
     )
+
+
+# ============================================================================
+# Database Override Tests (Manual Rules and Preferences) - Lines 33-67
+# ============================================================================
+
+
+def test_manual_rule_with_email_pattern(test_session):
+    """Test manual rule matching with email pattern"""
+    rule = ManualRule(
+        email_pattern="*@shop.com",
+        subject_pattern=None,
+        priority=10,
+        purpose="Test Shop Rule",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    email = MockEmail(
+        subject="Random Subject", body="Some content", sender="orders@shop.com"
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is True
+
+
+def test_manual_rule_with_subject_pattern(test_session):
+    """Test manual rule matching with subject pattern"""
+    rule = ManualRule(
+        email_pattern=None,
+        subject_pattern="*order*",
+        priority=10,
+        purpose="Order Pattern Rule",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    email = MockEmail(
+        subject="Your order is ready", body="Content", sender="shop@example.com"
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is True
+
+
+def test_manual_rule_with_both_patterns(test_session):
+    """Test manual rule with both email and subject patterns"""
+    rule = ManualRule(
+        email_pattern="*@amazon.com",
+        subject_pattern="*confirmation*",
+        priority=20,
+        purpose="Amazon Confirmation Rule",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    # Both patterns match
+    email1 = MockEmail(
+        subject="Order Confirmation",
+        body="Thank you",
+        sender="orders@amazon.com",
+    )
+    assert ReceiptDetector.is_receipt(email1, test_session) is True
+
+    # Only email matches - should not match
+    email2 = MockEmail(
+        subject="Random Subject", body="Content", sender="info@amazon.com"
+    )
+    assert ReceiptDetector.is_receipt(email2, test_session) is False
+
+
+def test_manual_rule_priority_ordering(test_session):
+    """Test that higher priority rules are checked first"""
+    # Lower priority rule
+    rule1 = ManualRule(
+        email_pattern="*@test.com",
+        subject_pattern=None,
+        priority=5,
+        purpose="Low Priority Rule",
+    )
+    # Higher priority rule
+    rule2 = ManualRule(
+        email_pattern="*@test.com",
+        subject_pattern=None,
+        priority=15,
+        purpose="High Priority Rule",
+    )
+    test_session.add(rule1)
+    test_session.add(rule2)
+    test_session.commit()
+
+    email = MockEmail(subject="Test", body="Content", sender="info@test.com")
+    # Should match the higher priority rule
+    assert ReceiptDetector.is_receipt(email, test_session) is True
+
+
+def test_preference_always_forward_sender(test_session):
+    """Test 'Always Forward' preference matching sender"""
+    pref = Preference(item="paypal.com", type="Always Forward")
+    test_session.add(pref)
+    test_session.commit()
+
+    email = MockEmail(
+        subject="Random email", body="No receipt indicators", sender="service@paypal.com"
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is True
+
+
+def test_preference_always_forward_subject(test_session):
+    """Test 'Always Forward' preference matching subject"""
+    pref = Preference(item="invoice", type="Always Forward")
+    test_session.add(pref)
+    test_session.commit()
+
+    email = MockEmail(
+        subject="Invoice for services",
+        body="No other indicators",
+        sender="billing@random.com",
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is True
+
+
+def test_preference_blocked_sender(test_session):
+    """Test 'Blocked Sender' preference"""
+    pref = Preference(item="marketing", type="Blocked Sender")
+    test_session.add(pref)
+    test_session.commit()
+
+    # Even with strong receipt indicators, should be blocked
+    email = MockEmail(
+        subject="Order Confirmation",
+        body="Order #123456 Total: $50.00",
+        sender="marketing@shop.com",
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is False
+
+
+def test_preference_blocked_category(test_session):
+    """Test 'Blocked Category' preference"""
+    pref = Preference(item="newsletter", type="Blocked Category")
+    test_session.add(pref)
+    test_session.commit()
+
+    email = MockEmail(
+        subject="Monthly Newsletter with receipt info",
+        body="Order #123456",
+        sender="info@shop.com",
+    )
+    assert ReceiptDetector.is_receipt(email, test_session) is False
+
+
+def test_database_exception_handling(test_session):
+    """Test that exceptions in database checks are handled gracefully"""
+    # Create a mock session that raises an exception
+    mock_session = MagicMock()
+    mock_session.exec.side_effect = Exception("Database error")
+
+    email = MockEmail(
+        subject="Order Confirmation", body="Order #123456", sender="shop@example.com"
+    )
+    # Should not raise exception and should fall back to normal detection
+    result = ReceiptDetector.is_receipt(email, mock_session)
+    # The email has strong indicators, so should still be detected
+    assert result is True
+
+
+# ============================================================================
+# debug_is_receipt Method Tests - Lines 122-159
+# ============================================================================
+
+
+def test_debug_is_receipt_with_manual_rule(test_session):
+    """Test debug_is_receipt returns trace with manual rule match"""
+    rule = ManualRule(
+        email_pattern="*@shop.com",
+        subject_pattern=None,
+        priority=10,
+        purpose="Debug Test Rule",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    email = MockEmail(subject="Test", body="Content", sender="orders@shop.com")
+    trace = ReceiptDetector.debug_is_receipt(email, test_session)
+
+    assert trace["final_decision"] is True
+    assert trace["matched_by"] == "Manual Rule"
+    assert len(trace["steps"]) > 0
+    assert trace["steps"][0]["step"] == "Manual Rule"
+    assert trace["steps"][0]["result"] is True
+
+
+def test_debug_is_receipt_without_session():
+    """Test debug_is_receipt without session"""
+    email = MockEmail(
+        subject="Receipt for your order",
+        body="Order #123456 Total: $50.00",
+        sender="shop@example.com",
+    )
+    trace = ReceiptDetector.debug_is_receipt(email, None)
+
+    assert "subject" in trace
+    assert "sender" in trace
+    assert "steps" in trace
+    assert "final_decision" in trace
+
+
+# ============================================================================
+# _check_manual_rules Helper Tests - Lines 166-181
+# ============================================================================
+
+
+def test_check_manual_rules_no_session():
+    """Test _check_manual_rules returns None when no session provided"""
+    result = ReceiptDetector._check_manual_rules("subject", "sender", None)
+    assert result is None
+
+
+def test_check_manual_rules_email_pattern_match(test_session):
+    """Test _check_manual_rules with email pattern match"""
+    rule = ManualRule(
+        email_pattern="*@trusted.com",
+        subject_pattern=None,
+        priority=10,
+        purpose="Trusted Sender",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    result = ReceiptDetector._check_manual_rules(
+        "any subject", "sender@trusted.com", test_session
+    )
+    assert result is not None
+    assert result.purpose == "Trusted Sender"
+
+
+def test_check_manual_rules_subject_pattern_match(test_session):
+    """Test _check_manual_rules with subject pattern match"""
+    rule = ManualRule(
+        email_pattern=None,
+        subject_pattern="*receipt*",
+        priority=10,
+        purpose="Receipt Keyword",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    result = ReceiptDetector._check_manual_rules(
+        "your receipt is ready", "any@sender.com", test_session
+    )
+    assert result is not None
+    assert result.purpose == "Receipt Keyword"
+
+
+def test_check_manual_rules_both_patterns_must_match(test_session):
+    """Test _check_manual_rules requires both patterns to match when both are set"""
+    rule = ManualRule(
+        email_pattern="*@shop.com",
+        subject_pattern="*order*",
+        priority=10,
+        purpose="Shop Orders",
+    )
+    test_session.add(rule)
+    test_session.commit()
+
+    # Only email matches
+    result1 = ReceiptDetector._check_manual_rules(
+        "random subject", "info@shop.com", test_session
+    )
+    assert result1 is None
+
+    # Only subject matches
+    result2 = ReceiptDetector._check_manual_rules(
+        "your order", "info@other.com", test_session
+    )
+    assert result2 is None
+
+    # Both match
+    result3 = ReceiptDetector._check_manual_rules(
+        "your order", "info@shop.com", test_session
+    )
+    assert result3 is not None
+    assert result3.purpose == "Shop Orders"
+
+
+def test_check_manual_rules_no_rules(test_session):
+    """Test _check_manual_rules when no rules exist"""
+    result = ReceiptDetector._check_manual_rules(
+        "subject", "sender@example.com", test_session
+    )
+    assert result is None
+
+
+# ============================================================================
+# is_reply_or_forward Edge Cases - Lines 201, 221
+# ============================================================================
+
+
+def test_is_reply_or_forward_wife_email():
+    """Test detection of wife's email"""
+    with patch.dict(os.environ, {"WIFE_EMAIL": "spouse@example.com"}):
+        assert ReceiptDetector.is_reply_or_forward(
+            "Order Confirmation", "spouse@example.com"
+        )
+
+
+def test_is_reply_or_forward_personal_emails():
+    """Test detection of personal email addresses from environment"""
+    with patch.dict(
+        os.environ,
+        {
+            "GMAIL_EMAIL": "personal@gmail.com",
+            "ICLOUD_EMAIL": "personal@icloud.com",
+            "SENDER_EMAIL": "personal@work.com",
+        },
+    ):
+        # Gmail
+        assert ReceiptDetector.is_reply_or_forward(
+            "Order", "personal@gmail.com"
+        )
+        # iCloud
+        assert ReceiptDetector.is_reply_or_forward(
+            "Order", "personal@icloud.com"
+        )
+        # Sender email
+        assert ReceiptDetector.is_reply_or_forward(
+            "Order", "personal@work.com"
+        )
+
+
+@patch("backend.services.detector.EmailService.get_all_accounts")
+def test_is_reply_or_forward_from_email_service_accounts(mock_get_accounts):
+    """Test detection of emails from EmailService accounts"""
+    mock_get_accounts.return_value = [
+        {"email": "account1@example.com"},
+        {"email": "account2@example.com"},
+        {"email": None},  # Account without email
+    ]
+
+    assert ReceiptDetector.is_reply_or_forward(
+        "Order", "account1@example.com"
+    )
+    assert ReceiptDetector.is_reply_or_forward(
+        "Order", "account2@example.com"
+    )
+    # Account not in list should return False
+    assert not ReceiptDetector.is_reply_or_forward(
+        "Order", "other@example.com"
+    )
+
+
+# ============================================================================
+# is_promotional_email Edge Cases - Lines 442, 446, 513
+# ============================================================================
+
+
+def test_promotional_subscribe_and_save_whitelist():
+    """Test that 'subscribe & save' emails are not marked as promotional"""
+    # Would normally be promotional due to keywords, but whitelisted
+    result = ReceiptDetector.is_promotional_email(
+        "Weekly deals and savings",
+        "Your subscribe & save order has shipped",
+        "shop@example.com",
+    )
+    assert result is False
+
+
+def test_promotional_subscription_order_whitelist():
+    """Test that 'subscription order' emails are not marked as promotional"""
+    result = ReceiptDetector.is_promotional_email(
+        "Special offer inside",
+        "Your subscription order #12345",
+        "subscriptions@example.com",
+    )
+    assert result is False
+
+
+def test_promotional_government_sender_exemption():
+    """Test that government senders are exempt from promotional filtering"""
+    # Has promotional keywords but from government
+    assert not ReceiptDetector.is_promotional_email(
+        "Special notice about renewal",
+        "Limited time to renew license",
+        "notices@dmv.gov",
+    )
+    assert not ReceiptDetector.is_promotional_email(
+        "Important update",
+        "Sign up for alerts",
+        "alerts@irs.gov",
+    )
+    assert not ReceiptDetector.is_promotional_email(
+        "New service available",
+        "Discover new features",
+        "info@government.gov",
+    )
+
+
+def test_promotional_email_no_keywords():
+    """Test that emails without promotional keywords return False"""
+    result = ReceiptDetector.is_promotional_email(
+        "Your order is ready", "Thank you for your purchase", "shop@example.com"
+    )
+    assert result is False
+
+
+def test_promotional_email_deals_patterns():
+    """Test promotional detection for deals-related patterns"""
+    # dealsnet in sender
+    assert ReceiptDetector.is_promotional_email(
+        "Check this out", "Great offers", "info@dealsnet.com"
+    )
+    # slickdeals
+    assert ReceiptDetector.is_promotional_email(
+        "Hot deals", "Best prices", "alerts@slickdeals.net"
+    )
+    # reddit deals
+    assert ReceiptDetector.is_promotional_email(
+        "reddit deals alert", "Top deals today", "notify@reddit.com"
+    )
+    # game deals in body
+    assert ReceiptDetector.is_promotional_email(
+        "New notification", "Check out these game deals", "info@example.com"
+    )
+    # steam sale in subject
+    assert ReceiptDetector.is_promotional_email(
+        "Steam sale this weekend", "Don't miss out", "newsletter@gaming.com"
+    )
+    # Test "bargain" pattern which is ONLY in deals_patterns (line 500)
+    # This should hit line 513 specifically
+    assert ReceiptDetector.is_promotional_email(
+        "Weekly notification", "Check out this bargain", "info@shop.com"
+    )
+
+
+def test_transactional_score_triggers_receipt():
+    """Test that high transactional score (>= 3) triggers receipt detection"""
+    # Create email with high transactional score but NO strong receipt indicators
+    # Avoid keywords like "receipt", "invoice", "order confirmation", etc.
+    # Also avoid promotional keywords
+    # But include transactional elements: order #, $amount, "transaction", "payment"
+    email = MockEmail(
+        subject="Transaction #ABC123456",
+        body="Payment of $99.99 has been processed. Transaction reference #987654321.",
+        sender="billing@service.com",
+    )
+    # Verify no strong indicators
+    assert not ReceiptDetector.has_strong_receipt_indicators(email.subject, email.body)
+    # Verify not promotional
+    assert not ReceiptDetector.is_promotional_email(
+        email.subject, email.body, email.sender
+    )
+    # Calculate score to verify it's >= 3
+    # Order # (2) + $amount (2) + transaction (1) + payment (1) = 6
+    score = ReceiptDetector.calculate_transactional_score(
+        email.subject, email.body, email.sender
+    )
+    assert score >= 3, f"Expected score >= 3, got {score}"
+    # This should be detected as receipt via transactional score path (lines 104-105)
+    assert ReceiptDetector.is_receipt(email) is True
