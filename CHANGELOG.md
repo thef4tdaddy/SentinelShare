@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.1.0...receipt-forwarder-root-v1.2.0) (2025-12-23)
+
+
+### Features
+
+* Retroactive Learning, Coverage Restoration, and Project Polish ([#139](https://github.com/thef4tdaddy/SentinelShare/issues/139)) ([4df2baa](https://github.com/thef4tdaddy/SentinelShare/commit/4df2baa17d2a2ee2fd52ba4b2e729d3f67d85bc6))
+
+
+### Bug Fixes
+
+* overhaul CI feedback, fix DB schemas, and resolve all backend type errors ([ecd6328](https://github.com/thef4tdaddy/SentinelShare/commit/ecd6328c95122fa82c56c3ae7246cdd70394c446))
+* **prod:** prevent scheduler crash and add configurable lookback ([#122](https://github.com/thef4tdaddy/SentinelShare/issues/122)) ([d408c44](https://github.com/thef4tdaddy/SentinelShare/commit/d408c449918e85f5e900f1102224a67f15c2b4ca))
+
 ## [1.1.0](https://github.com/thef4tdaddy/SentinelShare/compare/receipt-forwarder-root-v1.0.1...receipt-forwarder-root-v1.1.0) (2025-12-18)
 
 
