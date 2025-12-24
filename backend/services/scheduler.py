@@ -252,9 +252,7 @@ def process_emails():
                         f"❌ Error processing individual email {email_data.get('subject', 'unknown')}: {e}"
                     )
                     traceback.print_exc()
-                    # Close and replace the session to avoid a broken session affecting subsequent emails
-                    session.close()
-                    session = Session(engine)
+                    session.rollback()
                     # Mark that an error occurred during this run and update error message
                     error_occurred = True
                     subject = email_data.get("subject", "unknown")
