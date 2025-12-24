@@ -2,7 +2,10 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "package-name": "sentinel-share"
+      "package-name": "sentinel-share",
+      "extra-files": [
+        "frontend/package.json"
+      ]
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please-action/v4/schema.json"
