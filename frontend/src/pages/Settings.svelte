@@ -3,6 +3,7 @@
 	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
+	import { toasts } from '../lib/stores/toast';
 	import {
 		Play,
 		Settings,
@@ -36,9 +37,9 @@
 		try {
 			loading = true;
 			const res = await fetchJson('/settings/trigger-poll', { method: 'POST' });
-			alert(res.message || 'Poll triggered');
+			toasts.trigger(res.message || 'Poll triggered', 'success');
 		} catch {
-			alert('Error triggering poll');
+			toasts.trigger('Error triggering poll', 'error');
 		} finally {
 			loading = false;
 		}
@@ -53,9 +54,9 @@
 		loading = true;
 		try {
 			const res = await fetchJson('/api/history/reprocess-all-ignored', { method: 'POST' });
-			alert(res.message);
+			toasts.trigger(res.message, 'success');
 		} catch {
-			alert('Failed to reprocess emails');
+			toasts.trigger('Failed to reprocess emails', 'error');
 		} finally {
 			loading = false;
 		}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api, type LearningCandidate } from '../lib/api';
+	import { toasts } from '../lib/stores/toast';
 
 	export let onRuleAdded: () => void; // Callback when a rule is created
 
@@ -43,9 +44,10 @@
 			await api.learning.approve(candidate.id);
 			candidates = Array.isArray(candidates) ? candidates.filter((c) => c.id !== candidate.id) : [];
 			onRuleAdded();
+			toasts.trigger('Rule created successfully', 'success');
 		} catch (e) {
 			console.error('Failed to approve', e);
-			alert('Failed to create rule');
+			toasts.trigger('Failed to create rule', 'error');
 		} finally {
 			processingId = null;
 		}

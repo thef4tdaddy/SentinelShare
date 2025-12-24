@@ -7,6 +7,7 @@
 	import Settings from './pages/Settings.svelte';
 	import Login from './pages/Login.svelte';
 	import SendeeDashboard from './pages/SendeeDashboard.svelte';
+	import Toast from './components/Toast.svelte';
 	import './app.css';
 
 	let currentView = 'loading';
@@ -70,4 +71,5 @@
 			{/if}
 		</div>
 	{/if}
+	<Toast />
 </main>
