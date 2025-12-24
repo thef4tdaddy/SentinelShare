@@ -218,7 +218,11 @@ def reprocess_all_ignored(session: Session = Depends(get_session)):
             "body": body,
             "html_body": html_body,
             "message_id": email.email_id,
-            "date": email.received_at.strftime("%a, %d %b %Y %H:%M:%S %z") if email.received_at else None,
+            "date": (
+                email.received_at.strftime("%a, %d %b %Y %H:%M:%S %z")
+                if email.received_at
+                else None
+            ),
         }
 
         is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
