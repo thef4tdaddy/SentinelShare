@@ -287,7 +287,7 @@ class TestEmailService:
         assert "HTML Content" in result["body"]  # BS should have converted it
         assert "<html>" in result["html_body"]
 
-    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": '[{"email":"test1@example.com","password":"pass1"}]'})
+    @patch.dict(os.environ, {"EMAIL_ACCOUNTS": '[{"email":"test1@example.com","password":"pass1"}]'}, clear=True)
     def test_get_all_accounts_with_email_accounts_json(self):
         """Test get_all_accounts with EMAIL_ACCOUNTS JSON"""
         accounts = EmailService.get_all_accounts()
