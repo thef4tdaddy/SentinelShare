@@ -383,7 +383,7 @@ class TestEmailForwarder:
                     return [str(self), BadString("domain.com")]
                 # For any other split (by '>' or '.'), raise an error
                 raise RuntimeError("Simulated split error")
-        
+
         original_email = {
             "subject": "Test",
             "from": BadString("user@domain.com"),
@@ -416,7 +416,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the HTML content was used in the message
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -425,7 +425,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         assert "<h1>HTML Content</h1>" in html_part
 
@@ -453,7 +453,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the normalized URL (without trailing slash) was used in links
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -462,7 +462,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         # The URL should not have a double slash before /api
         assert "https://example.com/api/actions/quick" in html_part
@@ -493,7 +493,7 @@ class TestEmailForwarder:
 
         assert result
         mock_server.send_message.assert_called_once()
-        
+
         # Verify the message contains HTTP links with HMAC signatures
         sent_message = mock_server.send_message.call_args[0][0]
         # Get the HTML part from the multipart message
@@ -502,7 +502,7 @@ class TestEmailForwarder:
             if part.get_content_type() == "text/html":
                 html_part = part.get_payload(decode=True).decode()
                 break
-        
+
         assert html_part is not None
         # Check for HTTP link format with required parameters
         assert "https://example.com/api/actions/quick?" in html_part
@@ -615,12 +615,7 @@ class TestEmailForwarder:
             assert result
             mock_server.send_message.assert_called_once()
 
-    @patch("backend.services.forwarder.smtplib.SMTP")
-    @patch.dict(
-        os.environ,
-        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
-    )
-    def test_format_email_date_with_datetime_object(self, mock_smtp):
+    def test_format_email_date_with_datetime_object(self):
         """Test that format_email_date works with datetime objects"""
         from backend.services.forwarder import format_email_date
         from datetime import datetime, timezone
@@ -631,12 +626,7 @@ class TestEmailForwarder:
         assert "December 21, 2023" in formatted
         assert "+0000" in formatted
 
-    @patch("backend.services.forwarder.smtplib.SMTP")
-    @patch.dict(
-        os.environ,
-        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
-    )
-    def test_format_email_date_with_rfc2822_string(self, mock_smtp):
+    def test_format_email_date_with_rfc2822_string(self):
         """Test that format_email_date works with RFC 2822 strings"""
         from backend.services.forwarder import format_email_date
 
@@ -645,28 +635,29 @@ class TestEmailForwarder:
         assert "December 21, 2023" in formatted
         assert "+0000" in formatted
 
-    @patch("backend.services.forwarder.smtplib.SMTP")
-    @patch.dict(
-        os.environ,
-        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
-    )
-    def test_format_email_date_with_none(self, mock_smtp):
+    def test_format_email_date_with_none(self):
         """Test that format_email_date returns 'Unknown' for None"""
         from backend.services.forwarder import format_email_date
 
         assert format_email_date(None) == "Unknown"
 
-    @patch("backend.services.forwarder.smtplib.SMTP")
-    @patch.dict(
-        os.environ,
-        {"SENDER_EMAIL": "sender@example.com", "SENDER_PASSWORD": "password123"},
-    )
-    def test_format_email_date_with_invalid_string(self, mock_smtp):
+    def test_format_email_date_with_invalid_string(self):
         """Test that format_email_date returns raw string for invalid input"""
         from backend.services.forwarder import format_email_date
 
         result = format_email_date("Invalid Date Format")
         assert "Invalid Date Format" in result
+
+    def test_format_email_date_with_naive_datetime(self):
+        """Test that format_email_date handles timezone-naive datetime objects by assuming UTC"""
+        from backend.services.forwarder import format_email_date
+        from datetime import datetime
+
+        # Test with timezone-naive datetime object
+        naive_dt = datetime(2023, 12, 21, 10, 30, 0)
+        formatted = format_email_date(naive_dt)
+        assert "December 21, 2023" in formatted
+        assert "+0000" in formatted  # Should assume UTC and format with +0000
 
     @patch("backend.services.forwarder.smtplib.SMTP")
     @patch.dict(
