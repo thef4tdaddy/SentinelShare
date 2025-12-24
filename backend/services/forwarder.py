@@ -28,7 +28,7 @@ def format_email_date(date_input) -> str:
 
     Returns:
         Formatted date string in the format "December 21, 2023 at 10:30 AM +0000"
-        Returns "Unknown" if date_input is None or parsing fails
+        Returns "Unknown" if date_input is None, or the raw string if parsing fails
     """
     if date_input is None:
         return "Unknown"
