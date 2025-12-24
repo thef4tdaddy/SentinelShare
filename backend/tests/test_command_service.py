@@ -106,7 +106,7 @@ class TestCommandService:
     @patch.dict(os.environ, {"WIFE_EMAIL": "sara@example.com"})
     @patch("backend.services.command_service.CommandService._send_confirmation")
     def test_process_command_empty_lines(self, mock_send, session):
-        """Test lines 40, 45: Handle empty lines and empty parts"""
+        """Test line 40: Handle empty lines in email body (line 45 is unreachable)"""
         # Test with body that has ONLY empty lines (no commands)
         email_data = {
             "from": "sara@example.com",
