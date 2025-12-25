@@ -15,8 +15,16 @@
 		updated_at: string;
 	}
 
+	interface Props {
+		onDeleteRequest?: (id: number, email: string, onComplete: () => void) => void;
+	}
+
+	let { onDeleteRequest }: Props = $props();
+
 	let accounts: EmailAccount[] = $state([]);
-	let loading = $state(false);
+	let loadingAccounts = $state(false);
+	let addingAccount = $state(false);
+	let deletingAccountId: number | null = $state(null);
 	let showAddForm = $state(false);
 	let testingAccounts: Set<number> = $state(new Set());
 
@@ -29,13 +37,13 @@
 
 	async function loadAccounts() {
 		try {
-			loading = true;
+			loadingAccounts = true;
 			accounts = await fetchJson('/settings/accounts');
 		} catch (e) {
 			console.error('Failed to load accounts', e);
 			toasts.trigger('Failed to load accounts', 'error');
 		} finally {
-			loading = false;
+			loadingAccounts = false;
 		}
 	}
 
@@ -46,7 +54,7 @@
 		}
 
 		try {
-			loading = true;
+			addingAccount = true;
 			await fetchJson('/settings/accounts', {
 				method: 'POST',
 				body: JSON.stringify({
@@ -74,28 +82,35 @@
 			const errorMsg = e?.message || 'Failed to add account';
 			toasts.trigger(errorMsg, 'error');
 		} finally {
-			loading = false;
+			addingAccount = false;
 		}
 	}
 
-	async function deleteAccount(id: number) {
+	async function deleteAccount(id: number, email: string) {
+		// Use parent callback if provided (for ConfirmDialog)
+		if (onDeleteRequest) {
+			onDeleteRequest(id, email, loadAccounts);
+			return;
+		}
+		
+		// Fallback to browser confirm if no callback provided
 		if (!confirm('Are you sure you want to delete this account?')) return;
 
 		try {
-			loading = true;
+			deletingAccountId = id;
 			await fetchJson(`/settings/accounts/${id}`, { method: 'DELETE' });
 			toasts.trigger('Account deleted', 'success');
 			await loadAccounts();
 		} catch (e) {
 			toasts.trigger('Failed to delete account', 'error');
 		} finally {
-			loading = false;
+			deletingAccountId = null;
 		}
 	}
 
 	async function testAccount(id: number) {
 		try {
-			testingAccounts.add(id);
+			testingAccounts = new Set(testingAccounts).add(id);
 			const result = await fetchJson(`/settings/accounts/${id}/test`, { method: 'POST' });
 
 			if (result.success) {
@@ -106,7 +121,9 @@
 		} catch (e) {
 			toasts.trigger('Failed to test connection', 'error');
 		} finally {
-			testingAccounts.delete(id);
+			const newSet = new Set(testingAccounts);
+			newSet.delete(id);
+			testingAccounts = newSet;
 		}
 	}
 
@@ -122,7 +139,7 @@
 		<button
 			onclick={() => (showAddForm = !showAddForm)}
 			class="btn btn-secondary btn-sm"
-			disabled={loading}
+			disabled={addingAccount}
 		>
 			<Plus size={16} />
 			Add Account
@@ -203,12 +220,12 @@
 						formPort = 993;
 					}}
 					class="btn btn-secondary btn-sm"
-					disabled={loading}
+					disabled={addingAccount}
 				>
 					Cancel
 				</button>
-				<button onclick={addAccount} class="btn btn-primary btn-sm" disabled={loading}>
-					{#if loading}
+				<button onclick={addAccount} class="btn btn-primary btn-sm" disabled={addingAccount}>
+					{#if addingAccount}
 						<Loader2 size={16} class="animate-spin" />
 					{:else}
 						<Plus size={16} />
@@ -221,7 +238,7 @@
 
 	<!-- Accounts List -->
 	<div class="space-y-2">
-		{#if loading && accounts.length === 0}
+		{#if loadingAccounts && accounts.length === 0}
 			<div class="text-center py-8 text-text-secondary">
 				<Loader2 class="animate-spin mx-auto mb-2" size={24} />
 				<p>Loading accounts...</p>
@@ -263,11 +280,15 @@
 							Test
 						</button>
 						<button
-							onclick={() => deleteAccount(account.id)}
+							onclick={() => deleteAccount(account.id, account.email)}
 							class="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
-							disabled={loading}
+							disabled={deletingAccountId === account.id}
 						>
-							<Trash2 size={14} />
+							{#if deletingAccountId === account.id}
+								<Loader2 size={14} class="animate-spin" />
+							{:else}
+								<Trash2 size={14} />
+							{/if}
 						</button>
 					</div>
 				</div>

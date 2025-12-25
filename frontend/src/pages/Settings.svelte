@@ -29,6 +29,8 @@
 	let checkingConnections = $state(false);
 	let pollInterval: ReturnType<typeof setInterval>;
 	let showConfirmDialog = $state(false);
+	let showDeleteDialog = $state(false);
+	let accountToDelete: { id: number; email: string; onComplete: () => void } | null = $state(null);
 
 	function openConfirmDialog() {
 		showConfirmDialog = true;
@@ -49,6 +51,32 @@
 
 	function handleCancelPoll() {
 		showConfirmDialog = false;
+	}
+
+	function handleDeleteAccountRequest(id: number, email: string, onComplete: () => void) {
+		accountToDelete = { id, email, onComplete };
+		showDeleteDialog = true;
+	}
+
+	async function handleConfirmDelete() {
+		if (!accountToDelete) return;
+		
+		showDeleteDialog = false;
+		try {
+			await fetchJson(`/settings/accounts/${accountToDelete.id}`, { method: 'DELETE' });
+			toasts.trigger('Account deleted', 'success');
+			// Call the completion callback to reload the accounts list
+			accountToDelete.onComplete();
+		} catch (e) {
+			toasts.trigger('Failed to delete account', 'error');
+		} finally {
+			accountToDelete = null;
+		}
+	}
+
+	function handleCancelDelete() {
+		showDeleteDialog = false;
+		accountToDelete = null;
 	}
 
 	async function reprocessAllIgnored() {
@@ -154,7 +182,7 @@
 			<User size={20} class="text-text-secondary" />
 			<h3 class="text-lg font-bold text-text-main">Email Accounts</h3>
 		</div>
-		<AccountList />
+		<AccountList onDeleteRequest={handleDeleteAccountRequest} />
 	</section>
 
 	<!-- Email Template Section -->
@@ -192,5 +220,15 @@
 	title="Run Email Check"
 	message="Do you want to run the email check now? This will process all emails from your configured accounts."
 	confirmText="Run Now"
+	cancelText="Cancel"
+/>
+
+<ConfirmDialog
+	bind:isOpen={showDeleteDialog}
+	onConfirm={handleConfirmDelete}
+	onCancel={handleCancelDelete}
+	title="Delete Email Account"
+	message={accountToDelete ? `Are you sure you want to delete the account "${accountToDelete.email}"? This action cannot be undone.` : ''}
+	confirmText="Delete"
 	cancelText="Cancel"
 />
