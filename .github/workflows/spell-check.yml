@@ -2,18 +2,22 @@ name: Spell Checker
 
 on:
   push:
-    branches: ["**"]
+    branches: [main, develop]
   pull_request:
-    branches: ["**"]
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
 
 jobs:
   spelling:
     name: Check Spelling
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      actions: read
+    concurrency:
+      group: spelling-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     steps:
       - name: check-spelling
         id: spelling
