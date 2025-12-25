@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from backend.models import EmailAccount, ManualRule, Preference
+from backend.models import ManualRule, Preference
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
