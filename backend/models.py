@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -107,4 +108,7 @@ class EmailAccount(SQLModel, table=True):
     encrypted_password: str  # Encrypted password using Fernet
     is_active: bool = Field(default=True)  # Whether to monitor this account
     created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), onupdate=utc_now),
+    )

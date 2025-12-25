@@ -1,5 +1,3 @@
-import os
-
 import pytest
 from backend.models import ManualRule, Preference
 from sqlmodel import Session, SQLModel, create_engine
@@ -237,11 +235,11 @@ def test_get_email_accounts_empty(session: Session):
     assert len(accounts) == 0
 
 
-def test_create_email_account(session: Session):
+def test_create_email_account(session: Session, monkeypatch):
     """Test creating a new email account"""
     from backend.routers.settings import EmailAccountCreate, create_email_account
 
-    os.environ["SECRET_KEY"] = "test-secret-key"
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     account_data = EmailAccountCreate(
         email="test@example.com",
@@ -261,13 +259,13 @@ def test_create_email_account(session: Session):
     assert result.id is not None
 
 
-def test_create_email_account_duplicate(session: Session):
+def test_create_email_account_duplicate(session: Session, monkeypatch):
     """Test creating a duplicate email account raises 400"""
     from backend.routers.settings import (EmailAccountCreate,
                                           create_email_account)
     from fastapi import HTTPException
 
-    os.environ["SECRET_KEY"] = "test-secret-key"
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     account_data = EmailAccountCreate(
         email="duplicate@example.com",
@@ -288,14 +286,14 @@ def test_create_email_account_duplicate(session: Session):
     assert "already exists" in str(exc_info.value.detail)
 
 
-def test_delete_email_account(session: Session):
+def test_delete_email_account(session: Session, monkeypatch):
     """Test deleting an email account"""
     from backend.routers.settings import (EmailAccountCreate,
                                           create_email_account,
                                           delete_email_account,
                                           get_email_accounts)
 
-    os.environ["SECRET_KEY"] = "test-secret-key"
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     # Create an account
     account_data = EmailAccountCreate(
@@ -326,7 +324,7 @@ def test_delete_email_account_not_found(session: Session):
     assert "Account not found" in str(exc_info.value.detail)
 
 
-def test_test_email_account(session: Session):
+def test_test_email_account(session: Session, monkeypatch):
     """Test the test connection endpoint for email account"""
     from unittest.mock import patch
 
@@ -334,7 +332,7 @@ def test_test_email_account(session: Session):
                                           create_email_account,
                                           test_email_account)
 
-    os.environ["SECRET_KEY"] = "test-secret-key"
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
     # Create an account
     account_data = EmailAccountCreate(

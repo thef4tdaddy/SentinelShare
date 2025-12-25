@@ -13,7 +13,7 @@ class EncryptionService:
     def _get_fernet() -> Fernet:
         """
         Get or create a Fernet instance using the SECRET_KEY.
-        The SECRET_KEY must be a valid Fernet key (32 url-safe base64-encoded bytes).
+        Consistently uses SHA256-based key derivation to ensure compatibility.
         """
         secret_key = os.environ.get("SECRET_KEY")
         if not secret_key:
@@ -21,22 +21,16 @@ class EncryptionService:
                 "SECRET_KEY environment variable is required for encryption"
             )
 
-        # Convert the secret key to bytes and ensure it's the right format
-        # Fernet keys must be 32 url-safe base64-encoded bytes
-        try:
-            # Try to use it directly first
-            return Fernet(secret_key.encode())
-        except Exception:
-            # If that fails, generate a proper key from the secret
-            # This ensures backward compatibility with non-Fernet keys
-            import hashlib
-            import base64
+        # Always use hash-based derivation for consistency
+        # This ensures the same plaintext encrypts the same way regardless of SECRET_KEY format
+        import hashlib
+        import base64
 
-            # Hash the secret to get consistent 32 bytes
-            key_bytes = hashlib.sha256(secret_key.encode()).digest()
-            # Encode as base64 for Fernet
-            fernet_key = base64.urlsafe_b64encode(key_bytes)
-            return Fernet(fernet_key)
+        # Hash the secret to get consistent 32 bytes
+        key_bytes = hashlib.sha256(secret_key.encode()).digest()
+        # Encode as base64 for Fernet
+        fernet_key = base64.urlsafe_b64encode(key_bytes)
+        return Fernet(fernet_key)
 
     @staticmethod
     def encrypt(plaintext: str) -> str:
@@ -66,6 +60,9 @@ class EncryptionService:
 
         Returns:
             The decrypted plaintext string, or None if decryption fails
+            
+        Raises:
+            ValueError: If the encrypted text is invalid or key has changed
         """
         if not encrypted_text:
             return None
@@ -74,9 +71,10 @@ class EncryptionService:
             fernet = EncryptionService._get_fernet()
             decrypted_bytes = fernet.decrypt(encrypted_text.encode())
             return decrypted_bytes.decode()
-        except Exception:
-            # Log the error but don't expose details
+        except Exception as e:
+            # Log the error with details for debugging
             import logging
 
-            logging.error("Failed to decrypt data - key may have changed")
-            return None
+            logging.error(f"Failed to decrypt data: {type(e).__name__}")
+            # Raise a more specific error for callers to handle
+            raise ValueError("Decryption failed - key may have changed or data is corrupted")

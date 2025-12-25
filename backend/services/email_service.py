@@ -38,7 +38,7 @@ class EmailService:
                         if decrypted_password:
                             all_accounts.append(
                                 {
-                                    "email": acc.email,
+                                    "email": acc.email.lower(),  # Normalize to lowercase
                                     "password": decrypted_password,
                                     "imap_server": acc.host,
                                 }
