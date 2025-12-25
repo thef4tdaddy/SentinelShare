@@ -652,7 +652,7 @@
 				<div class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 					<div class="flex flex-col items-center justify-center gap-3">
 						<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
-							<HistoryIcon size={24} class="text-gray-400" />
+							<HistoryIcon size={24} class="text-gray-400 dark:text-gray-500" />
 						</div>
 						<p>No processing runs found.</p>
 					</div>
