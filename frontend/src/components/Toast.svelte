@@ -3,6 +3,7 @@
 	import { X, CheckCircle, AlertCircle, Info } from 'lucide-svelte';
 	import { fly } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
+	import type { ToastType } from '../lib/stores/toast';
 
 	// Theme-aware class configurations for better maintainability
 	const toastThemes = {
@@ -22,28 +23,31 @@
 			text: 'text-blue-900 dark:text-blue-100'
 		}
 	} as const;
+
+	function getToastTheme(type: ToastType) {
+		return toastThemes[type];
+	}
 </script>
 
 <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
 	{#each $toasts as toast (toast.id)}
-		{@const theme = toastThemes[toast.type]}
 		<div
-			class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-xl min-w-[300px] max-w-sm {theme.container}"
+			class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-xl min-w-[300px] max-w-sm {getToastTheme(toast.type).container}"
 			in:fly={{ y: 20, duration: 300 }}
 			out:fly={{ x: 20, duration: 200 }}
 			animate:flip
 		>
 			<div class="shrink-0">
 				{#if toast.type === 'success'}
-					<CheckCircle class={theme.icon} size={20} />
+					<CheckCircle class={getToastTheme(toast.type).icon} size={20} />
 				{:else if toast.type === 'error'}
-					<AlertCircle class={theme.icon} size={20} />
+					<AlertCircle class={getToastTheme(toast.type).icon} size={20} />
 				{:else}
-					<Info class={theme.icon} size={20} />
+					<Info class={getToastTheme(toast.type).icon} size={20} />
 				{/if}
 			</div>
 
-			<p class="text-sm font-medium flex-1 leading-snug {theme.text}">
+			<p class="text-sm font-medium flex-1 leading-snug {getToastTheme(toast.type).text}">
 				{toast.message}
 			</p>
 
