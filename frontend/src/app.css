@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
 	/* Light Mode Colors */
 	--color-primary: #0d3256; /* Navy Blue */
