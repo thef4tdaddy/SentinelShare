@@ -1,0 +1,13 @@
+# Add project-specific words here to be ignored by the spell checker
+SentinelShare
+VioletVault
+FastAPI
+SQLModel
+Svelte
+TailwindCSS
+uvicorn
+pytest
+mypy
+ruff
+venv
+f4tdaddy
