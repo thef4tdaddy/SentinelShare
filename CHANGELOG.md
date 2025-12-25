@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.3](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.2...sentinel-share-v1.3.3) (2025-12-25)
+
+
+### Bug Fixes
+
+* **ci:** fix context access in health check and reports in CI ([e864ae2](https://github.com/thef4tdaddy/SentinelShare/commit/e864ae2f611bb6f2cd877fe676710d409b22b2d4))
+* **ui:** remove double api prefix and sync version to 1.3.2 ([4d34c5e](https://github.com/thef4tdaddy/SentinelShare/commit/4d34c5e018f2b49a7a9308d6c543c6ef0135f02a))
+
 ## [1.3.2](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.1...sentinel-share-v1.3.2) (2025-12-24)
 
 
