@@ -13,39 +13,16 @@ This document maintains an inventory of active GitHub Actions workflows and a wi
 | **Dependabot Triage**    | PR              | Auto-prioritizes Dependabot PRs based on update severity (Major/Minor/Patch).                                |
 | **Auto-Format Title**    | PR              | Ensures PR titles follow Conventional Commits standard to support Release Please.                            |
 | **Auto-Approve Copilot** | PR              | Automatically approves low-risk workflow runs triggered by Copilot agents.                                   |
+| **Stale Issues**         | Schedule        | Automatically closes issues/PRs that have had no activity for 60+ days.                                      |
+| **Dependency Review**    | PR              | Scans PR dependency changes for vulnerabilities before they merge.                                           |
+| **CodeQL Analysis**      | Schedule/PR     | Deep semantic code analysis to find security vulnerabilities (SQL injection, XSS).                           |
+| **Spell Check**          | PR              | Catches typos in documentation and code comments.                                                            |
+| **Bundle Size**          | PR              | Monitors frontend bundle size (Limit: 300kB JS, 100ms load).                                                 |
+| **Lighthouse CI**        | PR              | Audits Frontend Performance, Accessibility, and SEO (PWA disabled).                                          |
+| **Playwright Tests**     | PR              | Runs End-to-End (E2E) browser tests against the Svelte application.                                          |
 
 ## 💡 Recommended Workflows (Future)
 
 Consider adding these to enhance automation:
 
-### Maintenance & Security
-
-1.  **Stale Issues (`stale.yml`)**:
-    - Automatically close issues/PRs that have had no activity for 60+ days to keep the backlog clean.
-    - _Action_: `actions/stale`.
-
-2.  **Dependency Review (`dependency-review.yml`)**:
-    - Scans PR dependency changes for vulnerabilities before they merge.
-    - _Action_: `actions/dependency-review-action`.
-
-3.  **CodeQL Analysis (`codeql.yml`)**:
-    - Deep semantic code analysis to find security vulnerabilities (SQL injection, XSS) that linters miss.
-    - _Action_: `github/codeql-action`.
-
-### Quality Assurance
-
-4.  **Spell Check (`spell-check.yml`)**:
-    - Catches typos in documentation and code comments to maintain professional quality.
-    - _Action_: `check-spelling/check-spelling`.
-
-5.  **Bundle Size (`size-limit.yml`)**:
-    - Monitors frontend bundle size to prevent performance regressions.
-    - _Action_: `andresz1/size-limit-action`.
-
-6.  **Lighthouse CI (`lighthouse.yml`)**:
-    - Automatically check Svelte app's Performance, Accessibility, and SEO on every PR.
-    - _Action_: `treosh/lighthouse-ci-action`.
-
-7.  **End-to-End Testing (`playwright.yml`)**:
-    - Run real browser tests against the Svelte application to verify critical flows (Login, Dashboard).
-    - _Action_: `playwright-community/playwright-github-action`.
+_(Currently all recommended workflows have been implemented. Add new ideas here as they arise.)_

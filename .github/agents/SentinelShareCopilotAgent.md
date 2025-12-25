@@ -58,8 +58,8 @@ SentinelShare is a self-hosted receipt forwarding system.
 
 ## 4. Development Workflow
 
-- **Tests**: Backend: `pytest`. Frontend: `vitest`.
-- **Linting**: strict ESLint (Frontend) and Black/Isort (Backend).
+- **Tests**: Backend: `pytest`. Frontend: `vitest` (Unit), `playwright` (E2E).
+- **Linting/QA**: strict ESLint, Black/Isort, Lighthouse CI (Performance), Size Limit (Bundle).
 - **Commits**: Use Conventional Commits (`feat:`, `fix:`, `chore:`).
 - **GitHub Scripts**: In `actions/github-script`, `context.steps` is invalid. Access steps via `env` variables and `process.env`.
 
