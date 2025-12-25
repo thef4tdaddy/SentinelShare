@@ -45,7 +45,7 @@ It turns a manual chore into a "set it and forget it" background process.
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12+
 - Node.js 18+
 - IMAP-enabled email accounts (Gmail App Passwords recommended)
 
@@ -118,6 +118,12 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` (or your configured port) to access the dashboard.
+
+## 📚 Developer Documentation
+
+- **[Project Context & Rules](GEMINI.md)**: Essential guide for AI Agents and Developers, covering architecture, "gotchas", and best practices.
+- **[Workflows](WORKFLOWS.md)**: Inventory of CI/CD pipelines and future automation recommendations.
+- **[Copilot Agent](.github/agents/SentinelShareCopilotAgent.md)**: Configuration and system prompt for the `SentinelShareCopilotAgent`.
 
 ## 🤝 Contributing
 
