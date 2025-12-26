@@ -86,7 +86,7 @@ jobs:
             try { backendLog = fs.readFileSync('backend_test.log', 'utf8'); } catch (e) { backendLog = 'Log file not found.'; }
             try { frontendLog = fs.readFileSync('frontend_test.log', 'utf8'); } catch (e) { frontendLog = 'Log file not found.'; }
 
-            // Helper to extract relevant failure lines and coverage table
+              // Helper to extract relevant failure lines and coverage table
             function getFailureSummary(log) {
               if (!log) return 'No log available (Step might have been skipped).';
               const lines = log.split('\n');
@@ -103,18 +103,15 @@ jobs:
                 }
                 if (insideCoverage) {
                     coverageTable.push(line);
-                    // Stop if we hit the limit or the end of the table (usually an empty line after the TOTAL line)
-                    if (line.includes('TOTAL') && coverageTable.length > 5) {
-                        insideCoverage = false; // Just captured the total, we can stop soon
+                    // Stop if we hit the limit or the end of the table
+                    if ((line.includes('TOTAL') && coverageTable.length > 5) || coverageTable.length > 500) {
+                        insideCoverage = false;
                     }
                 }
                 if (!insideCoverage && coverageTable.length > 0 && line.trim() === '') {
-                     // Empty line after table
                      break; 
                 }
               }
-              
-              // If table is too long, we might truncate `failures` but coverage is important for this request
               
               let output = '';
               if (failures.length > 0) {
@@ -124,9 +121,13 @@ jobs:
               if (coverageTable.length > 0) {
                  output += `### 📊 Coverage Gaps:\n\`\`\`\n${coverageTable.join('\n')}\n\`\`\`\n\n`;
               } else {
-                 // Fallback to tail if no table found
                  const summary = lines.slice(-20).join('\n');
                  output += `### 📋 Log Summary:\n\`\`\`\n${summary}\n\`\`\``;
+              }
+              
+              // Hard truncate to avoid 65536 limit
+              if (output.length > 60000) {
+                  output = output.substring(0, 60000) + '\n... (Truncated due to size limit)';
               }
               
               return output;
@@ -159,7 +160,7 @@ jobs:
             if (process.env.BACKEND_OUTCOME === 'failure') {
               await createIssue('Backend', backendSummary, backendLog, process.env.BACKEND_OUTCOME);
             }
-            
+
             if (process.env.FRONTEND_OUTCOME === 'failure') {
               await createIssue('Frontend', frontendSummary, frontendLog, process.env.FRONTEND_OUTCOME);
             }
