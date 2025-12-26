@@ -125,23 +125,15 @@ jobs:
                  output += `### 📋 Log Summary:\n\`\`\`\n${summary}\n\`\`\``;
               }
               
-              // Hard truncate to avoid 65536 limit
-              if (output.length > 60000) {
-                  output = output.substring(0, 60000) + '\n... (Truncated due to size limit)';
-              }
-              
+              // Hard truncate removed in favor of splitting into comments
               return output;
             }
 
-            // Helper to create issue
+            // Helper to create issue and comments if needed
             async function createIssue(type, summary, log, outcome) {
               if (outcome !== 'failure' && !summary.includes('FAILED')) return; // Only create issue on failure
 
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: `🚨 ${type} Health Check Failed: ${date}`,
-                body: `The Daily Health Check for **${type}** failed on ${date}. 
+              const fullBody = `The Daily Health Check for **${type}** failed on ${date}. 
                 
                 ## Status: ${outcome.toUpperCase()}
                 
@@ -149,9 +141,37 @@ jobs:
                 ${summary}
                 
                 ---
-                [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+
+              const MAX_CHAR = 60000;
+              let issueBody = fullBody;
+              let remainingParts = [];
+
+              if (fullBody.length > MAX_CHAR) {
+                  issueBody = fullBody.substring(0, MAX_CHAR) + '\n\n**(Continued in comments)**';
+                  let remaining = fullBody.substring(MAX_CHAR);
+                  while (remaining.length > 0) {
+                      remainingParts.push(remaining.substring(0, MAX_CHAR));
+                      remaining = remaining.substring(MAX_CHAR);
+                  }
+              }
+
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `🚨 ${type} Health Check Failed: ${date}`,
+                body: issueBody,
                 labels: ['bug', 'automated-report', 'coverage', type.toLowerCase()]
               });
+
+              for (const part of remainingParts) {
+                  await github.rest.issues.createComment({
+                      owner: context.repo.owner,
+                      repo: context.repo.repo,
+                      issue_number: issue.data.number,
+                      body: part
+                  });
+              }
             }
 
             const backendSummary = getFailureSummary(backendLog);
