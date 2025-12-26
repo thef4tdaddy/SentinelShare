@@ -114,41 +114,7 @@ describe('Login Component', () => {
 		expect(onLoginSuccess).not.toHaveBeenCalled();
 	});
 
-	it('shows loading state during login attempt', async () => {
-		const onLoginSuccess = vi.fn();
-		let resolvePromise: (value: Response) => void;
-		const fetchPromise = new Promise<Response>((resolve) => {
-			resolvePromise = resolve;
-		});
-		vi.mocked(fetch).mockReturnValueOnce(fetchPromise);
-
-		render(Login, { props: { onLoginSuccess } });
-
-		const passwordInput = screen.getByLabelText('Password');
-		const submitButton = screen.getByText('Access Dashboard');
-
-		await fireEvent.input(passwordInput, { target: { value: 'testpass' } });
-		await fireEvent.click(submitButton);
-
-		await waitFor(() => {
-			expect(screen.getByText('Verifying...')).toBeTruthy();
-		});
-
-		// Check that button is disabled during loading
-		expect(submitButton.hasAttribute('disabled')).toBe(true);
-
-		// Resolve the promise
-		resolvePromise!({
-			ok: true,
-			json: async () => ({ status: 'success' })
-		} as Response);
-
-		await waitFor(() => {
-			expect(onLoginSuccess).toHaveBeenCalled();
-		});
-	});
-
-	it('disables submit button during loading', async () => {
+	it('shows loading state and disables button during login attempt', async () => {
 		const onLoginSuccess = vi.fn();
 		let resolvePromise: (value: Response) => void;
 		const fetchPromise = new Promise<Response>((resolve) => {
@@ -164,7 +130,9 @@ describe('Login Component', () => {
 		await fireEvent.input(passwordInput, { target: { value: 'testpass' } });
 		await fireEvent.click(submitButton);
 
+		// Verify loading UI appears
 		await waitFor(() => {
+			expect(screen.getByText('Verifying...')).toBeTruthy();
 			expect(submitButton.disabled).toBe(true);
 		});
 
@@ -174,8 +142,10 @@ describe('Login Component', () => {
 			json: async () => ({ status: 'success' })
 		} as Response);
 
+		// Verify button is re-enabled after completion
 		await waitFor(() => {
 			expect(submitButton.disabled).toBe(false);
+			expect(onLoginSuccess).toHaveBeenCalled();
 		});
 	});
 
