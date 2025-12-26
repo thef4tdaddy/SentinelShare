@@ -51,16 +51,19 @@ jobs:
         run: |
           cd backend
           source venv/bin/activate
+          set -o pipefail
           {
+            EXIT_CODE=0
             echo "::group::Black"
-            python -m black --check .
+            python -m black --check . || EXIT_CODE=1
             echo "::endgroup::"
             echo "::group::Ruff"
-            python -m ruff check .
+            python -m ruff check . || EXIT_CODE=1
             echo "::endgroup::"
             echo "::group::Mypy"
-            python -m mypy . --ignore-missing-imports
+            python -m mypy . --ignore-missing-imports || EXIT_CODE=1
             echo "::endgroup::"
+            exit $EXIT_CODE
           } 2>&1 | tee ../backend_lint.log
         continue-on-error: true
 
@@ -69,6 +72,7 @@ jobs:
         run: |
           cd backend
           source venv/bin/activate
+          set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
           pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ 2>&1 | tee ../backend_test.log
         continue-on-error: true
@@ -78,16 +82,19 @@ jobs:
         id: frontend_lint
         run: |
           cd frontend
+          set -o pipefail
           {
+            EXIT_CODE=0
             echo "::group::Prettier"
-            npx prettier --check "src/**/*.{ts,js,svelte,css}"
+            npx prettier --check "src/**/*.{ts,js,svelte,css}" || EXIT_CODE=1
             echo "::endgroup::"
             echo "::group::ESLint"
-            npm run lint
+            npm run lint || EXIT_CODE=1
             echo "::endgroup::"
             echo "::group::Svelte Check"
-            npm run check
+            npm run check || EXIT_CODE=1
             echo "::endgroup::"
+            exit $EXIT_CODE
           } 2>&1 | tee ../frontend_lint.log
         continue-on-error: true
 
@@ -95,6 +102,7 @@ jobs:
         id: frontend_test
         run: |
           cd frontend
+          set -o pipefail
           # Fail if coverage is under 50%
           npm run test:run -- --coverage --coverage.thresholds.lines=50 2>&1 | tee ../frontend_test.log
         continue-on-error: true
@@ -105,6 +113,7 @@ jobs:
           # Start Backend in Background
           cd backend
           source venv/bin/activate
+          set -o pipefail
           # Use nohup to keep it running
           nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 
