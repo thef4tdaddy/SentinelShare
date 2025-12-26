@@ -60,7 +60,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
-# Create data directory for SQLite (if used) and logs
+# Create data directory for application data (receipts, logs)
 RUN mkdir -p /app/data
 
 # Expose port
