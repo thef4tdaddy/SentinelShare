@@ -56,22 +56,20 @@ jobs:
             EXIT_CODE=0
             
             echo "::group::Black"
-            python -m black --check .
-            BLACK_RES=$?
+            # Use '||' to prevent set -e from killing the script on failure
+            python -m black --check . && BLACK_RES=0 || BLACK_RES=$?
             echo "STATUS_BLACK:$BLACK_RES"
             if [ $BLACK_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Ruff"
-            python -m ruff check .
-            RUFF_RES=$?
+            python -m ruff check . && RUFF_RES=0 || RUFF_RES=$?
             echo "STATUS_RUFF:$RUFF_RES"
             if [ $RUFF_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Mypy"
-            python -m mypy . --ignore-missing-imports
-            MYPY_RES=$?
+            python -m mypy . --ignore-missing-imports && MYPY_RES=0 || MYPY_RES=$?
             echo "STATUS_MYPY:$MYPY_RES"
             if [ $MYPY_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
@@ -88,8 +86,9 @@ jobs:
           set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
           {
-            pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/
-            echo "STATUS_PYTEST:$?"
+            pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ && PYTEST_RES=0 || PYTEST_RES=$?
+            echo "STATUS_PYTEST:$PYTEST_RES"
+            exit $PYTEST_RES
           } 2>&1 | tee ../backend_test.log
         continue-on-error: true
 
@@ -103,22 +102,19 @@ jobs:
             EXIT_CODE=0
             
             echo "::group::Prettier"
-            npx prettier --check "src/**/*.{ts,js,svelte,css}"
-            PRETTIER_RES=$?
+            npx prettier --check "src/**/*.{ts,js,svelte,css}" && PRETTIER_RES=0 || PRETTIER_RES=$?
             echo "STATUS_PRETTIER:$PRETTIER_RES"
             if [ $PRETTIER_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::ESLint"
-            npm run lint
-            ESLINT_RES=$?
+            npm run lint && ESLINT_RES=0 || ESLINT_RES=$?
             echo "STATUS_ESLINT:$ESLINT_RES"
             if [ $ESLINT_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Svelte Check"
-            npm run check
-            SVELTE_RES=$?
+            npm run check && SVELTE_RES=0 || SVELTE_RES=$?
             echo "STATUS_SVELTE:$SVELTE_RES"
             if [ $SVELTE_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
@@ -133,8 +129,9 @@ jobs:
           cd frontend
           set -o pipefail
           {
-            npm run test:run -- --coverage --coverage.thresholds.lines=50
-            echo "STATUS_VITEST:$?"
+            npm run test:run -- --coverage --coverage.thresholds.lines=50 && VITEST_RES=0 || VITEST_RES=$?
+            echo "STATUS_VITEST:$VITEST_RES"
+            exit $VITEST_RES
           } 2>&1 | tee ../frontend_test.log
         continue-on-error: true
 
@@ -156,8 +153,9 @@ jobs:
           # Run Playwright
           cd ../frontend
           {
-             npx playwright test
-             echo "STATUS_PLAYWRIGHT:$?"
+             npx playwright test && PW_RES=0 || PW_RES=$?
+             echo "STATUS_PLAYWRIGHT:$PW_RES"
+             exit $PW_RES
           } 2>&1 | tee ../e2e_test.log
         continue-on-error: true
 
