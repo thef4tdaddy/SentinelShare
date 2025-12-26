@@ -200,49 +200,67 @@ jobs:
 
             // --- Tool Status Parsing ---
             const tools = [
-                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logs.backend_lint },
-                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logs.backend_lint },
-                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logs.backend_lint },
-                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logs.backend_test },
-                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint },
-                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint },
-                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint },
-                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test },
-                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e }
+                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logs.backend_lint, type: 'warning' },
+                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logs.backend_lint, type: 'critical' },
+                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logs.backend_lint, type: 'critical' },
+                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logs.backend_test, type: 'critical' },
+                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint, type: 'warning' },
+                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint, type: 'critical' },
+                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint, type: 'critical' },
+                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical' },
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' }
             ];
 
             let toolRows = [];
             let failures = [];
+            let hasCriticalFailure = false;
+            let hasWarningFailure = false;
 
             for (const tool of tools) {
                 const match = tool.log.match(new RegExp(`${tool.key}:(\\d+)`));
-                let status = '❓'; // Unknown (if log missing or marker not found)
+                let statusIcon = '❓';
                 let outcome = 'UNKNOWN';
                 
                 if (match) {
                     const code = parseInt(match[1]);
                     if (code === 0) {
-                        status = '✅';
+                        statusIcon = '✅';
                         outcome = 'PASS';
                     } else {
-                        status = '❌';
+                        // Determine failure icon based on severity
+                        if (tool.type === 'critical') {
+                            statusIcon = '❌'; // Red Flag
+                            hasCriticalFailure = true;
+                        } else {
+                            statusIcon = '⚠️'; // Yellow Flag
+                            hasWarningFailure = true;
+                        }
                         outcome = 'FAIL';
                         failures.push(tool.name);
                     }
                 } else if (!tool.log.includes('Log file not found')) {
                      // If log exists but marker missing, it likely crashed hard
-                     status = '❌';
+                     statusIcon = '❌';
                      outcome = 'CRASH';
+                     hasCriticalFailure = true;
                      failures.push(`${tool.name} (Crash)`);
                 }
 
-                toolRows.push(`| ${tool.name} | ${status} | ${outcome} |`);
+                toolRows.push(`| ${tool.name} | ${statusIcon} | ${outcome} |`);
             }
 
             // Determine Overall Status
-            // We trust the granular tool checks plus the overall step outcomes (as backup)
-            const overallStatus = failures.length === 0 ? 'success' : 'failure';
-            const icon = overallStatus === 'success' ? '✅' : '🚨';
+            let overallStatus = 'success';
+            let icon = '✅';
+
+            if (hasCriticalFailure) {
+                overallStatus = 'failure';
+                icon = '🚨';
+            } else if (hasWarningFailure) {
+                overallStatus = 'warning';
+                icon = '⚠️';
+            }
+
             const title = `${icon} Daily Health Report: ${date}`;
 
             // Build Summary Table
