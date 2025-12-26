@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.4.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.3...sentinel-share-v1.4.0) (2025-12-26)
+
+
+### Features
+
+* **ci:** add granular tool status reporting (STATUS markers and table parsing) ([993800b](https://github.com/thef4tdaddy/SentinelShare/commit/993800b420b309f7258148d875c93af43a518c71))
+* **ci:** align daily-health-check with full salvo verification ([ac9a46e](https://github.com/thef4tdaddy/SentinelShare/commit/ac9a46e48cdadcacd176b3a7d962c6be0442e26d))
+* **ci:** auto-create GitHub Issues for top 3 low coverage files per run ([95767d3](https://github.com/thef4tdaddy/SentinelShare/commit/95767d33c37a1ddbf2d27643bc80125a85513d46))
+* **ci:** classify failures as critical (red) vs warning (yellow) in health report ([ca2c923](https://github.com/thef4tdaddy/SentinelShare/commit/ca2c9232713a0baec6d2a3378d3f80470fec2829))
+* **ci:** enable daily health reports on success to track coverage gaps ([2ea0884](https://github.com/thef4tdaddy/SentinelShare/commit/2ea0884daa8add3f2cdeaa89866084f7441c3750))
+* **ci:** implement issue splitting for large health check reports ([7455b98](https://github.com/thef4tdaddy/SentinelShare/commit/7455b9880caf04ae102adbb86ef6a0ce90e92b97))
+* **test:** expand E2E coverage and add Playwright to full_salvo script ([4488364](https://github.com/thef4tdaddy/SentinelShare/commit/4488364fa401f442bf03004b9aa0951dedf528d5))
+
+
+### Bug Fixes
+
+* **ci:** add common tech terms to spell check whitelist ([8880be2](https://github.com/thef4tdaddy/SentinelShare/commit/8880be204b496ded4333e89a0d36fbd9be2c7729))
+* **ci:** align permissions scope with working workflows ([a274aae](https://github.com/thef4tdaddy/SentinelShare/commit/a274aaea6276e3d717616d7d4a0b28d75c99e163))
+* **ci:** allow health check to run on triggered branch (remove hardcoded develop ref) ([370e1b3](https://github.com/thef4tdaddy/SentinelShare/commit/370e1b32c99eefeca9a7855505c7daa3eefa1df5))
+* **ci:** configure spell-check for main/develop PRs and add whitelist ([328b8fd](https://github.com/thef4tdaddy/SentinelShare/commit/328b8fda039fde5e34ac62f6817d2be0b1cdf770))
+* **ci:** ensure lint failures propagate to status report using pipefail ([44f5918](https://github.com/thef4tdaddy/SentinelShare/commit/44f591881a778394ab4628673b68c9c371d28f78))
+* **ci:** fix spell-check inputs and restore playwright permissions ([24d65b8](https://github.com/thef4tdaddy/SentinelShare/commit/24d65b8077e233cc12a42c1a85ec94c2e0988cf6))
+* **ci:** grant contents:write permission to spell-check for commit comments ([26c2973](https://github.com/thef4tdaddy/SentinelShare/commit/26c29738e1a16216157c23ee7ffdbe0debbacd58))
+* **ci:** isolate failures by removing risky configs ([9865fba](https://github.com/thef4tdaddy/SentinelShare/commit/9865fbaecf2f1afbc7d339910a8628261a623e40))
+* **ci:** repair corrupted workflow files ([3522ecb](https://github.com/thef4tdaddy/SentinelShare/commit/3522ecb7f412248af2add81e0746dcbe74e87bbf))
+* **ci:** repair yaml syntax and missing permissions for workflows ([b20e06c](https://github.com/thef4tdaddy/SentinelShare/commit/b20e06c5a71de5847622dbbc70e78cfc8b655935))
+* **ci:** restore advanced workflow capabilities ([ed8db5d](https://github.com/thef4tdaddy/SentinelShare/commit/ed8db5d49da7aeb42799eae9b7d71c018f843081))
+* **ci:** restore complete workflow configurations ([a18cb83](https://github.com/thef4tdaddy/SentinelShare/commit/a18cb837d768719492babd32626702759a2c9818))
+* **ci:** simplify workflows to resolve startup failures ([367bccb](https://github.com/thef4tdaddy/SentinelShare/commit/367bccb85a6d59cb1236d28e564225bb79c2b6aa))
+* **ci:** start backend server before running E2E tests ([5c90eaf](https://github.com/thef4tdaddy/SentinelShare/commit/5c90eaf4be2a4b8d8d53f98224486ebcf1134546))
+* **ci:** strip ANSI codes from health check logs for readability ([e8e85fa](https://github.com/thef4tdaddy/SentinelShare/commit/e8e85fa20aa0296e3bf7d079dc778a7adb9e04bf))
+* **ci:** truncate issue body in health-check to avoid 65k char limit ([86a5474](https://github.com/thef4tdaddy/SentinelShare/commit/86a5474734192acd73a7ad2a84f568f6ec9b0e9c))
+* **ci:** upgrade node version to 22 in health-check workflow ([37d83ae](https://github.com/thef4tdaddy/SentinelShare/commit/37d83ae7237284db689ede5d208431952491c484))
+* **e2e:** correct report output path and ignore artifacts ([26f9627](https://github.com/thef4tdaddy/SentinelShare/commit/26f9627ad0490acde41c714951d1ffa94a758fc8))
+* **e2e:** update settings locator to button in login flow test ([35571b0](https://github.com/thef4tdaddy/SentinelShare/commit/35571b0a7c7ad82dbea5fac6c6b0e1b1ac33d799))
+* resolve workflow failures and enhance reporting ([ad45605](https://github.com/thef4tdaddy/SentinelShare/commit/ad4560552eb68045e912df4a80c42c48b28a65ac))
+* **test:** harden Settings.test.ts mock against race conditions ([e5e7dc6](https://github.com/thef4tdaddy/SentinelShare/commit/e5e7dc6119f9aa0ac5864257743a54ebc0c84ab3))
+* **test:** isolate backend tests from local environment variables ([55c767d](https://github.com/thef4tdaddy/SentinelShare/commit/55c767d262ac449c4d8483f8ab2ab58111fb892c))
+
 ## [1.3.3](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.2...sentinel-share-v1.3.3) (2025-12-25)
 
 
