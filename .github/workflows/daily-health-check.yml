@@ -142,6 +142,10 @@ jobs:
           cd backend
           source venv/bin/activate
           set -o pipefail
+
+          # Fix: Include root directory in PYTHONPATH so 'backend' module is found
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/..
+
           # Use nohup to keep it running
           nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 
