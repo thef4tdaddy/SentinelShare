@@ -9,13 +9,7 @@ import sys
 
 
 def test_routers_package_import():
-    """Test that the routers package can be imported."""
+    """Test that the routers package can be imported and exists as a module."""
     import backend.routers  # noqa: F401
-
-
-def test_routers_package_exists():
-    """Test that the routers package exists as a module."""
-    import backend.routers
-
     assert "backend.routers" in sys.modules
     assert hasattr(backend.routers, "__file__")
