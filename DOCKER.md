@@ -28,7 +28,7 @@ This guide will help you run SentinelShare using Docker and Docker Compose.
 
 4. **Start the application**:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 5. **Access the application**:
