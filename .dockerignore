@@ -17,6 +17,7 @@ pnpm-debug.log*
 coverage/
 .pytest_cache/
 htmlcov/
+backend/tests/
 
 # Development files
 .env
