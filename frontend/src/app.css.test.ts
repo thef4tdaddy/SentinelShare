@@ -34,6 +34,7 @@ describe('app.css - CSS Utilities and Theme', () => {
 			const styles = getComputedStyle(card);
 			// Card should have padding, background, border, etc.
 			expect(card.classList.contains('card')).toBe(true);
+			expect(styles.padding).not.toBe('');
 		});
 
 		it('should support card hover state', () => {
