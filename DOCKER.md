@@ -166,7 +166,7 @@ docker compose exec app alembic upgrade head
 ## Troubleshooting
 
 ### Application won't start
-1. Check logs: `docker compose logs app` (or add `-f docker-compose.sqlite.yml` for SQLite)
+1. Check logs: `docker compose logs app` (or `docker compose -f docker-compose.sqlite.yml logs app` for SQLite)
 2. Verify `.env` file has all required variables
 3. Ensure port 8000 is not already in use
 
