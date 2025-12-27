@@ -45,13 +45,23 @@ It turns a manual chore into a "set it and forget it" background process.
 
 ### Quick Start with Docker (Recommended)
 
-The easiest way to get started is with Docker:
+The easiest way to get started is with Docker. Choose between SQLite (simpler) or PostgreSQL (production-ready):
 
+**SQLite (Single Container, No Database Setup):**
 ```bash
 git clone https://github.com/f4tdaddy/SentinelShare.git
 cd SentinelShare
 cp .env.example .env
 # Edit .env with your configuration
+docker compose -f docker-compose.sqlite.yml up -d
+```
+
+**PostgreSQL (Production-Ready):**
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
+cp .env.example .env
+# Edit .env with your configuration (including POSTGRES_PASSWORD)
 docker compose up -d
 ```
 

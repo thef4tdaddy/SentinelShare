@@ -9,7 +9,43 @@ This guide will help you run SentinelShare using Docker and Docker Compose.
 
 ## Quick Start
 
-1. **Clone the repository** (if you haven't already):
+Choose between SQLite (simpler, single container) or PostgreSQL (production-ready):
+
+### Option 1: SQLite (Recommended for Getting Started)
+
+Perfect for testing and personal use. No database setup required!
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/f4tdaddy/SentinelShare.git
+   cd SentinelShare
+   ```
+
+2. **Create your environment file**:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Edit the `.env` file** with your configuration:
+   - Set `DASHBOARD_PASSWORD` for web UI access
+   - Set `SECRET_KEY` to a random secure string
+   - Configure your email credentials (GMAIL_EMAIL, GMAIL_PASSWORD, etc.)
+   - **Note**: You don't need `POSTGRES_PASSWORD` for SQLite
+
+4. **Start the application**:
+   ```bash
+   docker compose -f docker-compose.sqlite.yml up -d
+   ```
+
+5. **Access the application**:
+   - Open your browser to `http://localhost:8000`
+   - Log in with the password you set in `DASHBOARD_PASSWORD`
+
+### Option 2: PostgreSQL (Recommended for Production)
+
+More robust for production environments with multiple users or high volume.
+
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/f4tdaddy/SentinelShare.git
    cd SentinelShare
@@ -41,11 +77,12 @@ This guide will help you run SentinelShare using Docker and Docker Compose.
 
 All configuration is done through environment variables in the `.env` file:
 
+#### Required for Both SQLite and PostgreSQL
+
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `DASHBOARD_PASSWORD` | Password for web UI access | Yes |
 | `SECRET_KEY` | Secret key for session management | Yes |
-| `POSTGRES_PASSWORD` | PostgreSQL database password | Yes |
 | `GMAIL_EMAIL` | Your Gmail address for IMAP | Yes |
 | `GMAIL_PASSWORD` | Gmail app password | Yes |
 | `WIFE_EMAIL` | Recipient email address | Yes |
@@ -53,58 +90,90 @@ All configuration is done through environment variables in the `.env` file:
 | `SENDER_PASSWORD` | Sender email password | Yes |
 | `POLL_INTERVAL` | Email check interval in seconds (default: 60) | No |
 
+#### Required Only for PostgreSQL
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `POSTGRES_PASSWORD` | PostgreSQL database password | Yes (PostgreSQL only) |
+
 ### Data Persistence
 
-Docker Compose creates two persistent volumes:
+**SQLite setup:**
+- `./data`: Contains SQLite database file (`local_dev.db`) and application data (receipts, logs)
 
-- `postgres_data`: PostgreSQL database files
+**PostgreSQL setup:**
+- `postgres_data`: PostgreSQL database files (Docker volume)
 - `./data`: Application data (receipts, logs)
 
 Your data will persist across container restarts.
 
 ## Common Commands
 
-### View logs
+### SQLite Commands
+
+#### View logs
 ```bash
-docker-compose logs -f app
+docker compose -f docker-compose.sqlite.yml logs -f app
 ```
 
-### Stop the application
+#### Stop the application
 ```bash
-docker-compose down
+docker compose -f docker-compose.sqlite.yml down
 ```
 
-### Stop and remove all data
+#### Rebuild after code changes
 ```bash
-docker-compose down -v
+docker compose -f docker-compose.sqlite.yml up -d --build
 ```
 
-### Rebuild after code changes
+#### Run migrations manually
 ```bash
-docker-compose up -d --build
+docker compose -f docker-compose.sqlite.yml exec app alembic upgrade head
 ```
 
-### Access the database
+### PostgreSQL Commands
+
+#### View logs
 ```bash
-docker-compose exec db psql -U sentinelshare -d sentinelshare
+docker compose logs -f app
 ```
 
-### Run migrations manually
+#### Stop the application
 ```bash
-docker-compose exec app alembic upgrade head
+docker compose down
+```
+
+#### Stop and remove all data
+```bash
+docker compose down -v
+```
+
+#### Rebuild after code changes
+```bash
+docker compose up -d --build
+```
+
+#### Access the database
+```bash
+docker compose exec db psql -U sentinelshare -d sentinelshare
+```
+
+#### Run migrations manually
+```bash
+docker compose exec app alembic upgrade head
 ```
 
 ## Troubleshooting
 
 ### Application won't start
-1. Check logs: `docker-compose logs app`
+1. Check logs: `docker compose logs app` (or add `-f docker-compose.sqlite.yml` for SQLite)
 2. Verify `.env` file has all required variables
 3. Ensure port 8000 is not already in use
 
-### Database connection issues
-1. Check database health: `docker-compose ps`
+### Database connection issues (PostgreSQL only)
+1. Check database health: `docker compose ps`
 2. Wait for database to be ready (can take 10-30 seconds on first start)
-3. Check logs: `docker-compose logs db`
+3. Check logs: `docker compose logs db`
 
 ### Permission issues
 If you encounter permission issues with the `data/` directory:
@@ -112,14 +181,37 @@ If you encounter permission issues with the `data/` directory:
 sudo chown -R $USER:$USER ./data
 ```
 
-## Using SQLite Instead of PostgreSQL
+## Switching Between SQLite and PostgreSQL
 
-If you prefer to use SQLite instead of PostgreSQL:
+### From SQLite to PostgreSQL
 
-1. Remove the `DATABASE_URL` from your `.env` file (or comment it out).
-2. Remove or comment out the `DATABASE_URL` entry in the `environment` section of `docker-compose.yml` (this value overrides the one from `.env`).
-3. Modify `docker-compose.yml` to remove the `db` service dependency.
-4. The application will automatically use SQLite with the database file at `/app/local_dev.db`.
+1. Stop the SQLite container:
+   ```bash
+   docker compose -f docker-compose.sqlite.yml down
+   ```
+
+2. Add `POSTGRES_PASSWORD` to your `.env` file
+
+3. Start with PostgreSQL:
+   ```bash
+   docker compose up -d
+   ```
+
+Note: Your existing data won't be automatically migrated. You'll start with a fresh database.
+
+### From PostgreSQL to SQLite
+
+1. Stop the PostgreSQL containers:
+   ```bash
+   docker compose down
+   ```
+
+2. Start with SQLite:
+   ```bash
+   docker compose -f docker-compose.sqlite.yml up -d
+   ```
+
+Note: Your existing data won't be automatically migrated. You'll start with a fresh database.
 
 ## Production Deployment
 
