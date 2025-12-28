@@ -22,7 +22,10 @@ def session_fixture():
         yield session
 
 
-def test_get_dashboard_stats(session: Session):
+def test_get_dashboard_stats(session: Session, monkeypatch):
+    # Ensure no auth is required
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
     # Mock dependencies to use our test session
     from backend.database import get_session
 
@@ -50,7 +53,9 @@ def test_get_dashboard_stats(session: Session):
     app.dependency_overrides.clear()
 
 
-def test_get_dashboard_activity(session: Session):
+def test_get_dashboard_activity(session: Session, monkeypatch):
+    monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
     from backend.database import get_session
 
     app.dependency_overrides[get_session] = lambda: session

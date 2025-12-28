@@ -53,7 +53,9 @@
 	{:else if currentView === 'login'}
 		<Login onLoginSuccess={handleLoginSuccess} />
 	{:else}
-		<Navbar {currentView} onViewChange={handleViewChange} />
+		{#if currentView !== 'sendee'}
+			<Navbar {currentView} onViewChange={handleViewChange} />
+		{/if}
 
 		<div class="container-custom">
 			{#if currentView === 'dashboard'}

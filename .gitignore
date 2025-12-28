@@ -12,6 +12,8 @@ lerna-debug.log*
 /coverage
 coverage/
 coverage.json
+playwright-report/
+test-results/
 
 # Production
 build
@@ -44,3 +46,6 @@ htmlcov/
 # Database
 local_dev.db
 *.db
+
+# Docker
+data/
