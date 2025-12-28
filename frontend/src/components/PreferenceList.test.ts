@@ -2,17 +2,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import PreferenceList from './PreferenceList.svelte';
 import * as api from '../lib/api';
+import { toasts } from '../lib/stores/toast';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
 	fetchJson: vi.fn()
 }));
 
+vi.mock('../lib/stores/toast', () => ({
+	toasts: {
+		trigger: vi.fn(),
+		subscribe: vi.fn(() => () => {}),
+		remove: vi.fn()
+	}
+}));
+
 describe('PreferenceList Component - Preferences Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Mock window.alert
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -164,7 +171,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		await fireEvent.click(addButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error adding item');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error adding item', 'error');
 		});
 	});
 
@@ -194,7 +201,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error deleting item');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error deleting item', 'error');
 		});
 	});
 });
@@ -202,7 +209,6 @@ describe('PreferenceList Component - Preferences Type', () => {
 describe('PreferenceList Component - Rules Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {

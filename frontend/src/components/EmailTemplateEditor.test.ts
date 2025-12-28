@@ -2,17 +2,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import EmailTemplateEditor from './EmailTemplateEditor.svelte';
 import * as api from '../lib/api';
+import { toasts } from '../lib/stores/toast';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
 	fetchJson: vi.fn()
 }));
 
+vi.mock('../lib/stores/toast', () => ({
+	toasts: {
+		trigger: vi.fn(),
+		subscribe: vi.fn(() => () => {}),
+		remove: vi.fn()
+	}
+}));
+
 describe('EmailTemplateEditor Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Mock window.alert
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -126,7 +133,7 @@ describe('EmailTemplateEditor Component', () => {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ template: 'New template' })
 			});
-			expect(window.alert).toHaveBeenCalledWith('Template saved successfully!');
+			expect(toasts.trigger).toHaveBeenCalledWith('Template saved successfully!', 'success');
 		});
 	});
 
@@ -177,7 +184,7 @@ describe('EmailTemplateEditor Component', () => {
 		await fireEvent.click(saveButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Template saved successfully!');
+			expect(toasts.trigger).toHaveBeenCalledWith('Template saved successfully!', 'success');
 		});
 
 		// Save button should be disabled again after save
@@ -206,7 +213,7 @@ describe('EmailTemplateEditor Component', () => {
 		await fireEvent.click(saveButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error saving template');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error saving template', 'error');
 		});
 	});
 
@@ -216,7 +223,7 @@ describe('EmailTemplateEditor Component', () => {
 		render(EmailTemplateEditor);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error loading template');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error loading template', 'error');
 		});
 	});
 
