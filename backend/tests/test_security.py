@@ -1,8 +1,9 @@
 from unittest.mock import patch
 
 import pytest
-from backend.security import decrypt_content, encrypt_content, get_fernet
 from cryptography.fernet import Fernet
+
+from backend.security import decrypt_content, encrypt_content, get_fernet
 
 
 def test_encryption_decryption():
