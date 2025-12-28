@@ -2,10 +2,11 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
+from sqlmodel import Session, select
+
 from backend.database import create_db_and_tables, engine
 from backend.models import GlobalSettings
 from backend.services.forwarder import EmailForwarder
-from sqlmodel import Session, select
 
 
 @pytest.fixture
@@ -617,8 +618,9 @@ class TestEmailForwarder:
 
     def test_format_email_date_with_datetime_object(self):
         """Test that format_email_date works with datetime objects"""
-        from backend.services.forwarder import format_email_date
         from datetime import datetime, timezone
+
+        from backend.services.forwarder import format_email_date
 
         # Test with datetime object
         dt = datetime(2023, 12, 21, 10, 30, 0, tzinfo=timezone.utc)
@@ -650,8 +652,9 @@ class TestEmailForwarder:
 
     def test_format_email_date_with_naive_datetime(self):
         """Test that format_email_date handles timezone-naive datetime objects by assuming UTC"""
-        from backend.services.forwarder import format_email_date
         from datetime import datetime
+
+        from backend.services.forwarder import format_email_date
 
         # Test with timezone-naive datetime object
         naive_dt = datetime(2023, 12, 21, 10, 30, 0)

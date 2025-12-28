@@ -2,14 +2,15 @@ import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-import backend.services.scheduler as scheduler_module
 import pytest
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+
+import backend.services.scheduler as scheduler_module
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.services.scheduler import (cleanup_expired_emails, process_emails,
                                         redact_email, start_scheduler,
                                         stop_scheduler)
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
 
 
 @pytest.fixture(name="session")

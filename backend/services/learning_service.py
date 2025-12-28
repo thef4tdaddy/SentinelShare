@@ -3,8 +3,9 @@ import os
 import re
 from typing import Any, Dict, Optional
 
-from backend.models import ManualRule, ProcessedEmail
 from sqlmodel import Session, select
+
+from backend.models import ManualRule, ProcessedEmail
 
 
 class LearningService:

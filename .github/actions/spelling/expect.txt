@@ -19,6 +19,7 @@ SentinelShare
 Stmts
 Suject
 Thu
+Typecheck
 URLTo
 VARCHAR
 Vzd
@@ -115,6 +116,7 @@ cjs
 clickable
 comcast
 commitlint
+connrefused
 conventionalcommits
 copay
 correctpass

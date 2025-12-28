@@ -1,9 +1,10 @@
 from typing import List
 
-from backend.database import get_session
-from backend.models import ProcessedEmail
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
+
+from backend.database import get_session
+from backend.models import ProcessedEmail
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 

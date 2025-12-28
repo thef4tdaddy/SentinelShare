@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from backend.models import ManualRule, ProcessedEmail
-from backend.routers import actions
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, ProcessedEmail
+from backend.routers import actions
 
 
 @pytest.fixture(name="engine")
