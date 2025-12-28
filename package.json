@@ -1,6 +1,6 @@
 {
   "name": "sentinel-share",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "scripts": {
     "build": "cd frontend && npm install --include=dev && npm run build",
     "heroku-postbuild": "npm run build",
