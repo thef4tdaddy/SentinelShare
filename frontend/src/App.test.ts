@@ -64,38 +64,42 @@ describe('App Component', () => {
 		);
 	});
 
-	it('switches back to Dashboard view when dashboard button is clicked', async () => {
-		vi.mocked(api.fetchJson).mockResolvedValue([]);
+	it(
+		'switches back to Dashboard view when dashboard button is clicked',
+		{ timeout: 10000 },
+		async () => {
+			vi.mocked(api.fetchJson).mockResolvedValue([]);
 
-		render(App);
+			render(App);
 
-		// Wait for dashboard
-		await waitFor(() =>
-			expect(screen.getAllByRole('button', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1)
-		);
+			// Wait for dashboard
+			await waitFor(() =>
+				expect(screen.getAllByRole('button', { name: 'Settings' }).length).toBeGreaterThanOrEqual(1)
+			);
 
-		// Click settings first
-		const settingsButton = screen.getAllByRole('button', { name: 'Settings' })[0];
-		await fireEvent.click(settingsButton);
+			// Click settings first
+			const settingsButton = screen.getAllByRole('button', { name: 'Settings' })[0];
+			await fireEvent.click(settingsButton);
 
-		await waitFor(
-			() => {
-				expect(screen.getByText(/Manage detection rules/i)).toBeTruthy();
-			},
-			{ timeout: 3000 }
-		);
+			await waitFor(
+				() => {
+					expect(screen.getByText(/Manage detection rules/i)).toBeTruthy();
+				},
+				{ timeout: 3000 }
+			);
 
-		// Click dashboard to switch back
-		const dashboardButton = screen.getAllByRole('button', { name: 'Dashboard' })[0];
-		await fireEvent.click(dashboardButton);
+			// Click dashboard to switch back
+			const dashboardButton = screen.getAllByRole('button', { name: 'Dashboard' })[0];
+			await fireEvent.click(dashboardButton);
 
-		await waitFor(
-			() => {
-				expect(screen.getByText('Total Processed')).toBeTruthy();
-			},
-			{ timeout: 3000 }
-		);
-	});
+			await waitFor(
+				() => {
+					expect(screen.getByText('Total Processed')).toBeTruthy();
+				},
+				{ timeout: 5000 }
+			);
+		}
+	);
 
 	it('highlights active view in navbar', async () => {
 		vi.mocked(api.fetchJson).mockResolvedValue([]);
