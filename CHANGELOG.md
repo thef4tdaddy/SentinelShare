@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.1](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.4.0...sentinel-share-v1.4.1) (2025-12-28)
+
+
+### Bug Fixes
+
+* **auth:** allow /me endpoint to pass in no-auth dev mode (fixes CI E2E) ([af64913](https://github.com/thef4tdaddy/SentinelShare/commit/af649139ead53a714714c4f3d06f2558c23048de))
+* **ci:** add PYTHONPATH for uvicorn to resolve backend module ([a2aa2ca](https://github.com/thef4tdaddy/SentinelShare/commit/a2aa2ca8f78e086ed705f0c608786d8de15ba45f))
+* **ci:** allow manual trigger for dependency-review to register check ([653a98b](https://github.com/thef4tdaddy/SentinelShare/commit/653a98bcf0a05c1fdd4e253c8256f25631ef7eaa))
+* **ci:** allow manual trigger for lighthouse and size checks to register them ([00764cd](https://github.com/thef4tdaddy/SentinelShare/commit/00764cdc6396a18f8fc946dc89745ec2ebec6ef0))
+* **health:** resolve daily health check failures (email tokens, duplicates, pytest) ([4597f38](https://github.com/thef4tdaddy/SentinelShare/commit/4597f38016191db768c652f32272c4814f9368a5))
+* resolve E2E failures, prevent duplicate emails, unify verification ([6919443](https://github.com/thef4tdaddy/SentinelShare/commit/6919443990e20734ea0ee3da9a91b642d1d03cfc))
+
 ## [1.4.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.3.3...sentinel-share-v1.4.0) (2025-12-26)
 
 
