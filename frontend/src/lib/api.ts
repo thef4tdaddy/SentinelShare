@@ -1,7 +1,26 @@
 export const API_BASE = '/api';
 
 export async function fetchJson(endpoint: string, options: RequestInit = {}) {
-	const res = await fetch(`${API_BASE}${endpoint}`, options);
+	// Check for token in URL query params or localStorage
+	let token: string | null = null;
+	if (typeof window !== 'undefined' && window.localStorage) {
+		const searchParams = new URLSearchParams(window.location.search);
+		token = searchParams.get('token');
+		if (token) {
+			localStorage.setItem('dashboard_token', token);
+		} else {
+			token = localStorage.getItem('dashboard_token');
+		}
+	}
+
+	let url = `${API_BASE}${endpoint}`;
+	if (token) {
+		// Append token
+		const separator = url.includes('?') ? '&' : '?';
+		url += `${separator}token=${encodeURIComponent(token)}`;
+	}
+
+	const res = await fetch(url, options);
 	if (!res.ok) {
 		throw new Error(`API Error: ${res.statusText}`);
 	}

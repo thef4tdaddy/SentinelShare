@@ -1,6 +1,8 @@
 name: CI
+
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 on:
@@ -14,146 +16,323 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  frontend-check:
+  full-salvo:
     runs-on: ubuntu-latest
-    outputs:
-      lint_status: ${{ steps.lint.outcome }}
-      typecheck_status: ${{ steps.typecheck.outcome }}
-      build_status: ${{ steps.build.outcome }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Use Node.js
+      # --- Setup ---
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm install
-
-      - name: Lint
-        id: lint
-        working-directory: frontend
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Typecheck
-        id: typecheck
-        working-directory: frontend
-        run: npm run check
-        continue-on-error: true
-
-      - name: Build
-        id: build
-        working-directory: frontend
-        run: npm run build
-        continue-on-error: true
-
-      - name: Check Status
-        if: always()
+      - name: Install Backend Dependencies
         run: |
-          if [ "${{ steps.lint.outcome }}" == "failure" ] || [ "${{ steps.typecheck.outcome }}" == "failure" ] || [ "${{ steps.build.outcome }}" == "failure" ]; then
-            exit 1
-          fi
-
-  backend-check:
-    runs-on: ubuntu-latest
-    outputs:
-      ruff_status: ${{ steps.ruff.outcome }}
-
-      mypy_status: ${{ steps.mypy.outcome }}
-      pytest_status: ${{ steps.pytest.outcome }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-          cache: "pip"
-
-      - name: Install dependencies
-        working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff mypy httpx
+          cd backend
+          python -m venv venv
+          source venv/bin/activate
           pip install -r ../requirements.txt
+          pip install pytest pytest-cov black ruff mypy
 
-      - name: Lint with Ruff
-        id: ruff
-        working-directory: backend
-        run: ruff check . --output-format=github
-        continue-on-error: true
-
-      - name: Typecheck with Mypy
-        id: mypy
-        working-directory: backend
-        run: mypy .
-        continue-on-error: true
-
-      - name: Run Tests
-        id: pytest
-        working-directory: backend
-        run: pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ || true
-
-      - name: Check Status
-        if: always()
+      - name: Install Frontend Dependencies
         run: |
-          if [ "${{ steps.ruff.outcome }}" == "failure" ] || [ "${{ steps.mypy.outcome }}" == "failure" ]; then
-            echo "One or more steps failed."
-            exit 1
-          fi
+          cd frontend
+          npm ci
+          npx playwright install --with-deps
 
-  comment-on-failure:
-    needs: [frontend-check, backend-check]
-    if: failure() && github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v7
+      # --- Backend Salvo ---
+      - name: Backend Linting (Black, Ruff, Mypy)
+        id: backend_lint
+        run: |
+          cd backend
+          source venv/bin/activate
+          set -o pipefail
+          {
+            EXIT_CODE=0
+            
+            echo "::group::Black"
+            # Use '||' to prevent set -e from killing the script on failure
+            python -m black --check . && BLACK_RES=0 || BLACK_RES=$?
+            echo "STATUS_BLACK:$BLACK_RES"
+            if [ $BLACK_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            echo "::group::Ruff"
+            python -m ruff check . && RUFF_RES=0 || RUFF_RES=$?
+            echo "STATUS_RUFF:$RUFF_RES"
+            if [ $RUFF_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            echo "::group::Mypy"
+            python -m mypy . --ignore-missing-imports && MYPY_RES=0 || MYPY_RES=$?
+            echo "STATUS_MYPY:$MYPY_RES"
+            if [ $MYPY_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            exit $EXIT_CODE
+          } 2>&1 | tee ../backend_lint.log
+        continue-on-error: true
+
+      - name: Backend Tests (Pytest)
+        id: backend_test
+        run: |
+          cd backend
+          source venv/bin/activate
+          set -o pipefail
+          # Run tests and output coverage report. Fail under 50%.
+          {
+            pytest --cov=. --cov-report=term-missing --cov-fail-under=50 tests/ && PYTEST_RES=0 || PYTEST_RES=$?
+            echo "STATUS_PYTEST:$PYTEST_RES"
+            exit $PYTEST_RES
+          } 2>&1 | tee ../backend_test.log
+        continue-on-error: true
+
+      # --- Frontend Salvo ---
+      - name: Frontend Linting (Prettier, ESLint, Svelte Check)
+        id: frontend_lint
+        run: |
+          cd frontend
+          set -o pipefail
+          {
+            EXIT_CODE=0
+            
+            echo "::group::Prettier"
+            npx prettier --check "src/**/*.{ts,js,svelte,css}" && PRETTIER_RES=0 || PRETTIER_RES=$?
+            echo "STATUS_PRETTIER:$PRETTIER_RES"
+            if [ $PRETTIER_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            echo "::group::ESLint"
+            npm run lint && ESLINT_RES=0 || ESLINT_RES=$?
+            echo "STATUS_ESLINT:$ESLINT_RES"
+            if [ $ESLINT_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            echo "::group::Svelte Check"
+            npm run check && SVELTE_RES=0 || SVELTE_RES=$?
+            echo "STATUS_SVELTE:$SVELTE_RES"
+            if [ $SVELTE_RES -ne 0 ]; then EXIT_CODE=1; fi
+            echo "::endgroup::"
+            
+            exit $EXIT_CODE
+          } 2>&1 | tee ../frontend_lint.log
+        continue-on-error: true
+
+      - name: Frontend Tests (Vitest)
+        id: frontend_test
+        run: |
+          cd frontend
+          set -o pipefail
+          {
+            npm run test:run -- --coverage --coverage.thresholds.lines=50 && VITEST_RES=0 || VITEST_RES=$?
+            echo "STATUS_VITEST:$VITEST_RES"
+            exit $VITEST_RES
+          } 2>&1 | tee ../frontend_test.log
+        continue-on-error: true
+
+      - name: Frontend E2E (Playwright)
+        id: e2e
+        run: |
+          # Start Backend in Background
+          cd backend
+          source venv/bin/activate
+          set -o pipefail
+
+          # Fix: Include root directory in PYTHONPATH so 'backend' module is found
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/..
+
+          # Use nohup to keep it running
+          # Explicitly set DASHBOARD_PASSWORD empty to bypass auth for tests
+          export DASHBOARD_PASSWORD=""
+          nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
+
+          # Wait for Backend to be ready
+          echo "Waiting for Backend to start..."
+          timeout 30s bash -c 'until curl -s http://0.0.0.0:8000/api/health; do sleep 1; done'
+          echo "Backend started!"
+
+          # Run Playwright
+          cd ../frontend
+          {
+             npx playwright test && PW_RES=0 || PW_RES=$?
+             echo "STATUS_PLAYWRIGHT:$PW_RES"
+             exit $PW_RES
+          } 2>&1 | tee ../e2e_test.log
+        continue-on-error: true
+
+      # --- Reporting ---
+      - name: Generate CI Report
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          OUTCOME_BACKEND_LINT: ${{ steps.backend_lint.outcome }}
+          OUTCOME_BACKEND_TEST: ${{ steps.backend_test.outcome }}
+          OUTCOME_FRONTEND_LINT: ${{ steps.frontend_lint.outcome }}
+          OUTCOME_FRONTEND_TEST: ${{ steps.frontend_test.outcome }}
+          OUTCOME_E2E: ${{ steps.e2e.outcome }}
         with:
           script: |
-            const { owner, repo } = context.repo;
-            const run_id = context.runId;
-            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+            const fs = require('fs');
+            const date = new Date().toLocaleDateString();
 
-            // Frontend Results
-            const f_lint = '${{ needs.frontend-check.outputs.lint_status }}';
-            const f_type = '${{ needs.frontend-check.outputs.typecheck_status }}';
-            const f_build = '${{ needs.frontend-check.outputs.build_status }}';
+            // Helper to clean logs
+            function stripAnsi(str) {
+              return str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+            }
 
-            // Backend Results
-            const b_ruff = '${{ needs.backend-check.outputs.ruff_status }}';
-            const b_mypy = '${{ needs.backend-check.outputs.mypy_status }}';
-            const b_test = '${{ needs.backend-check.outputs.pytest_status }}';
+            // Read all logs
+            const logs = {
+              backend_lint: '',
+              backend_test: '',
+              frontend_lint: '',
+              frontend_test: '',
+              e2e: ''
+            };
 
-            const icon = (status) => status === 'success' ? '✅' : (status === 'skipped' ? '⚪' : '❌');
+            for (const key of Object.keys(logs)) {
+              try { 
+                logs[key] = stripAnsi(fs.readFileSync(`${key}.log`, 'utf8')); 
+              } catch (e) { 
+                logs[key] = 'Log file not found (Step might have been skipped).'; 
+              }
+            }
 
-            const body = `### ❌ CI Failure
+            // --- Tool Status Parsing ---
+            const tools = [
+                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logs.backend_lint, type: 'warning' },
+                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logs.backend_lint, type: 'critical' },
+                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logs.backend_lint, type: 'critical' },
+                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logs.backend_test, type: 'critical' },
+                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint, type: 'warning' },
+                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint, type: 'critical' },
+                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint, type: 'critical' },
+                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical' },
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' }
+            ];
 
-            The pipeline failed. Here is the breakdown:
+            let toolRows = [];
+            let failures = [];
+            let hasCriticalFailure = false;
+            let hasWarningFailure = false;
 
-            #### 🎨 Frontend
-            | Check | Status |
-            |-------|--------|
-            | ESLint | ${icon(f_lint)} |
-            | Typecheck | ${icon(f_type)} |
-            | Build | ${icon(f_build)} |
+            for (const tool of tools) {
+                const match = tool.log.match(new RegExp(`${tool.key}:(\\d+)`));
+                let statusIcon = '❓';
+                let outcome = 'UNKNOWN';
+                
+                if (match) {
+                    const code = parseInt(match[1]);
+                    if (code === 0) {
+                        statusIcon = '✅';
+                        outcome = 'PASS';
+                    } else {
+                        // Determine failure icon based on severity
+                        if (tool.type === 'critical') {
+                            statusIcon = '❌'; // Red Flag
+                            hasCriticalFailure = true;
+                        } else {
+                            statusIcon = '⚠️'; // Yellow Flag
+                            hasWarningFailure = true;
+                        }
+                        outcome = 'FAIL';
+                        failures.push(tool.name);
+                    }
+                } else if (!tool.log.includes('Log file not found')) {
+                     // If log exists but marker missing, it likely crashed hard
+                     statusIcon = '❌';
+                     outcome = 'CRASH';
+                     hasCriticalFailure = true;
+                     failures.push(`${tool.name} (Crash)`);
+                }
 
-            #### 🐍 Backend
-            | Check | Status |
-            |-------|--------|
-            | Ruff (Lint) | ${icon(b_ruff)} |
-            | Mypy (Types) | ${icon(b_mypy)} |
-            | Pytest (Tests) | ${icon(b_test)} |
+                toolRows.push(`| ${tool.name} | ${statusIcon} | ${outcome} |`);
+            }
 
-            [View Full Logs](${run_url})`;
+            // Determine Overall Status
+            let overallStatus = 'success';
+            let icon = '✅';
 
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: context.issue.number,
-              body
-            });
+            if (hasCriticalFailure) {
+                overallStatus = 'failure';
+                icon = '🚨';
+            } else if (hasWarningFailure) {
+                overallStatus = 'warning';
+                icon = '⚠️';
+            }
+
+            const title = `${icon} CI Report: ${date}`;
+
+            // Build Summary Table
+            const summaryTable = `| Tool | Status | Outcome |\n|---|---|---|\n${toolRows.join('\n')}\n`;
+
+            // Helper to extract failure details (simplified)
+            function getBriefLog(log) {
+              if (!log) return '';
+              const lines = log.split('\n');
+              // Filter out the STATUS_ markers from the view
+              const filtered = lines.filter(l => !l.includes('STATUS_'));
+              
+              const relevant = filtered.filter(l => 
+                l.includes('FAILED') || l.includes('Error:') || l.includes('FAIL') || l.includes('✘') || 
+                l.includes('error') || l.includes('reformatted') || l.includes('would be reformatted')
+              );
+              
+              if (relevant.length > 0) {
+                 return relevant.slice(0, 15).join('\n') + (relevant.length > 15 ? '\n...' : '');
+              }
+              return filtered.slice(-15).join('\n');
+            }
+
+            // Build Detailed Body
+            let details = '';
+            // Only show logs for steps that had a failure
+             if (failures.length > 0) {
+                 details += `### ❌ Failure Details\n`;
+                 // Naive mapping of tool failure to log file
+                  for (const tool of tools) {
+                      if (toolRows.find(r => r.includes(tool.name) && r.includes('FAIL'))) {
+                          // Find key for this tool
+                           if (tool.name.includes('Black') || tool.name.includes('Ruff') || tool.name.includes('Mypy')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.backend_lint)}\n\`\`\`\n\n`;
+                           else if (tool.name.includes('Pytest')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.backend_test)}\n\`\`\`\n\n`;
+                           else if (tool.name.includes('Prettier') || tool.name.includes('ESLint') || tool.name.includes('Svelte')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.frontend_lint)}\n\`\`\`\n\n`;
+                           else if (tool.name.includes('Vitest')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.frontend_test)}\n\`\`\`\n\n`;
+                           else if (tool.name.includes('Playwright')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.e2e)}\n\`\`\`\n\n`;
+                      }
+                  }
+             }
+
+            const fullBody = `**Full Salvo Verification Status**: ${overallStatus.toUpperCase()}
+
+            ${summaryTable}
+
+            ---
+            ${details}
+
+            [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+
+            if (context.eventName === 'pull_request') {
+                await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: context.issue.number,
+                    body: fullBody
+                });
+            } else {
+                // For push events, maybe create an issue? Or just log.
+                console.log(fullBody);
+            }
+
+            // Mark Run as Failed if Overall Status is failure
+            if (overallStatus === 'failure') {
+                core.setFailed("CI Checks Failed. See report.");
+            }

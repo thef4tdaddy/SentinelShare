@@ -25,6 +25,8 @@ export default defineConfig({
         '**/*.css', // Exclude CSS files from coverage tracking
       ],
     },
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['tests/**', '**/node_modules/**', '**/dist/**', '**/cypress/**', '**/.{idea,git,cache,output,temp}/**'],
   },
   resolve: {
     conditions: ['browser'],

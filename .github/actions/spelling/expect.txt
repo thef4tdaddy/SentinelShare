@@ -1,0 +1,23 @@
+# Add project-specific words here to be ignored by the spell checker
+FastAPI
+GMAIL
+Heroku
+SentinelShare
+SQLModel
+Svelte
+TailwindCSS
+URL
+VERCEL
+VioletVault
+f4tdaddy
+gitattributes
+github
+gmail
+https
+localhost
+mypy
+postgresql
+pytest
+ruff
+uvicorn
+venv

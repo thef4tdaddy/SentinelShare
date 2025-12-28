@@ -63,6 +63,36 @@ def process_emails():
         print(f"❌ Error creating processing run record: {type(e).__name__}")
         return
 
+    # Check for overlapping runs (Lock Mechanism)
+    try:
+        with Session(engine) as session:
+            # Look for runs started in the last 5 minutes that are still running
+            # This prevents double-execution if the scheduler is duplicated (e.g. multiple dynos)
+            cutoff = datetime.now(timezone.utc) - timedelta(minutes=5)
+            active_run = session.exec(
+                select(ProcessingRun)
+                .where(ProcessingRun.status == "running")
+                .where(ProcessingRun.started_at > cutoff)
+                .where(ProcessingRun.id != run_id)  # Exclude current run
+            ).first()
+
+            if active_run:
+                print(
+                    f"⚠️ Scheduler overlap detected (Run {active_run.id} is active). Skipping this execution."
+                )
+                # Mark current text run as skipped/duplicate
+                run = session.get(ProcessingRun, run_id)
+                if run:
+                    run.status = "skipped"
+                    run.error_message = f"Overlap with Run {active_run.id}"
+                    run.completed_at = datetime.now(timezone.utc)
+                    session.add(run)
+                    session.commit()
+                return
+
+    except Exception:
+        pass  # If DB check fails, proceed cautiously
+
     all_emails = []
     emails_processed_count = 0
     emails_forwarded_count = 0
