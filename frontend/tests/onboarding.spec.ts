@@ -8,7 +8,16 @@ test('has title', async ({ page }) => {
 });
 
 test('login page renders', async ({ page }) => {
+    // Mock the "me" auth check API to ensure we stay on login page
+    await page.route('**/api/auth/me', async route => {
+        await route.fulfill({ 
+            status: 401, 
+            body: JSON.stringify({ authenticated: false }) 
+        });
+    });
+
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByRole('button', { name: /Access Dashboard/i })).toBeVisible();
 });
 
