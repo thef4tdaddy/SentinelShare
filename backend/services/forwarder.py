@@ -157,7 +157,9 @@ class EmailForwarder:
 
         # Dashboard Token for the recipient
         token = generate_dashboard_token(target_email)
-        link_dashboard = f"{app_url}/?token={token}" if app_url else link_settings
+        # URL-encode the token to ensure characters like '+' are preserved
+        safe_token = urllib.parse.quote(token)
+        link_dashboard = f"{app_url}/?token={safe_token}" if app_url else link_settings
 
         action_type_text = (
             "Clicking an action opens a web confirmation."
