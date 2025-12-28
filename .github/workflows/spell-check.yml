@@ -30,3 +30,12 @@ jobs:
           use_magic_file: 1
           extra_dictionary_limit: 10
           quit_without_error: 0
+          extra_dictionaries: |
+            cspell:software-terms/dict/softwareTerms.txt
+            cspell:python/src/python/python-lib.txt
+            cspell:npm/dict/npm.txt
+            cspell:python/src/python/python.txt
+            cspell:python/src/common/extra.txt
+            cspell:typescript/dict/typescript.txt
+            cspell:html/dict/html.txt
+            cspell:filetypes/filetypes.txt
