@@ -12,6 +12,8 @@ lerna-debug.log*
 /coverage
 coverage/
 coverage.json
+playwright-report/
+test-results/
 
 # Production
 build

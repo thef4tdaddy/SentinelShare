@@ -418,6 +418,7 @@ def test_process_emails_no_accounts_configured(
         "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",
         "GMAIL_EMAIL": "test@example.com",
         "GMAIL_PASSWORD": "password",
+        "EMAIL_ACCOUNTS": "",  # Ensure no multi-account processing from local env
     },
 )
 @patch("backend.services.scheduler.engine")
