@@ -61,7 +61,7 @@ jobs:
         id: backend_lint
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           {
             EXIT_CODE=0
@@ -93,7 +93,7 @@ jobs:
         id: backend_test
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
           {

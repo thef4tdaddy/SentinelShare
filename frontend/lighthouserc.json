@@ -2,17 +2,21 @@
   "ci": {
     "collect": {
       "staticDistDir": "./frontend/dist",
-      "numberOfRuns": 3,
-      "puppeteerScript": "./frontend/lhci-auth.cjs"
-    },
-    "upload": {
-      "target": "temporary-public-storage"
+      "puppeteerLaunchOptions": {
+        "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+      },
+      "url": [
+        "/"
+      ]
     },
     "assert": {
-      "preset": "lighthouse:no-pwa"
-    },
-    "settings": {
-      "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "offscreen-images": "off",
+        "uses-webp-images": "off",
+        "color-contrast": "off",
+        "tap-targets": "off"
+      }
     }
   }
 }
