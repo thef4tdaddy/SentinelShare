@@ -1,0 +1,27 @@
+services:
+  # SentinelShare Application with SQLite
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sentinelshare-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # App Configuration
+      SECRET_KEY: ${SECRET_KEY:-change_this_to_something_secret}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?DASHBOARD_PASSWORD must be set in .env or the environment}
+      POLL_INTERVAL: ${POLL_INTERVAL:-60}
+      
+      # Email Credentials
+      GMAIL_EMAIL: ${GMAIL_EMAIL:?GMAIL_EMAIL must be set in .env or the environment}
+      GMAIL_PASSWORD: ${GMAIL_PASSWORD:?GMAIL_PASSWORD must be set in .env or the environment}
+      WIFE_EMAIL: ${WIFE_EMAIL:?WIFE_EMAIL must be set in .env or the environment}
+      SENDER_EMAIL: ${SENDER_EMAIL:?SENDER_EMAIL must be set in .env or the environment}
+      SENDER_PASSWORD: ${SENDER_PASSWORD:?SENDER_PASSWORD must be set in .env or the environment}
+    volumes:
+      # Mount for database and application data
+      - ./data:/app/data
+    env_file:
+      - .env

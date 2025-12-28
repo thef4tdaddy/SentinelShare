@@ -1,0 +1,68 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# GitHub
+.github
+
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.pytest_cache/
+htmlcov/
+backend/tests/
+
+# Development files
+.env
+.env.example
+.husky
+commitlint.config.js
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Database
+local_dev.db
+*.db
+data/
+
+# Build artifacts (we handle these in multi-stage)
+frontend/dist
+frontend/node_modules
+
+# IDE
+.vscode
+.idea
+.DS_Store
+
+# Documentation
+README.md
+CONTRIBUTING.md
+ROADMAP.md
+CHANGELOG.md
+LICENSE
+
+# Misc
+*.log
+.python-version
+mypy.ini
+mypy.ini.bak
+pytest.ini
+release-please.log
+release-please-config.json
+.release-please-manifest.json
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore

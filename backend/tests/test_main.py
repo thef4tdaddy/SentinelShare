@@ -159,7 +159,12 @@ def test_frontend_dist_behavior(dist_should_exist, tmp_path):
         dist_should_exist: Whether to set up the dist directory
         tmp_path: Pytest fixture for temporary directory
     """
+    import os
     import sys
+
+    # Ensure no auth is enforced for this test
+    if "DASHBOARD_PASSWORD" in os.environ:
+        del os.environ["DASHBOARD_PASSWORD"]
 
     # Clean up any previous imports
     if "backend.main" in sys.modules:

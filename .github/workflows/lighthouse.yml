@@ -1,0 +1,35 @@
+name: Lighthouse CI
+on:
+  pull_request:
+    branches: ["main", "develop"]
+  workflow_dispatch: # Allow manual trigger to register check
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: "./frontend/lighthouserc.json"
+          uploadArtifacts: true
+          temporaryPublicStorage: true

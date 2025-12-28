@@ -1,0 +1,18 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./dist",
+      "numberOfRuns": 3,
+      "puppeteerScript": "./lhci-auth.cjs"
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    },
+    "assert": {
+      "preset": "lighthouse:no-pwa"
+    },
+    "settings": {
+      "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+    }
+  }
+}

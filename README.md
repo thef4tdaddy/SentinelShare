@@ -39,13 +39,41 @@ It turns a manual chore into a "set it and forget it" background process.
 
 - **Backend**: Python (FastAPI), SQLModel (SQLite), APScheduler, imaplib.
 - **Frontend**: Svelte 5, Tailwind CSS, Vite, Lucide Icons.
-- **Deployment**: Ready for Heroku or Docker-based environments.
+- **Deployment**: Ready for Heroku, Docker, or Docker Compose environments.
 
 ## 📦 Installation & Setup
 
-### Prerequisites
+### Quick Start with Docker (Recommended)
 
-- Python 3.10+
+The easiest way to get started is with Docker. Choose between SQLite (simpler) or PostgreSQL (production-ready):
+
+**SQLite (Single Container, No Database Setup):**
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
+cp .env.example .env
+# Edit .env with your configuration
+docker compose -f docker-compose.sqlite.yml up -d
+```
+
+**PostgreSQL (Production-Ready):**
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
+cp .env.example .env
+# Edit .env with your configuration (including POSTGRES_PASSWORD)
+docker compose up -d
+```
+
+Visit `http://localhost:8000` and log in with your `DASHBOARD_PASSWORD`.
+
+**👉 See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.**
+
+### Manual Setup
+
+#### Prerequisites
+
+- Python 3.12+
 - Node.js 18+
 - IMAP-enabled email accounts (Gmail App Passwords recommended)
 
@@ -118,6 +146,12 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` (or your configured port) to access the dashboard.
+
+## 📚 Developer Documentation
+
+- **[Project Context & Rules](GEMINI.md)**: Essential guide for AI Agents and Developers, covering architecture, "gotchas", and best practices.
+- **[Workflows](WORKFLOWS.md)**: Inventory of CI/CD pipelines and future automation recommendations.
+- **[Copilot Agent](.github/agents/SentinelShareCopilotAgent.md)**: Configuration and system prompt for the `SentinelShareCopilotAgent`.
 
 ## 🤝 Contributing
 
