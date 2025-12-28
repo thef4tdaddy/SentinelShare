@@ -4,6 +4,10 @@ on:
     branches: ["main", "develop"]
   workflow_dispatch: # Allow manual trigger to register check
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   size:
     runs-on: ubuntu-latest
