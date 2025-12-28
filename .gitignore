@@ -46,3 +46,6 @@ htmlcov/
 # Database
 local_dev.db
 *.db
+
+# Docker
+data/
