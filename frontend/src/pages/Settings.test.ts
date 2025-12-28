@@ -152,7 +152,7 @@ describe('Settings Component', () => {
 		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
-			expect(toasts.trigger).toHaveBeenCalledWith('Poll triggered', 'info');
+			expect(toasts.trigger).toHaveBeenCalledWith('Poll triggered', 'success');
 		});
 	});
 

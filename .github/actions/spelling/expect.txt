@@ -11,6 +11,26 @@ ruff
 uvicorn
 vitest
 workflow
+workflows
+sentinelshare
+sqltypes
+tdaddy
+globalsettings
+gmail
+gmailpass
+gotchas
+healthcheck
+isready
+learningcandidate
+lhci
+lighthouserc
+lucide
+networkidle
+nohup
+postgresql
+processedemail
+processingrun
+gcc
 # CI & Technical
 Commitlint
 conventionalcommits
