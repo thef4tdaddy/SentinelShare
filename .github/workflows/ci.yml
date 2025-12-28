@@ -200,15 +200,15 @@ jobs:
 
             // Read all logs
             const logs = {
-              black: '',
-              ruff: '',
-              mypy: '',
+              black: 'black.log',
+              ruff: 'ruff.log',
+              mypy: 'mypy.log',
               pytest: 'backend_test.log',
-              prettier: '',
-              eslint: '',
-              svelte: '',
+              prettier: 'prettier.log',
+              eslint: 'eslint.log',
+              svelte: 'svelte.log',
               vitest: 'frontend_test.log',
-              e2e: 'e2e_test.log',
+              e2e: 'e2e_report.log',
               backend_setup: 'setup_backend_installer.log',
               frontend_setup: 'setup_frontend_installer.log'
             };
