@@ -2,16 +2,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Settings from './Settings.svelte';
 import * as api from '../lib/api';
+import { toasts } from '../lib/stores/toast';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
 	fetchJson: vi.fn()
 }));
 
+vi.mock('../lib/stores/toast', () => ({
+	toasts: {
+		trigger: vi.fn(),
+		subscribe: vi.fn(() => () => {}),
+		remove: vi.fn()
+	}
+}));
+
 describe('Settings Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -79,7 +87,7 @@ describe('Settings Component', () => {
 			expect(api.fetchJson).toHaveBeenCalledWith('/settings/trigger-poll', {
 				method: 'POST'
 			});
-			expect(window.alert).toHaveBeenCalledWith('Poll triggered successfully');
+			expect(toasts.trigger).toHaveBeenCalledWith('Poll triggered successfully', 'success');
 		});
 	});
 
@@ -144,7 +152,7 @@ describe('Settings Component', () => {
 		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Poll triggered');
+			expect(toasts.trigger).toHaveBeenCalledWith('Poll triggered', 'info');
 		});
 	});
 
@@ -176,7 +184,7 @@ describe('Settings Component', () => {
 		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error triggering poll');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error triggering poll', 'error');
 		});
 	});
 });

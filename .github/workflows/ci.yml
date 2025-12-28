@@ -38,9 +38,9 @@ jobs:
 
       - name: Install Backend Dependencies
         run: |
-          cd backend
           python -m venv venv
           source venv/bin/activate
+          cd backend
           pip install -r ../requirements.txt
           pip install pytest pytest-cov black ruff mypy
 
@@ -145,7 +145,7 @@ jobs:
         run: |
           # Start Backend in Background
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
 
           # Fix: Include root directory in PYTHONPATH so 'backend' module is found
