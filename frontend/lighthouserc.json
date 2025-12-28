@@ -1,9 +1,9 @@
 {
   "ci": {
     "collect": {
-      "staticDistDir": "./dist",
+      "staticDistDir": "./frontend/dist",
       "numberOfRuns": 3,
-      "puppeteerScript": "./lhci-auth.cjs"
+      "puppeteerScript": "./frontend/lhci-auth.cjs"
     },
     "upload": {
       "target": "temporary-public-storage"
