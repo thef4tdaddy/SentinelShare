@@ -34,4 +34,4 @@ jobs:
           configPath: "./frontend/lighthouserc.json"
           uploadArtifacts: true
           temporaryPublicStorage: true
-          artifactName: "lhci-report"
+          artifactName: "lhci_report"

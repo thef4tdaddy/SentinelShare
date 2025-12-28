@@ -15,7 +15,11 @@
         "offscreen-images": "off",
         "uses-webp-images": "off",
         "color-contrast": "off",
-        "tap-targets": "off"
+        "tap-targets": "off",
+        "maskable-icon": "off",
+        "valid-source-maps": "off",
+        "service-worker": "off",
+        "pwa-crossorigin": "off"
       }
     }
   }
