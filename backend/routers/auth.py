@@ -32,6 +32,7 @@ def logout(request: Request):
 
 @router.get("/me")
 def check_auth(request: Request):
-    if request.session.get("authenticated"):
+    # Allow access if authenticated OR if running in No-Auth Dev Mode
+    if request.session.get("authenticated") or not os.environ.get("DASHBOARD_PASSWORD"):
         return {"authenticated": True}
     raise HTTPException(status_code=401, detail="Not authenticated")

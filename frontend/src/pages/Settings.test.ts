@@ -170,8 +170,8 @@ describe('Settings Component', () => {
 		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
 		const confirmButton = buttons[1]; // The modal button is the second one
 
-		// Mock the trigger-poll API error
-		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
+		// Mock the trigger-poll API error - use mockRejectedValue to ensure it catches even if prior calls exhausted the chain
+		vi.mocked(api.fetchJson).mockRejectedValue(new Error('API Error'));
 
 		await fireEvent.click(confirmButton);
 

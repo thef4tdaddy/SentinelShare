@@ -7,6 +7,33 @@ import { fetchJson, API_BASE } from './api';
 describe('API Module', () => {
 	beforeEach(() => {
 		globalThis.fetch = vi.fn();
+
+		// Mock window.location.search
+		const searchParams = new URLSearchParams();
+		Object.defineProperty(window, 'location', {
+			value: {
+				search: searchParams.toString()
+			},
+			writable: true
+		});
+
+		// Mock localStorage
+		const localStorageMock = (function () {
+			let store: Record<string, string> = {};
+			return {
+				getItem: vi.fn((key: string) => store[key] || null),
+				setItem: vi.fn((key: string, value: string) => {
+					store[key] = value.toString();
+				}),
+				clear: vi.fn(() => {
+					store = {};
+				}),
+				removeItem: vi.fn((key: string) => {
+					delete store[key];
+				})
+			};
+		})();
+		Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 	});
 
 	afterEach(() => {

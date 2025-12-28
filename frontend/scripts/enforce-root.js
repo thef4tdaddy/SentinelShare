@@ -32,7 +32,14 @@ const ALLOWED = new Set([
   'vite.config.ts',
   'vitest.config.ts', // Added
   'coverage', // Vitest coverage
-  '.ruff_cache' // Backend linting cache
+  '.ruff_cache', // Backend linting cache
+  'CHANGELOG.md',
+  'lhci-auth.cjs',
+  'lighthouserc.json',
+  'playwright.config.ts',
+  'tests',
+  'playwright-report',
+  'test-results'
 ]);
 
 // Ignored patterns (e.g., temporary files)

@@ -51,12 +51,24 @@ async def auth_middleware(request: Request, call_next):
     ):
         return await call_next(request)
 
+    from backend.security import verify_dashboard_token
+
     # Check Authentication for protected API routes
     if not request.session.get("authenticated"):
         # If DASHBOARD_PASSWORD is not set, allow access (Backward compatibility/Dev mode)
         if not os.environ.get("DASHBOARD_PASSWORD"):
             return await call_next(request)
 
+        # Check for Token in Query Params
+        token = request.query_params.get("token")
+        if token:
+            print(f"DEBUG MIDDLEWARE: Token received: {token[:10]}...")
+            if verify_dashboard_token(token):
+                print("DEBUG MIDDLEWARE: Token Valid")
+                return await call_next(request)
+            print("DEBUG MIDDLEWARE: Token Invalid")
+        else:
+            print("DEBUG MIDDLEWARE: No Token Check")
         return JSONResponse({"detail": "Unauthorized"}, status_code=401)
 
     return await call_next(request)

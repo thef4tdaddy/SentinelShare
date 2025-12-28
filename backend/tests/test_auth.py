@@ -27,7 +27,8 @@ def test_check_auth(monkeypatch):
     assert response.json()["authenticated"] is True
 
 
-def test_check_auth_failure():
+def test_check_auth_failure(monkeypatch):
+    monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
     # Ensure fresh client or clear session
     fresh_client = TestClient(app)
     response = fresh_client.get("/api/auth/me")
