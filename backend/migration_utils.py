@@ -1,9 +1,10 @@
 import os
 
+from sqlalchemy import inspect
+
 from alembic import command
 from alembic.config import Config
 from backend.database import engine
-from sqlalchemy import inspect
 
 
 def run_migrations():
