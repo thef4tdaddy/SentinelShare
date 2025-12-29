@@ -1,39 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { fetchJson, API_BASE, api } from './api';
 
-// Explicitly type the global fetch mock
-// const fetchMock = globalThis.fetch as Mock;
+// Helper function to set up common mocks
+function setupMocks(searchQuery = '') {
+	globalThis.fetch = vi.fn();
+
+	// Mock window.location.search
+	Object.defineProperty(window, 'location', {
+		value: {
+			search: searchQuery
+		},
+		writable: true
+	});
+
+	// Mock localStorage
+	const localStorageMock = (function () {
+		let store: Record<string, string> = {};
+		return {
+			getItem: vi.fn((key: string) => store[key] || null),
+			setItem: vi.fn((key: string, value: string) => {
+				store[key] = value.toString();
+			}),
+			clear: vi.fn(() => {
+				store = {};
+			}),
+			removeItem: vi.fn((key: string) => {
+				delete store[key];
+			})
+		};
+	})();
+	Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+}
 
 describe('API Module', () => {
 	beforeEach(() => {
-		globalThis.fetch = vi.fn();
-
-		// Mock window.location.search
-		const searchParams = new URLSearchParams();
-		Object.defineProperty(window, 'location', {
-			value: {
-				search: searchParams.toString()
-			},
-			writable: true
-		});
-
-		// Mock localStorage
-		const localStorageMock = (function () {
-			let store: Record<string, string> = {};
-			return {
-				getItem: vi.fn((key: string) => store[key] || null),
-				setItem: vi.fn((key: string, value: string) => {
-					store[key] = value.toString();
-				}),
-				clear: vi.fn(() => {
-					store = {};
-				}),
-				removeItem: vi.fn((key: string) => {
-					delete store[key];
-				})
-			};
-		})();
-		Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+		setupMocks();
 	});
 
 	afterEach(() => {
@@ -170,33 +171,7 @@ describe('API Module', () => {
 
 describe('API Learning Methods', () => {
 	beforeEach(() => {
-		globalThis.fetch = vi.fn();
-
-		// Mock window.location.search
-		Object.defineProperty(window, 'location', {
-			value: {
-				search: ''
-			},
-			writable: true
-		});
-
-		// Mock localStorage
-		const localStorageMock = (function () {
-			let store: Record<string, string> = {};
-			return {
-				getItem: vi.fn((key: string) => store[key] || null),
-				setItem: vi.fn((key: string, value: string) => {
-					store[key] = value.toString();
-				}),
-				clear: vi.fn(() => {
-					store = {};
-				}),
-				removeItem: vi.fn((key: string) => {
-					delete store[key];
-				})
-			};
-		})();
-		Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+		setupMocks();
 	});
 
 	afterEach(() => {
