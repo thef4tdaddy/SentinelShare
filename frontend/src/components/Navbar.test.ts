@@ -85,7 +85,7 @@ describe('Navbar Component', () => {
 	it('calls onViewChange when preferences button is clicked', async () => {
 		const onViewChange = vi.fn();
 		render(Navbar, { currentView: 'dashboard', onViewChange });
-		const preferencesButton = screen.getAllByText(/^Preferences$|^Prefs$/)[0];
+		const preferencesButton = screen.getAllByText('Preferences')[0];
 		await fireEvent.click(preferencesButton);
 		expect(onViewChange).toHaveBeenCalledWith('preferences');
 	});
@@ -96,7 +96,10 @@ describe('Navbar Component', () => {
 		render(Navbar, { currentView: 'dashboard', onViewChange });
 		// Mobile navigation should have Home, History, Rules, Prefs, Settings
 		expect(screen.getByText('Home')).toBeTruthy();
+		expect(screen.getAllByText('History').length).toBeGreaterThanOrEqual(1);
+		expect(screen.getAllByText('Rules').length).toBeGreaterThanOrEqual(1);
 		expect(screen.getByText('Prefs')).toBeTruthy();
+		expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1);
 	});
 
 	it('calls onViewChange when mobile dashboard button is clicked', async () => {
