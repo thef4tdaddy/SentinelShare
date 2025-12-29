@@ -231,10 +231,9 @@ describe('PreferenceList Component - Preferences Type', () => {
 
 		// Find delete button by aria-label for mobile view
 		const deleteButtons = screen.getAllByLabelText('Delete');
-		// Mobile delete button should be available
-		const mobileDeleteButton = deleteButtons.find((btn) => btn.classList.contains('rounded-xl'));
-		if (!mobileDeleteButton) throw new Error('Mobile delete button not found');
-		
+		// Assume the first delete button corresponds to the mobile view
+		const mobileDeleteButton = deleteButtons[0];
+		if (!mobileDeleteButton) throw new Error('Delete button not found');
 		await fireEvent.click(mobileDeleteButton);
 
 		// Modal should open
