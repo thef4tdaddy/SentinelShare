@@ -166,32 +166,34 @@ describe('App Component', () => {
 		// Save original location
 		const originalLocation = window.location;
 		
-		// Mock URL with token parameter
-		delete (window as any).location;
-		window.location = { search: '?token=test-token-123' } as any;
+		try {
+			// Mock URL with token parameter
+			delete (window as any).location;
+			window.location = { search: '?token=test-token-123' } as any;
 
-		// Mock successful preferences load for SendeeDashboard
-		vi.mocked(api.fetchJson).mockResolvedValueOnce({
-			success: true,
-			email: 'test@example.com',
-			blocked: [],
-			allowed: []
-		});
+			// Mock successful preferences load for SendeeDashboard
+			vi.mocked(api.fetchJson).mockResolvedValueOnce({
+				success: true,
+				email: 'test@example.com',
+				blocked: [],
+				allowed: []
+			});
 
-		render(App);
+			render(App);
 
-		// Wait for SendeeDashboard to load (should show "Forwarding Preferences" title)
-		await waitFor(
-			() => {
-				expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
-				// SendeeDashboard should be rendered without Navbar
-				expect(screen.queryByAltText('SentinelShare Logo')).toBeNull();
-			},
-			{ timeout: 3000 }
-		);
-
-		// Restore original location
-		window.location = originalLocation;
+			// Wait for SendeeDashboard to load (should show "Forwarding Preferences" title)
+			await waitFor(
+				() => {
+					expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
+					// SendeeDashboard should be rendered without Navbar
+					expect(screen.queryByAltText('SentinelShare Logo')).toBeNull();
+				},
+				{ timeout: 3000 }
+			);
+		} finally {
+			// Restore original location
+			window.location = originalLocation;
+		}
 	});
 
 	it('switches to History view when history button is clicked', async () => {
