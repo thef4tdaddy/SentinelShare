@@ -1,7 +1,8 @@
 import importlib
 
-from backend.database import create_db_and_tables, get_session
 from sqlmodel import Session, SQLModel
+
+from backend.database import create_db_and_tables, get_session
 
 
 class TestDatabase:
@@ -22,6 +23,8 @@ class TestDatabase:
     def test_create_db_and_tables(self):
         """Test that create_db_and_tables creates tables without errors"""
         # This should not raise any exceptions
+        import backend.models  # noqa: F401
+
         create_db_and_tables()
 
         # Verify tables were created by checking metadata
@@ -82,11 +85,12 @@ class TestDatabase:
 
         # Reload the module to trigger the initialization code
         import backend.database
+
         importlib.reload(backend.database)
 
         # Import the database_url variable to verify line 9 was executed
         from backend.database import database_url, engine
-        
+
         # Verify that database_url was set from the environment variable (line 7)
         # and that the replacement happened (line 9)
         assert database_url is not None, "database_url was not set from DATABASE_URL"
@@ -94,7 +98,11 @@ class TestDatabase:
             f"Line 9 was not executed correctly: expected '{expected_url}', "
             f"got '{database_url}'. The postgres:// prefix should have been replaced."
         )
-        
+
         # Additional verification: the engine's URL should match
-        assert "postgresql://" in str(engine.url), "Engine URL does not contain postgresql://"
-        assert "postgres://" not in str(engine.url), "Engine URL still contains postgres:// (should be postgresql://)"
+        assert "postgresql://" in str(
+            engine.url
+        ), "Engine URL does not contain postgresql://"
+        assert "postgres://" not in str(
+            engine.url
+        ), "Engine URL still contains postgres:// (should be postgresql://)"
