@@ -47,8 +47,13 @@
 
 <main class="min-h-screen bg-gray-50 dark:bg-gray-900">
 	{#if currentView === 'loading'}
-		<div class="h-screen flex items-center justify-center">
+		<div
+			class="h-screen flex flex-col items-center justify-center"
+			role="status"
+			aria-live="polite"
+		>
 			<span class="loading loading-spinner loading-lg text-primary" aria-label="Loading"></span>
+			<h1 class="sr-only">SentinelShare Loading...</h1>
 		</div>
 	{:else if currentView === 'login'}
 		<Login onLoginSuccess={handleLoginSuccess} />
