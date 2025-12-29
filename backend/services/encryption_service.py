@@ -1,6 +1,7 @@
 import os
-from cryptography.fernet import Fernet
 from typing import Optional
+
+from cryptography.fernet import Fernet
 
 
 class EncryptionService:
@@ -23,8 +24,8 @@ class EncryptionService:
 
         # Always use hash-based derivation for consistency
         # This ensures the same plaintext encrypts the same way regardless of SECRET_KEY format
-        import hashlib
         import base64
+        import hashlib
 
         # Hash the secret to get consistent 32 bytes
         key_bytes = hashlib.sha256(secret_key.encode()).digest()
@@ -60,7 +61,7 @@ class EncryptionService:
 
         Returns:
             The decrypted plaintext string, or None if decryption fails
-            
+
         Raises:
             ValueError: If the encrypted text is invalid or key has changed
         """
@@ -77,4 +78,6 @@ class EncryptionService:
 
             logging.error(f"Failed to decrypt data: {type(e).__name__}")
             # Raise a more specific error for callers to handle
-            raise ValueError("Decryption failed - key may have changed or data is corrupted")
+            raise ValueError(
+                "Decryption failed - key may have changed or data is corrupted"
+            )

@@ -58,7 +58,9 @@ class TestEncryptionService:
         """Test that missing SECRET_KEY raises ValueError"""
         monkeypatch.delenv("SECRET_KEY", raising=False)
 
-        with pytest.raises(ValueError, match="SECRET_KEY environment variable is required"):
+        with pytest.raises(
+            ValueError, match="SECRET_KEY environment variable is required"
+        ):
             EncryptionService.encrypt("test")
 
     def test_encrypt_special_characters(self, monkeypatch):

@@ -237,7 +237,8 @@ def test_get_email_accounts_empty(session: Session):
 
 def test_create_email_account(session: Session, monkeypatch):
     """Test creating a new email account"""
-    from backend.routers.settings import EmailAccountCreate, create_email_account
+    from backend.routers.settings import (EmailAccountCreate,
+                                          create_email_account)
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
