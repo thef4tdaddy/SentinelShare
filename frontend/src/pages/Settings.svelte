@@ -97,7 +97,9 @@
 <div class="mb-8 flex items-center justify-between">
 	<div>
 		<h2 class="text-2xl font-bold text-text-main mb-1 dark:text-text-main-dark">Settings</h2>
-		<p class="text-text-secondary text-sm dark:text-text-secondary-dark">Manage detection rules and preferences.</p>
+		<p class="text-text-secondary text-sm dark:text-text-secondary-dark">
+			Manage detection rules and preferences.
+		</p>
 	</div>
 
 	<div class="flex gap-2">
@@ -155,8 +157,17 @@
 						: 'border-l-4 border-l-red-500 dark:border-l-red-400'}"
 				>
 					<div class="overflow-hidden">
-						<p class="font-medium text-text-main truncate dark:text-text-main-dark" title={res.account}>{res.account}</p>
-						<p class="text-xs {res.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">
+						<p
+							class="font-medium text-text-main truncate dark:text-text-main-dark"
+							title={res.account}
+						>
+							{res.account}
+						</p>
+						<p
+							class="text-xs {res.success
+								? 'text-green-600 dark:text-green-400'
+								: 'text-red-600 dark:text-red-400'}"
+						>
 							{res.success ? 'Connected' : 'Connection Failed'}
 						</p>
 					</div>
@@ -196,7 +207,9 @@
 	<section>
 		<div class="flex items-center gap-2 mb-4">
 			<Sliders size={20} class="text-text-secondary dark:text-text-secondary-dark" />
-			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">Detection Preferences</h3>
+			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">
+				Detection Preferences
+			</h3>
 		</div>
 		<PreferenceList type="preferences" />
 	</section>
