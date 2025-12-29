@@ -10,9 +10,9 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "eslint .",
     "format": "prettier --write 'src/**/*.{ts,js,svelte,css}'",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "coverage": "vitest run --coverage",
+    "test": "TZ=UTC vitest",
+    "test:run": "TZ=UTC vitest run",
+    "coverage": "TZ=UTC vitest run --coverage",
     "predev": "node scripts/enforce-root.js",
     "prepare": "husky"
   },

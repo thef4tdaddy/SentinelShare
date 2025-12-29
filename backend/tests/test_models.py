@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-
 from backend.models import (GlobalSettings, ManualRule, Preference,
                             ProcessedEmail, Stats)
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
 
 
 @pytest.fixture(name="session")

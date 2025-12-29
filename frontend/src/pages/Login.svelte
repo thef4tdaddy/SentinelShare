@@ -43,9 +43,13 @@
 </script>
 
 <div class="h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-	<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+	<div
+		class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-gray-100 dark:bg-gray-800 dark:border-gray-700"
+	>
 		<div class="flex flex-col items-center mb-8">
-			<div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 dark:bg-blue-900/50">
+			<div
+				class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 dark:bg-blue-900/50"
+			>
 				<Lock class="w-8 h-8 text-primary dark:text-primary-dark" />
 			</div>
 			<h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">SentinelShare</h1>
@@ -54,7 +58,10 @@
 
 		<form onsubmit={handleLogin} class="space-y-4">
 			<div>
-				<label for="password" class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Password</label>
+				<label
+					for="password"
+					class="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">Password</label
+				>
 				<input
 					type="password"
 					id="password"
@@ -66,7 +73,9 @@
 			</div>
 
 			{#if error}
-				<div class="text-red-500 text-sm text-center bg-red-50 p-2 rounded dark:bg-red-900/30 dark:text-red-300">
+				<div
+					class="text-red-500 text-sm text-center bg-red-50 p-2 rounded dark:bg-red-900/30 dark:text-red-300"
+				>
 					{error}
 				</div>
 			{/if}
