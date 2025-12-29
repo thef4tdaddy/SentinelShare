@@ -153,6 +153,9 @@ jobs:
           source ../venv/bin/activate
           set -o pipefail
 
+          # Generate a secure key for testing, ensuring consistency between Backend and Playwright
+          export SECRET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+
           # Fix: Include root directory in PYTHONPATH so 'backend' module is found
           export PYTHONPATH=$PYTHONPATH:$(pwd)/..
 
