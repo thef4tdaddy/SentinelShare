@@ -27,7 +27,7 @@ class EmailService:
 
             with Session(engine) as session:
                 db_accounts = session.exec(
-                    select(EmailAccount).where(EmailAccount.is_active == True)
+                    select(EmailAccount).where(EmailAccount.is_active)
                 ).all()
 
                 for acc in db_accounts:

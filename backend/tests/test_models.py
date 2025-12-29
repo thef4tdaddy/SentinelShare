@@ -365,7 +365,7 @@ class TestEmailAccount:
         session.commit()
 
         active_accounts = session.exec(
-            select(EmailAccount).where(EmailAccount.is_active == True)
+            select(EmailAccount).where(EmailAccount.is_active)
         ).all()
 
         assert len(active_accounts) == 2
