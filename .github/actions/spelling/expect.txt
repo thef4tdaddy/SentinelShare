@@ -261,6 +261,7 @@ lookback
 lucide
 lyft
 manualrule
+maxsplit
 mcdonalds
 mdsvex
 microsoft
@@ -323,6 +324,7 @@ testid
 testpass
 testpaths
 thef
+tokenizes
 treosh
 tseslint
 uber
