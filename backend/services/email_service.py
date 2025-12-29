@@ -209,6 +209,7 @@ class EmailService:
             mail.login(username, password)
             mail.select("inbox")
 
+            custom_criterion_provided = search_criterion is not None
             if search_criterion is None:
                 # Default to last N days
                 since_date = (datetime.now() - timedelta(days=lookback_days)).strftime(
@@ -253,7 +254,7 @@ class EmailService:
                 email_ids = email_ids[-batch_limit:]
 
             # Log appropriately based on whether custom criterion was used
-            if search_criterion is None:
+            if not custom_criterion_provided:
                 print(
                     f"📬 Recent emails found (last {lookback_days} days): {len(email_ids)}"
                 )

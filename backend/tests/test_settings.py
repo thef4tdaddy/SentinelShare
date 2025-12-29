@@ -70,9 +70,11 @@ def test_update_preference(session: Session):
 
 
 def test_email_template_endpoints(session: Session):
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          get_email_template,
-                                          update_email_template)
+    from backend.routers.settings import (
+        EmailTemplateUpdate,
+        get_email_template,
+        update_email_template,
+    )
 
     # Default template
     tpl = get_email_template(session=session)
@@ -111,8 +113,11 @@ def test_trigger_poll(session: Session):
 
 def test_delete_preference_success(session: Session):
     """Test successfully deleting a preference (lines 33-35)"""
-    from backend.routers.settings import (create_preference, delete_preference,
-                                          get_preferences)
+    from backend.routers.settings import (
+        create_preference,
+        delete_preference,
+        get_preferences,
+    )
 
     # Create a preference first
     pref = Preference(item="test_delete", type="Blocked Category")
@@ -151,8 +156,7 @@ def test_delete_rule_not_found(session: Session):
 
 def test_update_email_template_empty(session: Session):
     """Test updating email template with empty string raises 400"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
     from fastapi import HTTPException
 
     # Test with empty string
@@ -170,8 +174,7 @@ def test_update_email_template_empty(session: Session):
 
 def test_update_email_template_too_long(session: Session):
     """Test updating email template with too long content raises 400"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
     from fastapi import HTTPException
 
     # Create a template longer than 10,000 characters
@@ -187,8 +190,7 @@ def test_update_email_template_too_long(session: Session):
 
 def test_update_email_template_create_new(session: Session):
     """Test creating a new email template setting (lines 110-115)"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # First time creating the template - should hit the else branch on lines 110-115
     result = update_email_template(
@@ -202,9 +204,11 @@ def test_update_email_template_create_new(session: Session):
 
 def test_update_email_template_existing(session: Session):
     """Test updating an existing email template setting (line 108)"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          get_email_template,
-                                          update_email_template)
+    from backend.routers.settings import (
+        EmailTemplateUpdate,
+        get_email_template,
+        update_email_template,
+    )
 
     # First, create a template
     update_email_template(
@@ -237,8 +241,7 @@ def test_get_email_accounts_empty(session: Session):
 
 def test_create_email_account(session: Session, monkeypatch):
     """Test creating a new email account"""
-    from backend.routers.settings import (EmailAccountCreate,
-                                          create_email_account)
+    from backend.routers.settings import EmailAccountCreate, create_email_account
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
@@ -262,8 +265,7 @@ def test_create_email_account(session: Session, monkeypatch):
 
 def test_create_email_account_duplicate(session: Session, monkeypatch):
     """Test creating a duplicate email account raises 400"""
-    from backend.routers.settings import (EmailAccountCreate,
-                                          create_email_account)
+    from backend.routers.settings import EmailAccountCreate, create_email_account
     from fastapi import HTTPException
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
@@ -289,10 +291,12 @@ def test_create_email_account_duplicate(session: Session, monkeypatch):
 
 def test_delete_email_account(session: Session, monkeypatch):
     """Test deleting an email account"""
-    from backend.routers.settings import (EmailAccountCreate,
-                                          create_email_account,
-                                          delete_email_account,
-                                          get_email_accounts)
+    from backend.routers.settings import (
+        EmailAccountCreate,
+        create_email_account,
+        delete_email_account,
+        get_email_accounts,
+    )
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
@@ -329,9 +333,11 @@ def test_test_email_account(session: Session, monkeypatch):
     """Test the test connection endpoint for email account"""
     from unittest.mock import patch
 
-    from backend.routers.settings import (EmailAccountCreate,
-                                          create_email_account,
-                                          test_email_account)
+    from backend.routers.settings import (
+        EmailAccountCreate,
+        create_email_account,
+        test_email_account,
+    )
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
