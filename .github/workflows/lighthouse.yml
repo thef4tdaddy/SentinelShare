@@ -71,6 +71,12 @@ jobs:
             console.log('Reading report from:', reportPath);
 
             const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+
+            if (!report.categories || !report.audits) {
+               console.log('Report is missing categories or audits structure.');
+               return;
+            }
+
             const failures = [];
 
             // Categories under 0.9

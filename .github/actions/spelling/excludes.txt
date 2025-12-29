@@ -1,3 +1,13 @@
 package-lock.json
 frontend/package-lock.json
 **/package-lock.json
+**/*.png
+**/*.ico
+**/*.jpg
+**/*.svg
+**/*.min.js
+**/*.map
+**/dist/**
+**/node_modules/**
+__pycache__/
+*.pyc

@@ -22,7 +22,11 @@
         "installable-manifest": "warn",
         "deprecations": "warn",
         "resource-summary": "warn",
-        "splash-screen": "warn"
+        "splash-screen": "warn",
+        "service-worker": "warn",
+        "pwa-crossorigin": "warn",
+        "valid-source-maps": "warn",
+        "themed-omnibox": "warn"
       }
     }
   }

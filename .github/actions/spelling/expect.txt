@@ -1,6 +1,5 @@
 Bri
 CBTd
-Commitlint
 Hashtag
 Lego
 MDi
@@ -15,7 +14,6 @@ Procfile
 Roboto
 SEO
 Segoe
-SentinelShare
 Stmts
 Suject
 Thu
@@ -27,7 +25,6 @@ WJq
 WORKDIR
 Wtwb
 XCircle
-XSS
 XWuf
 YNAB
 ZWN
