@@ -238,7 +238,7 @@ describe('SendeeDashboard Component', () => {
 		const xButton = allowedSection?.querySelector('button');
 
 		expect(xButton).toBeTruthy();
-		
+
 		if (xButton) {
 			await fireEvent.click(xButton);
 
@@ -269,7 +269,7 @@ describe('SendeeDashboard Component', () => {
 		// Find all buttons and get the one in the blocked section
 		const buttons = container.querySelectorAll('button');
 		let blockedButton: Element | null = null;
-		
+
 		// Find the button that's within a badge containing 'spam@example.com'
 		buttons.forEach((button) => {
 			const badge = button.closest('.badge');
@@ -612,9 +612,9 @@ describe('SendeeDashboard Component', () => {
 
 		// Find and click the X button to remove from blocked
 		const badges = Array.from(container.querySelectorAll('.badge'));
-		const blockedBadge = badges.find(badge => 
-			badge.textContent?.includes('spam@example.com') && 
-			badge.className.includes('bg-danger')
+		const blockedBadge = badges.find(
+			(badge) =>
+				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-danger')
 		);
 		const xButton = blockedBadge?.querySelector('button');
 
@@ -657,9 +657,9 @@ describe('SendeeDashboard Component', () => {
 
 		// Find X button on blocked sender to remove it
 		const badges = Array.from(container.querySelectorAll('.badge'));
-		const blockedBadge = badges.find(badge => 
-			badge.textContent?.includes('spam@example.com') && 
-			badge.className.includes('bg-danger')
+		const blockedBadge = badges.find(
+			(badge) =>
+				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-danger')
 		);
 		const xButton = blockedBadge?.querySelector('button');
 

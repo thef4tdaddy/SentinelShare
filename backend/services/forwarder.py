@@ -7,13 +7,12 @@ from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
-from sqlmodel import Session, select
-
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import engine
 from backend.models import GlobalSettings
 from backend.security import generate_dashboard_token, generate_hmac_signature
 from backend.services.email_service import EmailService
+from sqlmodel import Session, select
 
 
 def format_email_date(date_input) -> str:

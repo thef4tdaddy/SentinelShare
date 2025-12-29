@@ -2,11 +2,10 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
-from sqlmodel.pool import StaticPool
-
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.routers import history
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
 
 # Test constants
 MOCK_IMAP_CREDENTIALS = {
@@ -341,9 +340,8 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_from_format(self, session: Session, sample_emails):
         """Test that invalid date_from format returns 400 error"""
-        from fastapi import HTTPException
-
         from backend.routers.history import get_email_history
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -355,9 +353,8 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_to_format(self, session: Session, sample_emails):
         """Test that invalid date_to format returns 400 error"""
-        from fastapi import HTTPException
-
         from backend.routers.history import get_email_history
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -395,9 +392,8 @@ class TestHistoryDateFiltering:
 
     def test_stats_with_invalid_date(self, session: Session, sample_emails):
         """Test that stats endpoint returns 400 for invalid dates"""
-        from fastapi import HTTPException
-
         from backend.routers.history import get_history_stats
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             get_history_stats(date_from="bad-date", session=session)
@@ -706,9 +702,8 @@ class TestHistoryReprocess:
 
     def test_reprocess_email_not_found(self, session: Session):
         """Test reprocessing a non-existent email"""
-        from fastapi import HTTPException
-
         from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             reprocess_email(email_id=99999, session=session)
@@ -731,9 +726,8 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from fastapi import HTTPException
-
         from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
 
         assert email.id is not None
         with patch(
@@ -761,9 +755,8 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from fastapi import HTTPException
-
         from backend.routers.history import reprocess_email
+        from fastapi import HTTPException
 
         assert email.id is not None
         with patch(
@@ -819,9 +812,8 @@ class TestHistoryReprocess:
 
     def test_submit_feedback_email_not_found(self, session: Session):
         """Test submitting feedback for a non-existent email"""
-        from fastapi import HTTPException
-
         from backend.routers.history import submit_feedback
+        from fastapi import HTTPException
 
         with pytest.raises(HTTPException) as exc_info:
             submit_feedback(email_id=99999, is_receipt=True, session=session)

@@ -1,6 +1,5 @@
-from sqlmodel import Session, SQLModel
-
 from backend.database import create_db_and_tables, get_session
+from sqlmodel import Session, SQLModel
 
 
 class TestDatabase:
