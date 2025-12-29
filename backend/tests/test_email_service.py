@@ -776,3 +776,91 @@ class TestEmailService:
         result = EmailService.fetch_email_by_id("user", "pass", "<attach@test.com>")
         assert result is not None
         assert result["body"] == "Text content"
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_fetch_emails_multipart_get_payload_exception(self, mock_imap):
+        """Test exception handling when multipart email get_payload raises an error"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+        mock_mail.select.return_value = ("OK", [])
+        mock_mail.search.return_value = ("OK", [b"1"])
+
+        # Patch message_from_bytes to return a mocked message
+        with patch(
+            "backend.services.email_service.email.message_from_bytes"
+        ) as mock_message_from_bytes:
+            # Create a real multipart message structure but mock the problematic part
+            mock_msg = Mock()
+            mock_msg.get.side_effect = lambda key: {
+                "Subject": "Test Subject",
+                "From": "test@test.com",
+                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                "Message-ID": "<test@test.com>",
+                "Reply-To": None,
+            }.get(key)
+            mock_msg.__getitem__ = lambda self, key: {
+                "Subject": "Test Subject",
+            }.get(key)
+            mock_msg.is_multipart.return_value = True
+
+            # Create a mock part that raises exception on get_payload(decode=True)
+            mock_part = Mock()
+            mock_part.get_content_type.return_value = "text/plain"
+            mock_part.get.return_value = None  # Content-Disposition
+            mock_part.get_payload.side_effect = Exception("Payload decode error")
+
+            # Make walk return the message itself and our bad part
+            mock_msg.walk.return_value = [mock_msg, mock_part]
+
+            mock_message_from_bytes.return_value = mock_msg
+            mock_mail.fetch.return_value = ("OK", [(b"", b"raw-bytes")])
+
+            emails = EmailService.fetch_recent_emails("user@test.com", "pass")
+            # Should handle the exception with continue and still return the email
+            assert len(emails) == 1
+            assert emails[0]["subject"] == "Test Subject"
+            assert emails[0]["from"] == "test@test.com"
+            assert emails[0]["body"] == ""
+
+    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    def test_fetch_emails_non_multipart_get_payload_exception(self, mock_imap):
+        """Test exception handling when non-multipart email get_payload raises an error"""
+        mock_mail = Mock()
+        mock_imap.return_value = mock_mail
+        mock_mail.login.return_value = ("OK", [])
+        mock_mail.select.return_value = ("OK", [])
+        mock_mail.search.return_value = ("OK", [b"1"])
+
+        # Patch message_from_bytes to return a message that raises on get_payload
+        with patch(
+            "backend.services.email_service.email.message_from_bytes"
+        ) as mock_message_from_bytes:
+            mock_msg = Mock()
+            mock_msg.get.side_effect = lambda key: {
+                "Subject": "Test Subject",
+                "From": "test@test.com",
+                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                "Message-ID": "<test@test.com>",
+                "Reply-To": None,
+            }.get(key)
+            mock_msg.__getitem__ = lambda self, key: {
+                "Subject": "Test Subject",
+                "From": "test@test.com",
+                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                "Message-ID": "<test@test.com>",
+            }.get(key)
+            mock_msg.is_multipart.return_value = False
+            mock_msg.get_content_type.return_value = "text/plain"
+            mock_msg.get_payload.side_effect = Exception("Non-multipart payload error")
+
+            mock_message_from_bytes.return_value = mock_msg
+            mock_mail.fetch.return_value = ("OK", [(b"", b"raw-bytes")])
+
+            emails = EmailService.fetch_recent_emails("user@test.com", "pass")
+
+        # Should handle the exception with logging and still return the email with empty body
+        assert len(emails) == 1
+        assert emails[0]["subject"] == "Test Subject"
+        assert emails[0]["from"] == "test@test.com"
+        assert emails[0]["body"] == ""
