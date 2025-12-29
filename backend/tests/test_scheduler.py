@@ -1031,3 +1031,136 @@ def test_process_emails_outer_exception(
     finally:
         # Restore original engine
         scheduler_module.engine = original_engine
+
+
+@patch.dict(
+    os.environ,
+    {
+        "POLL_INTERVAL": "60",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",
+        "GMAIL_EMAIL": "test@example.com",
+        "GMAIL_PASSWORD": "password",
+    },
+)
+@patch("backend.services.scheduler.engine")
+def test_process_emails_scheduler_overlap_detection(mock_engine_patch, engine):
+    """Test that process_emails skips execution when an active run is detected"""
+    # Use our test engine in the scheduler module
+    original_engine = scheduler_module.engine
+    scheduler_module.engine = engine
+
+    try:
+        # Create an active run that started recently (within 5 minutes)
+        with Session(engine) as session:
+            active_run = ProcessingRun(
+                started_at=datetime.now(timezone.utc) - timedelta(minutes=2),
+                check_interval_minutes=60,
+                status="running",
+            )
+            session.add(active_run)
+            session.commit()
+            session.refresh(active_run)
+            active_run_id = active_run.id
+
+        # Call process_emails - should detect overlap and skip
+        process_emails()
+
+        # Verify that two ProcessingRuns exist
+        with Session(engine) as session:
+            runs = session.exec(select(ProcessingRun)).all()
+            assert len(runs) == 2
+
+            # Find the skipped run (should be the second one)
+            skipped_runs = [r for r in runs if r.status == "skipped"]
+            assert len(skipped_runs) == 1
+            skipped_run = skipped_runs[0]
+            
+            # Verify the skipped run has correct status and message
+            assert skipped_run.status == "skipped"
+            assert f"Overlap with Run {active_run_id}" in skipped_run.error_message
+            assert skipped_run.completed_at is not None
+    finally:
+        # Restore original engine
+        scheduler_module.engine = original_engine
+
+
+@patch.dict(
+    os.environ,
+    {
+        "POLL_INTERVAL": "60",
+        "WIFE_EMAIL": "wife@example.com",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",
+        "GMAIL_EMAIL": "test@example.com",
+        "GMAIL_PASSWORD": "password",
+    },
+)
+@patch("backend.services.scheduler.engine")
+@patch("backend.services.scheduler.EmailService.fetch_recent_emails")
+@patch("backend.services.scheduler.Session")
+def test_process_emails_overlap_check_exception_handling(
+    mock_session_class, mock_fetch, mock_engine_patch, engine
+):
+    """Test that exceptions during overlap check are handled gracefully"""
+    # Use our test engine in the scheduler module
+    original_engine = scheduler_module.engine
+    scheduler_module.engine = engine
+
+    try:
+        # Mock fetch to return emails
+        mock_emails = [
+            {
+                "message_id": "msg1",
+                "subject": "Test email",
+                "from": "sender@example.com",
+                "body": "Test body",
+            }
+        ]
+        mock_fetch.return_value = mock_emails
+
+        # Create mock sessions to track calls
+        call_count = [0]
+
+        def create_mock_session(*args, **kwargs):
+            call_count[0] += 1
+            mock_session = MagicMock()
+            
+            # First session: creating the run (should work)
+            if call_count[0] == 1:
+                real_session = Session(engine)
+                mock_session.__enter__ = MagicMock(return_value=real_session)
+                mock_session.__exit__ = MagicMock(
+                    side_effect=lambda *args: real_session.__exit__(*args)
+                )
+            # Second session: overlap check (should fail)
+            elif call_count[0] == 2:
+                mock_session.__enter__ = MagicMock(
+                    side_effect=Exception("Database error during overlap check")
+                )
+                mock_session.__exit__ = MagicMock(return_value=False)
+            # Remaining sessions: should work normally
+            else:
+                real_session = Session(engine)
+                mock_session.__enter__ = MagicMock(return_value=real_session)
+                mock_session.__exit__ = MagicMock(
+                    side_effect=lambda *args: real_session.__exit__(*args)
+                )
+            
+            return mock_session
+
+        mock_session_class.side_effect = create_mock_session
+
+        # Call process_emails - should handle exception and continue
+        process_emails()
+
+        # Verify that a ProcessingRun was still created and completed
+        # (exception in overlap check should be caught and processing continues)
+        with Session(engine) as session:
+            runs = session.exec(select(ProcessingRun)).all()
+            assert len(runs) == 1
+            run = runs[0]
+            # Processing should complete despite overlap check failure
+            assert run.status == "completed"
+            assert run.emails_checked == 1
+    finally:
+        # Restore original engine
+        scheduler_module.engine = original_engine
