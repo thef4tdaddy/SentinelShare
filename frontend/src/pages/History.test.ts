@@ -552,7 +552,7 @@ describe('History Component', () => {
 			.mockResolvedValueOnce(mockStats)
 			.mockResolvedValueOnce(mockRuns);
 
-		const { container } = render(History);
+		render(History);
 
 		// Wait for initial load
 		await waitFor(() => {
