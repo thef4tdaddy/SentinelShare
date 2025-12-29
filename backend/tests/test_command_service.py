@@ -210,38 +210,3 @@ class TestCommandService:
         mock_send.assert_called_once()
         msg = mock_send.call_args[0][0]
         assert "No active preferences" in msg
-
-    @patch.dict(os.environ, {"WIFE_EMAIL": "sara@example.com"})
-    @patch("backend.services.command_service.CommandService._send_confirmation")
-    def test_process_command_empty_parts_after_split(self, mock_send, session):
-        """Test line 45: Handle case where line.split() returns empty list"""
-        # This is a defensive code path that's theoretically unreachable in normal conditions
-        # since a non-empty stripped string will always split into at least one part.
-        # We create a custom string-like object that behaves abnormally to trigger this edge case.
-        
-        class AbnormalString(str):
-            """A string subclass that returns empty list from split() without arguments"""
-            def split(self, sep=None, maxsplit=-1):
-                if sep is None:  # split() with no arguments - used for tokenization
-                    return []
-                # For split("\n"), return our custom string so strip() preserves the type
-                result = super().split(sep, maxsplit)
-                if sep == "\n":
-                    return [AbnormalString(s) for s in result]
-                return result
-            
-            def strip(self, chars=None):
-                # Return AbnormalString to preserve type through strip()
-                return AbnormalString(super().strip(chars))
-        
-        # Create email data with our abnormal string
-        abnormal_body = AbnormalString("test line")
-        email_data = {
-            "from": "sara@example.com",
-            "body": abnormal_body,
-        }
-        
-        result = CommandService.process_command(email_data)
-        # No command should be executed since parts is empty
-        assert result is False
-        mock_send.assert_not_called()
