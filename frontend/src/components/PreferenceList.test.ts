@@ -366,4 +366,33 @@ describe('PreferenceList Component - Rules Type', () => {
 			expect(screen.getByText(/Are you sure you want to delete this rule/i)).toBeTruthy();
 		});
 	});
+
+	it('closes dialog with Escape key', async () => {
+		const mockRules = [
+			{ id: 1, email_pattern: '@amazon.com', subject_pattern: 'order', purpose: 'Amazon orders' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockRules);
+
+		render(PreferenceList, { type: 'rules' });
+
+		await waitFor(() => {
+			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
+		});
+
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+		});
+
+		// Press Escape to close
+		await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+		// Dialog should close via the binding
+		await waitFor(() => {
+			expect(screen.queryByText('Confirm Delete')).toBeFalsy();
+		});
+	});
 });
