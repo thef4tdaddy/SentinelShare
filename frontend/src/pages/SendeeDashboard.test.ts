@@ -604,8 +604,12 @@ describe('SendeeDashboard Component', () => {
 			expect(screen.getByText('spam@example.com')).toBeTruthy();
 		});
 
-		// Find and click the X button
-		const blockedBadge = container.querySelector('.bg-danger\\/10.text-danger');
+		// Find and click the X button - use a more robust selector
+		const badges = Array.from(container.querySelectorAll('.badge'));
+		const blockedBadge = badges.find(badge => 
+			badge.textContent?.includes('spam@example.com') && 
+			badge.className.includes('bg-danger')
+		);
 		const xButton = blockedBadge?.querySelector('button');
 
 		if (xButton) {
@@ -668,8 +672,12 @@ describe('SendeeDashboard Component', () => {
 			expect(screen.getByText('spam@example.com')).toBeTruthy();
 		});
 
-		// Find X button on blocked sender
-		const blockedBadge = container.querySelector('.bg-danger\\/10.text-danger');
+		// Find X button on blocked sender - use a more robust selector
+		const badges = Array.from(container.querySelectorAll('.badge'));
+		const blockedBadge = badges.find(badge => 
+			badge.textContent?.includes('spam@example.com') && 
+			badge.className.includes('bg-danger')
+		);
 		const xButton = blockedBadge?.querySelector('button');
 
 		if (xButton) {
