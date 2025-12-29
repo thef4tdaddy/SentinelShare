@@ -187,4 +187,243 @@ describe('Settings Component', () => {
 			expect(toasts.trigger).toHaveBeenCalledWith('Error triggering poll', 'error');
 		});
 	});
+
+	it('reprocessAllIgnored cancels when user declines confirmation', async () => {
+		// Mock window.confirm to return false
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('Reprocess Ignored')).toBeTruthy();
+		});
+
+		// Clear the calls from mount
+		vi.clearAllMocks();
+
+		const reprocessButton = screen.getByText('Reprocess Ignored');
+		await fireEvent.click(reprocessButton);
+
+		// Confirm was called
+		expect(confirmSpy).toHaveBeenCalledWith('Reprocess all ignored emails from last 24h?');
+
+		// API should not be called since user declined
+		expect(api.fetchJson).not.toHaveBeenCalled();
+
+		confirmSpy.mockRestore();
+	});
+
+	it('reprocessAllIgnored successfully reprocesses emails', async () => {
+		// Mock window.confirm to return true
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('Reprocess Ignored')).toBeTruthy();
+		});
+
+		const reprocessButton = screen.getByText('Reprocess Ignored');
+
+		// Mock the reprocess response
+		const mockResponse = { message: 'Successfully reprocessed 5 emails' };
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResponse);
+
+		await fireEvent.click(reprocessButton);
+
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith('/api/history/reprocess-all-ignored', {
+				method: 'POST'
+			});
+			expect(toasts.trigger).toHaveBeenCalledWith('Successfully reprocessed 5 emails', 'success');
+		});
+
+		confirmSpy.mockRestore();
+	});
+
+	it('reprocessAllIgnored handles error gracefully', async () => {
+		// Mock window.confirm to return true
+		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('Reprocess Ignored')).toBeTruthy();
+		});
+
+		const reprocessButton = screen.getByText('Reprocess Ignored');
+
+		// Mock API error
+		vi.mocked(api.fetchJson).mockRejectedValue(new Error('API Error'));
+
+		await fireEvent.click(reprocessButton);
+
+		await waitFor(() => {
+			expect(toasts.trigger).toHaveBeenCalledWith('Failed to reprocess emails', 'error');
+		});
+
+		confirmSpy.mockRestore();
+	});
+
+	it('checkConnections handles error and logs to console', async () => {
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+		// Mock initial checkConnections to fail
+		const error = new Error('Connection failed');
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockRejectedValueOnce(error); // checkConnections fails
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to test connections', error);
+		});
+
+		consoleErrorSpy.mockRestore();
+	});
+
+	it('renders Test Connections button and triggers check on click', async () => {
+		// Mock all API calls that happen on mount
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('Test Connections')).toBeTruthy();
+		});
+
+		// Clear the calls from mount
+		vi.clearAllMocks();
+
+		const testButton = screen.getByText('Test Connections');
+
+		// Mock the response for manual test
+		const mockResults = [
+			{ account: 'test@example.com', success: true },
+			{ account: 'test2@example.com', success: false, error: 'Auth failed' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResults);
+
+		await fireEvent.click(testButton);
+
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith('/settings/test-connections', {
+				method: 'POST'
+			});
+		});
+	});
+
+	it('displays successful connection with green indicator', async () => {
+		// Mock all API calls with successful connection
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([
+				{ account: 'test@example.com', success: true }
+			]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('test@example.com')).toBeTruthy();
+			expect(screen.getByText('Connected')).toBeTruthy();
+		});
+
+		// Check for green styling classes
+		const accountCard = screen.getByText('test@example.com').closest('div.card');
+		expect(accountCard?.classList.contains('border-l-green-500')).toBe(true);
+	});
+
+	it('displays failed connection with red indicator and error tooltip', async () => {
+		// Mock all API calls with failed connection
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([
+				{ account: 'test2@example.com', success: false, error: 'Authentication failed' }
+			]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('test2@example.com')).toBeTruthy();
+			expect(screen.getByText('Connection Failed')).toBeTruthy();
+			expect(screen.getByText('Authentication failed')).toBeTruthy();
+		});
+
+		// Check for red styling classes
+		const accountCard = screen.getByText('test2@example.com').closest('div.card');
+		expect(accountCard?.classList.contains('border-l-red-500')).toBe(true);
+	});
+
+	it('displays multiple connection results with mixed success/failure states', async () => {
+		// Mock all API calls with mixed connection results
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([
+				{ account: 'success@example.com', success: true },
+				{ account: 'failed@example.com', success: false, error: 'Timeout' },
+				{ account: 'another@example.com', success: true }
+			]); // checkConnections
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('success@example.com')).toBeTruthy();
+			expect(screen.getByText('failed@example.com')).toBeTruthy();
+			expect(screen.getByText('another@example.com')).toBeTruthy();
+		});
+
+		// Check that both "Connected" and "Connection Failed" appear
+		expect(screen.getAllByText('Connected').length).toBe(2);
+		expect(screen.getByText('Connection Failed')).toBeTruthy();
+		expect(screen.getByText('Timeout')).toBeTruthy();
+	});
+
+	it('displays default message when no connection results exist', async () => {
+		// Mock all API calls with empty connection results
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections - empty array
+
+		render(Settings);
+
+		await waitFor(() => {
+			expect(screen.getByText('No accounts configured or check pending...')).toBeTruthy();
+		});
+	});
 });
