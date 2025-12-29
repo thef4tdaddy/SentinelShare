@@ -81,7 +81,9 @@
 		</div>
 
 		{#if loading}
-			<div class="text-center py-8 text-text-secondary dark:text-text-secondary-dark">Loading template...</div>
+			<div class="text-center py-8 text-text-secondary dark:text-text-secondary-dark">
+				Loading template...
+			</div>
 		{:else}
 			<div class="space-y-4">
 				<!-- Template Editor -->

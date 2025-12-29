@@ -108,9 +108,13 @@
 			tabindex="-1"
 		>
 			{#if title || showCloseButton}
-				<div class="flex items-center justify-between p-6 pb-4 border-b border-border dark:border-border-dark">
+				<div
+					class="flex items-center justify-between p-6 pb-4 border-b border-border dark:border-border-dark"
+				>
 					{#if title}
-						<h3 id="modal-title" class="text-xl font-bold text-text-main dark:text-text-main-dark">{title}</h3>
+						<h3 id="modal-title" class="text-xl font-bold text-text-main dark:text-text-main-dark">
+							{title}
+						</h3>
 					{:else}
 						<div></div>
 					{/if}
