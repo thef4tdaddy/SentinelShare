@@ -20,10 +20,11 @@ class EmailService:
 
         # 1. Fetch accounts from database (new method)
         try:
+            from sqlmodel import Session, select
+
             from backend.database import engine
             from backend.models import EmailAccount
             from backend.services.encryption_service import EncryptionService
-            from sqlmodel import Session, select
 
             with Session(engine) as session:
                 db_accounts = session.exec(

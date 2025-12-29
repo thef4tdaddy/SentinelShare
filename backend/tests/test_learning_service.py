@@ -1,9 +1,10 @@
 from unittest.mock import patch
 
 import pytest
+from sqlmodel import Session, SQLModel, create_engine, select
+
 from backend.models import LearningCandidate, ManualRule, ProcessedEmail
 from backend.services.learning_service import LearningService
-from sqlmodel import Session, SQLModel, create_engine, select
 
 
 @pytest.fixture(name="session")

@@ -218,9 +218,10 @@ class TestCommandService:
         # This is a defensive code path that's theoretically unreachable in normal conditions
         # since a non-empty stripped string will always split into at least one part.
         # We create a custom string-like object that behaves abnormally to trigger this edge case.
-        
+
         class AbnormalString(str):
             """A string subclass that returns empty list from split() without arguments"""
+
             def split(self, sep=None, maxsplit=-1):
                 # In CommandService.process_command the flow is:
                 #   1. body.split("\n")           -> produces "lines"
@@ -235,18 +236,18 @@ class TestCommandService:
                 # For split with an explicit separator, return our custom string so strip() preserves the type
                 result = super().split(sep, maxsplit)
                 return [AbnormalString(s) for s in result]
-            
+
             def strip(self, chars=None):
                 # Return AbnormalString to preserve type through strip()
                 return AbnormalString(super().strip(chars))
-        
+
         # Create email data with our abnormal string
         abnormal_body = AbnormalString("test line")
         email_data = {
             "from": "sara@example.com",
             "body": abnormal_body,
         }
-        
+
         result = CommandService.process_command(email_data)
         # No command should be executed since parts is empty
         assert result is False
