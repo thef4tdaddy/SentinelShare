@@ -55,10 +55,17 @@ test.describe('Token Authentication System', () => {
   test('Admin/Sender Side: should login via password', async ({ page }) => {
     await page.goto('/');
     
-    const loginButton = page.getByRole('button', { name: /Access Dashboard/i });
-    if (await loginButton.isVisible()) {
-        await page.getByPlaceholder('Enter dashboard password...').fill('testpass');
-        await loginButton.click();
+    // Wait for app to load - expect login form on fresh start
+    const loginInput = page.getByPlaceholder('Enter dashboard password...');
+    try {
+        await loginInput.waitFor({ state: 'visible', timeout: 5000 });
+        // If visible, perform login
+        await loginInput.fill('testpass');
+        await page.getByRole('button', { name: /Access Dashboard/i }).click();
+    } catch {
+        // If timeout, assume we might be logged in or page is stuck.
+        // Proceed to check dashboard to fail with a clear error if neither is found.
+        console.log('Login form not detected, checking for dashboard directly...');
     }
     
     // Verify Admin Access via Dashboard heading

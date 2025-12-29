@@ -270,9 +270,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		// Modal should open with correct message for preferences
 		await waitFor(() => {
 			expect(screen.getByText('Confirm Delete')).toBeTruthy();
-			expect(
-				screen.getByText(/Are you sure you want to delete this preference/i)
-			).toBeTruthy();
+			expect(screen.getByText(/Are you sure you want to delete this preference/i)).toBeTruthy();
 		});
 	});
 });

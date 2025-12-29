@@ -2,11 +2,10 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
-from sqlmodel import Session, select
-
 from backend.database import create_db_and_tables, engine
 from backend.models import GlobalSettings
 from backend.services.forwarder import EmailForwarder
+from sqlmodel import Session, select
 
 
 @pytest.fixture

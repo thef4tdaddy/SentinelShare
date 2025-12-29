@@ -1,10 +1,9 @@
 import pytest
+from backend.main import app
+from backend.models import LearningCandidate, ManualRule
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
-
-from backend.main import app
-from backend.models import LearningCandidate, ManualRule
 
 
 @pytest.fixture(name="session")

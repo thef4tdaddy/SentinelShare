@@ -1,14 +1,13 @@
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
-from sqlmodel import Session, select
-
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import get_session
 from backend.models import GlobalSettings, ManualRule, Preference
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel, EmailStr, Field
+from sqlmodel import Session, select
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -140,3 +139,150 @@ def test_connections():
         )
 
     return results
+
+
+# Email Account Management Endpoints
+
+
+class EmailAccountCreate(BaseModel):
+    email: EmailStr
+    host: str = "imap.gmail.com"
+    port: int = Field(default=993, ge=1, le=65535)
+    username: str
+    password: str  # WARNING: This password is sent in plain text in the request body; ensure this endpoint is only served over HTTPS/TLS. It will be encrypted before storage.
+
+
+class EmailAccountResponse(BaseModel):
+    id: int
+    email: str
+    host: str
+    port: int
+    username: str
+    is_active: bool
+    created_at: str
+    updated_at: str
+
+
+@router.get("/accounts", response_model=List[EmailAccountResponse])
+def get_email_accounts(session: Session = Depends(get_session)):
+    """Get all email accounts (without passwords)"""
+    from backend.models import EmailAccount
+
+    accounts = session.exec(select(EmailAccount)).all()
+    return [
+        EmailAccountResponse(
+            id=acc.id,
+            email=acc.email,
+            host=acc.host,
+            port=acc.port,
+            username=acc.username,
+            is_active=acc.is_active,
+            created_at=acc.created_at.isoformat(),
+            updated_at=acc.updated_at.isoformat(),
+        )
+        for acc in accounts
+    ]
+
+
+@router.post("/accounts", response_model=EmailAccountResponse)
+def create_email_account(
+    account: EmailAccountCreate, session: Session = Depends(get_session)
+):
+    """Create a new email account"""
+    import logging
+    from datetime import datetime, timezone
+
+    from backend.models import EmailAccount
+    from backend.services.encryption_service import EncryptionService
+
+    # Normalize email to lowercase for case-insensitive comparison
+    normalized_email = str(account.email).lower()
+
+    # Check if account already exists (case-insensitive)
+    existing = session.exec(
+        select(EmailAccount).where(EmailAccount.email == normalized_email)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=400, detail="Account with this email already exists"
+        )
+
+    # Encrypt the password
+    try:
+        encrypted_password = EncryptionService.encrypt(account.password)
+    except Exception as e:
+        logging.error(f"Password encryption failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to encrypt password")
+
+    # Create the account
+    now = datetime.now(timezone.utc)
+    new_account = EmailAccount(
+        email=normalized_email,
+        host=account.host,
+        port=account.port,
+        username=account.username,
+        encrypted_password=encrypted_password,
+        is_active=True,
+        created_at=now,
+        updated_at=now,
+    )
+
+    session.add(new_account)
+    session.commit()
+    session.refresh(new_account)
+
+    return EmailAccountResponse(
+        id=new_account.id,
+        email=new_account.email,
+        host=new_account.host,
+        port=new_account.port,
+        username=new_account.username,
+        is_active=new_account.is_active,
+        created_at=new_account.created_at.isoformat(),
+        updated_at=new_account.updated_at.isoformat(),
+    )
+
+
+@router.delete("/accounts/{account_id}")
+def delete_email_account(account_id: int, session: Session = Depends(get_session)):
+    """Delete an email account"""
+    from backend.models import EmailAccount
+
+    account = session.get(EmailAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    session.delete(account)
+    session.commit()
+    return {"ok": True}
+
+
+@router.post("/accounts/{account_id}/test")
+def test_email_account(account_id: int, session: Session = Depends(get_session)):
+    """Test connection for a specific email account"""
+    import logging
+
+    from backend.models import EmailAccount
+    from backend.services.encryption_service import EncryptionService
+
+    account = session.get(EmailAccount, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # Decrypt password
+    try:
+        password = EncryptionService.decrypt(account.encrypted_password)
+        if not password:
+            raise HTTPException(status_code=500, detail="Failed to decrypt password")
+    except ValueError as e:
+        logging.error(f"Password decryption failed for account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to decrypt password")
+
+    # Test connection
+    result = EmailService.test_connection(account.username, password, account.host)
+
+    return {
+        "account": account.email,
+        "success": result["success"],
+        "error": result["error"],
+    }

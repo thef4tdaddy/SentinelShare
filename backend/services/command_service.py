@@ -1,9 +1,8 @@
 import os
 
-from sqlmodel import Session, select
-
 from backend.database import engine
 from backend.models import Preference
+from sqlmodel import Session, select
 
 
 class CommandService:
