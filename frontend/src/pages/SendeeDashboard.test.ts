@@ -641,7 +641,7 @@ describe('SendeeDashboard Component', () => {
 
 		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
 
-		const { component } = render(SendeeDashboard, {
+		render(SendeeDashboard, {
 			props: { token: 'test-token', isAdmin: false }
 		});
 
