@@ -819,10 +819,13 @@ class TestEmailService:
             emails = EmailService.fetch_recent_emails("user@test.com", "pass")
             # Should handle the exception with continue and still return the email
             assert len(emails) == 1
+            assert emails[0]["subject"] == "Test Subject"
+            assert emails[0]["from"] == "test@test.com"
+            assert emails[0]["body"] == ""
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_non_multipart_get_payload_exception(self, mock_imap):
-        """Test exception in non-multipart email get_payload (lines 280-281)"""
+        """Test exception handling when non-multipart email get_payload raises an error"""
         mock_mail = Mock()
         mock_imap.return_value = mock_mail
         mock_mail.login.return_value = ("OK", [])
