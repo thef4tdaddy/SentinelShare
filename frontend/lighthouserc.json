@@ -20,7 +20,11 @@
         "valid-source-maps": "warn",
         "service-worker": "warn",
         "pwa-crossorigin": "warn",
-        "csp-xss": "warn"
+        "csp-xss": "warn",
+        "errors-in-console": "warn",
+        "installable-manifest": "warn",
+        "deprecations": "warn",
+        "resource-summary": "warn"
       }
     }
   }
