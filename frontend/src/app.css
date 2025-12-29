@@ -1,7 +1,10 @@
 @import 'tailwindcss';
 
+/* Tailwind v4 dark mode configuration - enables class-based dark mode via .dark class */
+@variant dark (.dark &);
+
 @theme {
-	/* User's Palette */
+	/* Light Mode Colors */
 	--color-primary: #0d3256; /* Navy Blue */
 	--color-primary-light: #1a4b7c;
 	--color-accent: #18c09d; /* Teal/Green */
@@ -13,6 +16,18 @@
 	--color-bg-card: #ffffff; /* Pure White */
 	--color-border: #e5e7eb;
 
+	/* Dark Mode Colors */
+	--color-primary-dark: #60a5fa; /* Lighter Blue for dark mode */
+	--color-primary-light-dark: #3b82f6;
+	--color-accent-dark: #34d399; /* Lighter Teal for dark mode */
+	--color-accent-hover-dark: #10b981;
+	--color-text-main-dark: #f3f4f6; /* Light Gray for dark mode text */
+	--color-text-secondary-dark: #9ca3af; /* Medium Gray for dark mode */
+	--color-text-inverse-dark: #111827;
+	--color-bg-main-dark: #111827; /* Dark Navy */
+	--color-bg-card-dark: #1f2937; /* Slightly lighter dark */
+	--color-border-dark: #374151;
+
 	/* Status Colors */
 	--color-success: #18c09d;
 	--color-danger: #ef4444;
@@ -21,6 +36,7 @@
 
 body {
 	@apply bg-bg-main text-text-main font-sans antialiased min-h-screen flex flex-col;
+	@apply dark:bg-bg-main-dark dark:text-text-main-dark;
 }
 
 /* Typography Headings */
@@ -31,6 +47,7 @@ h4,
 h5,
 h6 {
 	@apply font-bold tracking-tight text-primary;
+	@apply dark:text-primary-dark;
 }
 
 h1 {
@@ -46,6 +63,7 @@ h3 {
 /* Component Classes */
 .card {
 	@apply bg-bg-card rounded-xl shadow-sm border border-border p-6 transition-all duration-200;
+	@apply dark:bg-bg-card-dark dark:border-border-dark;
 }
 
 .card:hover {
@@ -58,14 +76,17 @@ h3 {
 
 .btn-primary {
 	@apply bg-primary text-text-inverse hover:bg-primary-light shadow-sm hover:shadow active:scale-95;
+	@apply dark:bg-primary-dark dark:hover:bg-primary-light-dark dark:text-text-inverse-dark;
 }
 
 .btn-secondary {
 	@apply bg-white text-text-secondary border border-border hover:bg-gray-50 hover:text-primary active:scale-95;
+	@apply dark:bg-gray-800 dark:text-text-secondary-dark dark:border-border-dark dark:hover:bg-gray-700 dark:hover:text-primary-dark;
 }
 
 .btn-accent {
 	@apply bg-accent text-white hover:bg-accent-hover shadow-sm hover:shadow active:scale-95;
+	@apply dark:bg-accent-dark dark:hover:bg-accent-hover-dark;
 }
 
 .btn-danger {
@@ -74,6 +95,7 @@ h3 {
 
 .input-field {
 	@apply w-full px-4 py-2 rounded-lg border border-border bg-white text-text-main placeholder-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+	@apply dark:bg-gray-800 dark:border-border-dark dark:text-text-main-dark dark:placeholder-text-secondary-dark/50 dark:focus:ring-primary-dark/20 dark:focus:border-primary-dark;
 }
 
 .badge {
