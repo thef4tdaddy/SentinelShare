@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 from apscheduler.schedulers.background import \
     BackgroundScheduler  # type: ignore
+from sqlmodel import Session, select
+
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content, get_email_content_hash
@@ -12,7 +14,6 @@ from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from backend.services.learning_service import LearningService
-from sqlmodel import Session, select
 
 scheduler = BackgroundScheduler()
 

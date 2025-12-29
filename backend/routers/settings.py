@@ -1,13 +1,14 @@
 from typing import List
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import get_session
 from backend.models import GlobalSettings, ManualRule, Preference
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
-from sqlmodel import Session, select
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
