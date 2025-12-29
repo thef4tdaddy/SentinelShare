@@ -1,7 +1,10 @@
 Bri
 CBTd
+CMM
 Commitlint
+Fkdn
 Hashtag
+JYIw
 Lego
 MDi
 Minecraft
@@ -22,9 +25,11 @@ Thu
 Typecheck
 URLTo
 VARCHAR
+Vtoc
 Vzd
 WJq
 WORKDIR
+Wdn
 Wtwb
 XCircle
 XSS
