@@ -557,7 +557,7 @@ describe('SendeeDashboard Component', () => {
 		resolveSave!({ success: true });
 	});
 
-	it('adds sender to blocked when clicking X on allowed sender (toggleBlock from allowed)', async () => {
+	it('removes sender from allowed when clicking X button', async () => {
 		const mockPreferences = {
 			success: true,
 			email: 'user@example.com',
@@ -575,24 +575,24 @@ describe('SendeeDashboard Component', () => {
 			expect(screen.getByText('trusted@example.com')).toBeTruthy();
 		});
 
-		// Find and click the X button to toggle it to blocked
+		// Find and click the X button to remove from allowed
 		const allowedBadge = container.querySelector('.bg-emerald-100.text-emerald-700');
 		const xButton = allowedBadge?.querySelector('button');
 
 		expect(xButton).toBeTruthy();
 
 		if (xButton) {
-			// First click removes from allowed
+			// Click removes from allowed
 			await fireEvent.click(xButton);
 
-			// Now verify it's not in allowed anymore
+			// Verify it's not in allowed anymore
 			await waitFor(() => {
 				expect(screen.getByText('No senders in your allow-list.')).toBeTruthy();
 			});
 		}
 	});
 
-	it('adds sender to allowed when clicking X on blocked sender (toggleAllow from blocked)', async () => {
+	it('removes sender from blocked when clicking X button', async () => {
 		const mockPreferences = {
 			success: true,
 			email: 'user@example.com',
@@ -610,7 +610,7 @@ describe('SendeeDashboard Component', () => {
 			expect(screen.getByText('spam@example.com')).toBeTruthy();
 		});
 
-		// Find and click the X button - use a more robust selector
+		// Find and click the X button to remove from blocked
 		const badges = Array.from(container.querySelectorAll('.badge'));
 		const blockedBadge = badges.find(badge => 
 			badge.textContent?.includes('spam@example.com') && 
@@ -624,39 +624,14 @@ describe('SendeeDashboard Component', () => {
 			// Click removes from blocked
 			await fireEvent.click(xButton);
 
-			// Now verify it's not in blocked anymore
+			// Verify it's not in blocked anymore
 			await waitFor(() => {
 				expect(screen.getByText('No blocked senders yet.')).toBeTruthy();
 			});
 		}
 	});
 
-	it('properly handles toggle functions to add items', async () => {
-		const mockPreferences = {
-			success: true,
-			email: 'user@example.com',
-			blocked: [],
-			allowed: []
-		};
-
-		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
-
-		render(SendeeDashboard, {
-			props: { token: 'test-token', isAdmin: false }
-		});
-
-		await waitFor(() => {
-			expect(screen.getByText('No senders in your allow-list.')).toBeTruthy();
-		});
-
-		// Access the component instance if possible to test toggle functions
-		// Since we can't directly access component methods in Svelte 5 easily,
-		// we'll verify the behavior through the UI interactions we can make
-		// The toggle functions have both add and remove branches, but the UI
-		// only exposes the remove behavior through X buttons.
-	});
-
-	it('moves sender from blocked to allowed when toggling', async () => {
+	it('verifies blocked list state after removing sender', async () => {
 		const mockPreferences = {
 			success: true,
 			email: 'user@example.com',
@@ -680,7 +655,7 @@ describe('SendeeDashboard Component', () => {
 			expect(screen.getByText('spam@example.com')).toBeTruthy();
 		});
 
-		// Find X button on blocked sender - use a more robust selector
+		// Find X button on blocked sender to remove it
 		const badges = Array.from(container.querySelectorAll('.badge'));
 		const blockedBadge = badges.find(badge => 
 			badge.textContent?.includes('spam@example.com') && 
