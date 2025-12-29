@@ -32,6 +32,11 @@ jobs:
         uses: treosh/lighthouse-ci-action@v10
         with:
           configPath: "./frontend/lighthouserc.json"
-          uploadArtifacts: true
+          uploadArtifacts: false
           temporaryPublicStorage: false
-          artifactName: "results"
+
+      - name: Upload Lighthouse Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
