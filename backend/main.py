@@ -1,8 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 
-from backend.routers import (actions, auth, dashboard, history, learning,
-                             settings)
+from backend.routers import actions, auth, dashboard, history, learning, settings
 from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
