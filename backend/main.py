@@ -47,6 +47,8 @@ async def auth_middleware(request: Request, call_next):
         or path in ["/api/health", "/health"]
         or path.startswith("/assets")
         or path == "/"
+        or path.startswith("/api/actions/quick")
+        or path.startswith("/api/actions/update-preferences")
         or not path.startswith("/api")  # Serve frontend assets/SPA routes freely
     ):
         return await call_next(request)
