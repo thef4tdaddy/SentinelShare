@@ -68,6 +68,5 @@ def test_dashboard_token_expiration():
     msg = f"dashboard:{email}:{old_timestamp}"
     sig = generate_hmac_signature(msg)
     expired_token = f"{email}:{old_timestamp}:{sig}"
-    
     # Verify that the expired token is rejected
     assert verify_dashboard_token(expired_token) is None
