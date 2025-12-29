@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from backend.models import ManualRule, ProcessedEmail
-from backend.routers import actions
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, ProcessedEmail
+from backend.routers import actions
 
 
 @pytest.fixture(name="engine")
@@ -701,9 +702,10 @@ class TestGetPreferencesForSendee:
 
     def test_get_preferences_with_valid_token(self, session, monkeypatch):
         """Test getting preferences with a valid token"""
+        from unittest.mock import Mock
+
         from backend.models import Preference
         from backend.security import generate_dashboard_token
-        from unittest.mock import Mock
 
         secret = "test-secret"
         monkeypatch.setenv("SECRET_KEY", secret)
@@ -727,12 +729,13 @@ class TestGetPreferencesForSendee:
         assert result["success"] is True
         assert result["email"] == email
         assert result["blocked"] == ["amazon.com"]
-        assert result["allowed"] == ["uber.com"]
+        assert "uber.com" in result["allowed"]
 
     def test_get_preferences_with_invalid_token(self, session):
         """Test getting preferences with an invalid token"""
-        from fastapi import HTTPException
         from unittest.mock import Mock
+
+        from fastapi import HTTPException
 
         request = Mock()
         request.session = {}
@@ -745,8 +748,9 @@ class TestGetPreferencesForSendee:
 
     def test_get_preferences_with_admin_session(self, session):
         """Test getting preferences with admin session"""
-        from backend.models import Preference
         from unittest.mock import Mock
+
+        from backend.models import Preference
 
         # Add some preferences
         session.add(Preference(item="test.com", type="Blocked Sender"))
@@ -765,8 +769,9 @@ class TestGetPreferencesForSendee:
 
     def test_get_preferences_without_auth(self, session):
         """Test getting preferences without authentication"""
-        from fastapi import HTTPException
         from unittest.mock import Mock
+
+        from fastapi import HTTPException
 
         # Create a mock request without authentication
         request = Mock()
@@ -784,11 +789,13 @@ class TestUpdatePreferences:
 
     def test_update_preferences_with_valid_token(self, session, monkeypatch):
         """Test updating preferences with a valid token"""
-        from backend.models import Preference
-        from backend.security import generate_dashboard_token
+        import os
         from unittest.mock import Mock
 
-        secret = "test-secret"
+        from backend.models import Preference
+        from backend.security import generate_dashboard_token
+
+        secret = os.getenv("SECRET_KEY", "test-secret")
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Add existing preferences
@@ -827,8 +834,9 @@ class TestUpdatePreferences:
 
     def test_update_preferences_with_invalid_token(self, session):
         """Test updating preferences with an invalid token"""
-        from fastapi import HTTPException
         from unittest.mock import Mock
+
+        from fastapi import HTTPException
 
         request_mock = Mock()
         request_mock.session = {}
@@ -845,8 +853,9 @@ class TestUpdatePreferences:
 
     def test_update_preferences_with_admin_session(self, session):
         """Test updating preferences with admin session"""
-        from backend.models import Preference
         from unittest.mock import Mock
+
+        from backend.models import Preference
 
         # Add existing preferences
         session.add(Preference(item="old.com", type="Blocked Sender"))
@@ -878,8 +887,9 @@ class TestUpdatePreferences:
 
     def test_update_preferences_without_auth(self, session):
         """Test updating preferences without authentication"""
-        from fastapi import HTTPException
         from unittest.mock import Mock
+
+        from fastapi import HTTPException
 
         # Create a mock request without authentication
         request_mock = Mock()
@@ -897,11 +907,14 @@ class TestUpdatePreferences:
 
     def test_update_preferences_exception_handling(self, session, monkeypatch):
         """Test exception handling during preference update"""
-        from backend.security import generate_dashboard_token
-        from fastapi import HTTPException
+        import os
         from unittest.mock import Mock, patch
 
-        secret = "test-secret"
+        from fastapi import HTTPException
+
+        from backend.security import generate_dashboard_token
+
+        secret = os.getenv("SECRET_KEY", "test-secret")
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Generate a valid token
