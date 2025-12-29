@@ -12,14 +12,15 @@
     "assert": {
       "preset": "lighthouse:recommended",
       "assertions": {
-        "offscreen-images": "off",
-        "uses-webp-images": "off",
-        "color-contrast": "off",
-        "tap-targets": "off",
-        "maskable-icon": "off",
-        "valid-source-maps": "off",
-        "service-worker": "off",
-        "pwa-crossorigin": "off"
+        "offscreen-images": "warn",
+        "uses-webp-images": "warn",
+        "color-contrast": "warn",
+        "tap-targets": "warn",
+        "maskable-icon": "warn",
+        "valid-source-maps": "warn",
+        "service-worker": "warn",
+        "pwa-crossorigin": "warn",
+        "csp-xss": "warn"
       }
     }
   }

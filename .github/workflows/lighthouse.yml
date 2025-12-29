@@ -33,5 +33,5 @@ jobs:
         with:
           configPath: "./frontend/lighthouserc.json"
           uploadArtifacts: true
-          temporaryPublicStorage: true
-          artifactName: "lighthouse_results"
+          temporaryPublicStorage: false
+          artifactName: "results"
