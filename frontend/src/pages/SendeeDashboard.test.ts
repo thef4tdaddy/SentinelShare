@@ -237,6 +237,8 @@ describe('SendeeDashboard Component', () => {
 		const allowedSection = container.querySelector('.bg-emerald-100.text-emerald-700');
 		const xButton = allowedSection?.querySelector('button');
 
+		expect(xButton).toBeTruthy();
+		
 		if (xButton) {
 			await fireEvent.click(xButton);
 
@@ -275,6 +277,8 @@ describe('SendeeDashboard Component', () => {
 				blockedButton = button;
 			}
 		});
+
+		expect(blockedButton).toBeTruthy();
 
 		if (blockedButton) {
 			await fireEvent.click(blockedButton);
@@ -575,6 +579,8 @@ describe('SendeeDashboard Component', () => {
 		const allowedBadge = container.querySelector('.bg-emerald-100.text-emerald-700');
 		const xButton = allowedBadge?.querySelector('button');
 
+		expect(xButton).toBeTruthy();
+
 		if (xButton) {
 			// First click removes from allowed
 			await fireEvent.click(xButton);
@@ -611,6 +617,8 @@ describe('SendeeDashboard Component', () => {
 			badge.className.includes('bg-danger')
 		);
 		const xButton = blockedBadge?.querySelector('button');
+
+		expect(xButton).toBeTruthy();
 
 		if (xButton) {
 			// Click removes from blocked
@@ -679,6 +687,8 @@ describe('SendeeDashboard Component', () => {
 			badge.className.includes('bg-danger')
 		);
 		const xButton = blockedBadge?.querySelector('button');
+
+		expect(xButton).toBeTruthy();
 
 		if (xButton) {
 			// Click removes from blocked
