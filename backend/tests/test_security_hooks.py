@@ -1,7 +1,11 @@
 from datetime import datetime, timezone
 
-from backend.security import (generate_dashboard_token, generate_hmac_signature,
-                              get_email_content_hash, verify_dashboard_token)
+from backend.security import (
+    generate_dashboard_token,
+    generate_hmac_signature,
+    get_email_content_hash,
+    verify_dashboard_token,
+)
 
 
 def test_get_email_content_hash_consistency():

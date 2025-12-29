@@ -43,11 +43,33 @@ It turns a manual chore into a "set it and forget it" background process.
 
 ## 📦 Installation & Setup
 
+### 🐳 Docker Quickstart
+
+You can run SentinelShare with a single command using our official Docker image.
+
+```bash
+# Pull and run the latest version (GHCR)
+# Note: Mount a local data directory to persist receipts and logs
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  --name sentinelshare \
+  ghcr.io/thef4tdaddy/sentinelshare:latest
+```
+
+Or using `docker-compose.yml` (included in repo):
+
+```bash
+docker-compose up -d
+```
+
 ### Quick Start with Docker (Recommended)
 
 The easiest way to get started is with Docker. Choose between SQLite (simpler) or PostgreSQL (production-ready):
 
 **SQLite (Single Container, No Database Setup):**
+
 ```bash
 git clone https://github.com/f4tdaddy/SentinelShare.git
 cd SentinelShare
@@ -57,6 +79,7 @@ docker compose -f docker-compose.sqlite.yml up -d
 ```
 
 **PostgreSQL (Production-Ready):**
+
 ```bash
 git clone https://github.com/f4tdaddy/SentinelShare.git
 cd SentinelShare

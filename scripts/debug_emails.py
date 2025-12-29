@@ -6,12 +6,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     print("python-dotenv not installed, assuming env vars are set")
 
 from backend.services.email_service import EmailService
 from backend.services.detector import ReceiptDetector
+
 
 def mask_email(email_str):
     if not email_str:
@@ -24,12 +26,13 @@ def mask_email(email_str):
     except Exception:
         return "***@***"
 
+
 def debug_emails():
     print("🔍 Starting Debug Email Fetch...")
-    
+
     # Ensure lookback is sufficient for the test
     os.environ["EMAIL_LOOKBACK_DAYS"] = "30"
-    
+
     accounts = EmailService.get_all_accounts()
     print(f"👥 Found {len(accounts)} accounts configured.")
 
@@ -52,11 +55,15 @@ def debug_emails():
 
         try:
             print("   🔌 Connecting to mail server...")
-            emails = EmailService.fetch_recent_emails(username=email_addr, password=password, imap_server=server)
+            emails = EmailService.fetch_recent_emails(
+                username=email_addr, password=password, imap_server=server
+            )
             print(f"   📬 Fetched {len(emails)} emails.")
 
             if not emails:
-                print("   ⚠️ No emails found. Check lookback window or if emails are 'Read'.")
+                print(
+                    "   ⚠️ No emails found. Check lookback window or if emails are 'Read'."
+                )
 
             for email in emails:
                 subject = email.get("subject", "No Subject")
@@ -82,6 +89,7 @@ def debug_emails():
 
         except Exception as e:
             print(f"   ❌ Error scanning account: {e}")
+
 
 if __name__ == "__main__":
     debug_emails()
