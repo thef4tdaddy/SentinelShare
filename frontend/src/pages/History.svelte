@@ -275,9 +275,9 @@
 		<div class="flex items-center justify-between">
 			<div>
 				<p class="text-text-secondary text-sm mb-1">Total Processed</p>
-				<p class="text-2xl font-bold text-text-main">{stats.total}</p>
+				<p class="text-2xl font-bold text-text-main dark:text-text-main-dark">{stats.total}</p>
 			</div>
-			<div class="p-3 bg-blue-50 text-blue-600 rounded-lg">
+			<div class="p-3 bg-blue-50 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400 rounded-lg">
 				<Mail size={24} />
 			</div>
 		</div>
@@ -289,7 +289,7 @@
 				<p class="text-text-secondary text-sm mb-1">Forwarded</p>
 				<p class="text-2xl font-bold text-emerald-600">{stats.forwarded}</p>
 			</div>
-			<div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+			<div class="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 rounded-lg">
 				<CheckCircle size={24} />
 			</div>
 		</div>
@@ -301,7 +301,7 @@
 				<p class="text-text-secondary text-sm mb-1">Blocked</p>
 				<p class="text-2xl font-bold text-gray-600">{stats.blocked}</p>
 			</div>
-			<div class="p-3 bg-gray-50 text-gray-600 rounded-lg">
+			<div class="p-3 bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-lg">
 				<XCircle size={24} />
 			</div>
 		</div>
@@ -313,7 +313,7 @@
 				<p class="text-text-secondary text-sm mb-1">Errors</p>
 				<p class="text-2xl font-bold text-red-600">{stats.errors}</p>
 			</div>
-			<div class="p-3 bg-red-50 text-red-600 rounded-lg">
+			<div class="p-3 bg-red-50 text-red-600 dark:bg-red-900/50 dark:text-red-400 rounded-lg">
 				<AlertCircle size={24} />
 			</div>
 		</div>
@@ -403,34 +403,34 @@
 		<div class="overflow-x-auto">
 			<table class="w-full text-left border-collapse">
 				<thead>
-					<tr class="border-b border-gray-100">
+					<tr class="border-b border-gray-100 dark:border-gray-700">
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Status
 						</th>
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Subject
 						</th>
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Sender
 						</th>
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Category
 						</th>
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Amount
 						</th>
 						<th
-							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50"
+							class="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-wider bg-gray-50/50 dark:bg-gray-800/50"
 						>
 							Processed
 						</th>
@@ -439,7 +439,7 @@
 				<tbody>
 					{#if loading}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary">
+							<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 								<div class="flex items-center justify-center gap-2">
 									<Clock size={20} class="animate-spin" />
 									Loading...
@@ -448,10 +448,10 @@
 						</tr>
 					{:else if emails.length === 0}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary">
+							<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 								<div class="flex flex-col items-center justify-center gap-3">
-									<div class="bg-gray-100 p-3 rounded-full">
-										<Mail size={24} class="text-gray-400" />
+									<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
+										<Mail size={24} class="text-gray-400 dark:text-gray-500" />
 									</div>
 									<p>No emails found.</p>
 								</div>
@@ -496,7 +496,7 @@
 										<Search size={14} />
 									</button>
 								</td>
-								<td class="py-3 px-4 font-medium text-text-main">
+								<td class="py-3 px-4 font-medium text-text-main dark:text-text-main-dark">
 									<div class="truncate max-w-[300px]" title={email.subject}>
 										{email.subject}
 									</div>
@@ -532,12 +532,12 @@
 	<!-- Email History Cards (Mobile) -->
 	<div class="md:hidden space-y-4 pb-20">
 		{#if loading}
-			<div class="card py-12 text-center text-text-secondary">
+			<div class="card py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 				<Clock size={24} class="animate-spin mx-auto mb-2 text-primary" />
 				<p>Loading your history...</p>
 			</div>
 		{:else if emails.length === 0}
-			<div class="card py-12 text-center text-text-secondary">
+			<div class="card py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 				<Mail size={32} class="mx-auto mb-2 text-gray-300" />
 				<p>No activity found.</p>
 			</div>
@@ -613,8 +613,8 @@
 	</div>
 	<!-- Pagination -->
 	{#if pagination.total_pages > 1}
-		<div class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-			<div class="text-sm text-text-secondary">
+		<div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+			<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
 				Page {pagination.page} of {pagination.total_pages} ({pagination.total} total)
 			</div>
 			<div class="flex gap-2">
@@ -640,8 +640,8 @@
 {:else if activeTab === 'runs'}
 	<!-- Processing Runs -->
 	<div class="card">
-		<div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100">
-			<div class="p-2 bg-purple-50 text-purple-600 rounded-lg">
+		<div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+			<div class="p-2 bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 rounded-lg">
 				<HistoryIcon size={20} />
 			</div>
 			<h3 class="text-lg font-bold text-text-main m-0">Recent Processing Runs</h3>
@@ -649,10 +649,10 @@
 
 		<div class="space-y-4">
 			{#if runs.length === 0}
-				<div class="py-12 text-center text-text-secondary">
+				<div class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
 					<div class="flex flex-col items-center justify-center gap-3">
-						<div class="bg-gray-100 p-3 rounded-full">
-							<HistoryIcon size={24} class="text-gray-400" />
+						<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
+							<HistoryIcon size={24} class="text-gray-400 dark:text-gray-500" />
 						</div>
 						<p>No processing runs found.</p>
 					</div>
@@ -665,11 +665,11 @@
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
 								<Clock size={16} class="text-primary" />
-								<span class="font-semibold text-text-main">
+								<span class="font-semibold text-text-main dark:text-text-main-dark">
 									{formatDate(run.run_time)}
 								</span>
 							</div>
-							<div class="text-sm text-text-secondary">
+							<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
 								{run.total_emails} email{run.total_emails !== 1 ? 's' : ''}
 							</div>
 						</div>
@@ -678,21 +678,21 @@
 							<div class="flex items-center gap-2">
 								<CheckCircle size={16} class="text-emerald-600" />
 								<div>
-									<div class="text-sm text-text-secondary">Forwarded</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Forwarded</div>
 									<div class="font-semibold text-emerald-600">{run.forwarded}</div>
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								<XCircle size={16} class="text-gray-600" />
 								<div>
-									<div class="text-sm text-text-secondary">Blocked</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Blocked</div>
 									<div class="font-semibold text-gray-600">{run.blocked}</div>
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								<AlertCircle size={16} class="text-red-600" />
 								<div>
-									<div class="text-sm text-text-secondary">Errors</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Errors</div>
 									<div class="font-semibold text-red-600">{run.errors}</div>
 								</div>
 							</div>
@@ -727,14 +727,14 @@
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
-				<h3 id="modal-title" class="text-lg font-bold text-text-main">Forward Ignored Email</h3>
+				<h3 id="modal-title" class="text-lg font-bold text-text-main dark:text-text-main-dark">Forward Ignored Email</h3>
 				<button
 					onclick={closeModal}
 					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
 					title="Close"
 					aria-label="Close modal"
 				>
-					<X size={20} class="text-text-secondary" />
+					<X size={20} class="text-text-secondary dark:text-text-secondary-dark" />
 				</button>
 			</div>
 
@@ -761,15 +761,15 @@
 				{#if isAnalyzing}
 					<div class="py-12 text-center">
 						<RefreshCw size={24} class="animate-spin text-primary mx-auto mb-2" />
-						<p class="text-sm text-text-secondary">Analyzing rule logic...</p>
+						<p class="text-sm text-text-secondary dark:text-text-secondary-dark">Analyzing rule logic...</p>
 					</div>
 				{:else if selectedAnalysis}
 					<div class="mb-4">
 						<h4 class="text-sm font-bold text-text-main mb-2">Detection Trace</h4>
-						<div class="bg-gray-50 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
 							{#each selectedAnalysis.analysis.steps as step (step.step)}
 								<div class="flex items-center justify-between text-xs">
-									<span class="text-text-secondary">{step.step}:</span>
+									<span class="text-text-secondary dark:text-text-secondary-dark">{step.step}:</span>
 									<span class={step.result ? 'text-emerald-600 font-bold' : 'text-red-500'}>
 										{step.result ? 'MATCH' : 'MISS'}
 									</span>
@@ -795,7 +795,7 @@
 					Help improve the adaptive rule engine by providing feedback.
 				</p>
 
-				<div class="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-100">
+				<div class="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-100 dark:border-gray-700">
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
 						<p class="text-sm text-text-main font-medium break-all">{selectedEmail.subject}</p>

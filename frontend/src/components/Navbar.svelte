@@ -6,7 +6,7 @@
 </script>
 
 <nav
-	class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 border-b border-border transition-all duration-300"
+	class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border-b border-border dark:border-border-dark transition-all duration-300"
 >
 	<div class="container-custom flex items-center justify-between h-16">
 		<!-- Logo Section -->
@@ -18,20 +18,20 @@
 			<img
 				src="/assets/LogoWithText.svg"
 				alt="SentinelShare Logo"
-				class="h-10 md:h-14 w-auto border-2 border-primary bg-white rounded-lg shadow-sm"
+				class="h-10 md:h-14 w-auto border-2 border-primary bg-white rounded-lg shadow-sm dark:border-primary-dark dark:bg-gray-800"
 			/>
-			<span class="hidden md:inline text-xs font-mono text-gray-400 mt-2">v{__APP_VERSION__}</span>
+			<span class="hidden md:inline text-xs font-mono text-gray-400 mt-2 dark:text-gray-500">v{__APP_VERSION__}</span>
 		</button>
 
 		<!-- Desktop Navigation Links -->
 		<div
-			class="hidden md:flex items-center gap-1 bg-gray-100/50 p-1 rounded-xl border border-gray-200/50"
+			class="hidden md:flex items-center gap-1 bg-gray-100/50 dark:bg-gray-800/50 p-1 rounded-xl border border-gray-200/50 dark:border-gray-700/50"
 		>
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
 				'dashboard'
-					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('dashboard')}
 			>
 				<LayoutDashboard size={18} />
@@ -41,8 +41,8 @@
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
 				'history'
-					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('history')}
 			>
 				<History size={18} />
@@ -52,8 +52,8 @@
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
 				'rules'
-					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('rules')}
 			>
 				<ShieldCheck size={18} />
@@ -63,8 +63,8 @@
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
 				'preferences'
-					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('preferences')}
 			>
 				<Sliders size={18} />
@@ -74,8 +74,8 @@
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 {currentView ===
 				'settings'
-					? 'bg-white text-primary shadow-sm ring-1 ring-black/5'
-					: 'text-text-secondary hover:text-primary hover:bg-gray-100'}"
+					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
+					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('settings')}
 			>
 				<Settings size={18} />
@@ -87,14 +87,14 @@
 
 <!-- Mobile Bottom Navigation -->
 <div
-	class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/90 backdrop-blur-xl border-t border-gray-200 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.04)]"
+	class="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.04)]"
 >
 	<div class="flex items-center justify-around h-16 px-2">
 		<button
 			class="flex flex-col items-center gap-1 flex-1 py-1 transition-all {currentView ===
 			'dashboard'
-				? 'text-primary'
-				: 'text-gray-400'}"
+				? 'text-primary dark:text-primary-dark'
+				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('dashboard')}
 		>
 			<LayoutDashboard size={20} class={currentView === 'dashboard' ? 'scale-110' : ''} />
@@ -103,8 +103,8 @@
 
 		<button
 			class="flex flex-col items-center gap-1 flex-1 py-1 transition-all {currentView === 'history'
-				? 'text-primary'
-				: 'text-gray-400'}"
+				? 'text-primary dark:text-primary-dark'
+				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('history')}
 		>
 			<History size={20} class={currentView === 'history' ? 'scale-110' : ''} />
@@ -113,8 +113,8 @@
 
 		<button
 			class="flex flex-col items-center gap-1 flex-1 py-1 transition-all {currentView === 'rules'
-				? 'text-primary'
-				: 'text-gray-400'}"
+				? 'text-primary dark:text-primary-dark'
+				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('rules')}
 		>
 			<ShieldCheck size={20} class={currentView === 'rules' ? 'scale-110' : ''} />
@@ -124,8 +124,8 @@
 		<button
 			class="flex flex-col items-center gap-1 flex-1 py-1 transition-all {currentView ===
 			'preferences'
-				? 'text-primary'
-				: 'text-gray-400'}"
+				? 'text-primary dark:text-primary-dark'
+				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('preferences')}
 		>
 			<Sliders size={20} class={currentView === 'preferences' ? 'scale-110' : ''} />
@@ -134,8 +134,8 @@
 
 		<button
 			class="flex flex-col items-center gap-1 flex-1 py-1 transition-all {currentView === 'settings'
-				? 'text-primary'
-				: 'text-gray-400'}"
+				? 'text-primary dark:text-primary-dark'
+				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('settings')}
 		>
 			<Settings size={20} class={currentView === 'settings' ? 'scale-110' : ''} />

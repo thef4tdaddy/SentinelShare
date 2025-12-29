@@ -101,23 +101,23 @@
 	>
 		<div
 			bind:this={modalElement}
-			class="relative w-full max-w-md mx-4 bg-bg-card rounded-xl shadow-2xl border border-border transform transition-all"
+			class="relative w-full max-w-md mx-4 bg-bg-card rounded-xl shadow-2xl border border-border transform transition-all dark:bg-bg-card-dark dark:border-border-dark"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby={title ? 'modal-title' : undefined}
 			tabindex="-1"
 		>
 			{#if title || showCloseButton}
-				<div class="flex items-center justify-between p-6 pb-4 border-b border-border">
+				<div class="flex items-center justify-between p-6 pb-4 border-b border-border dark:border-border-dark">
 					{#if title}
-						<h3 id="modal-title" class="text-xl font-bold text-text-main">{title}</h3>
+						<h3 id="modal-title" class="text-xl font-bold text-text-main dark:text-text-main-dark">{title}</h3>
 					{:else}
 						<div></div>
 					{/if}
 					{#if showCloseButton}
 						<button
 							onclick={onClose}
-							class="p-1 rounded-lg text-text-secondary hover:text-text-main hover:bg-gray-100 transition-colors"
+							class="p-1 rounded-lg text-text-secondary hover:text-text-main hover:bg-gray-100 transition-colors dark:text-text-secondary-dark dark:hover:text-text-main-dark dark:hover:bg-gray-800"
 							aria-label="Close"
 						>
 							<X size={20} />
