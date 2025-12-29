@@ -25,7 +25,8 @@
         "splash-screen": "warn",
         "service-worker": "warn",
         "pwa-crossorigin": "warn",
-        "valid-source-maps": "warn"
+        "valid-source-maps": "warn",
+        "themed-omnibox": "warn"
       }
     }
   }
