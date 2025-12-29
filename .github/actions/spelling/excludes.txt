@@ -1,13 +1,22 @@
-package-lock.json
-frontend/package-lock.json
-**/package-lock.json
-**/*.png
-**/*.ico
-**/*.jpg
-**/*.svg
-**/*.min.js
-**/*.map
-**/dist/**
-**/node_modules/**
-__pycache__/
-*.pyc
+# Exclude node_modules (directory matching)
+^frontend/node_modules/
+^node_modules/
+(?:^|/)node_modules/
+
+# Exclude dist/build artifacts
+(?:^|/)dist/
+(?:^|/)build/
+(?:^|/)__pycache__/
+
+# Exclude specific files
+^package-lock\.json$
+^frontend/package-lock\.json$
+^pnpm-lock\.yaml$
+^yarn\.lock$
+(?:^|/)__init__\.py$
+
+# Exclude file types (extensions)
+\.(?:png|ico|jpg|svg|min\.js|map|pyc)$
+
+# Exclude configuration file
+^\.github/actions/spelling/expect\.txt$

@@ -92,13 +92,13 @@
 		</div>
 		<div class="space-y-2">
 			<div class="flex justify-between text-sm">
-				<span class="text-text-secondary">Candidates:</span>
+				<span class="text-text-secondary dark:text-text-secondary-dark">Candidates:</span>
 				<span class="font-mono font-bold"
 					>{Array.isArray(rules) ? rules.filter((r) => r.is_shadow_mode).length : 0}</span
 				>
 			</div>
 			<div class="flex justify-between text-sm">
-				<span class="text-text-secondary">Auto-Applied:</span>
+				<span class="text-text-secondary dark:text-text-secondary-dark">Auto-Applied:</span>
 				<span class="font-mono font-bold text-emerald-600"
 					>{Array.isArray(rules)
 						? rules.filter((r) => !r.is_shadow_mode && r.purpose?.includes('(AUTO)')).length
@@ -149,17 +149,17 @@
 								>
 							{:else}
 								<span
-									class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-700 border-gray-100"
+									class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-gray-50 text-gray-700 border-gray-100 dark:border-gray-700"
 									>MANUAL</span
 								>
 							{/if}
 						</td>
 						<td class="py-3 px-4">
-							<div class="text-sm font-medium text-text-main">
+							<div class="text-sm font-medium text-text-main dark:text-text-main-dark">
 								{rule.email_pattern || 'Any Sender'}
 							</div>
 							{#if rule.subject_pattern}
-								<div class="text-xs text-text-secondary">Subject: {rule.subject_pattern}</div>
+								<div class="text-xs text-text-secondary dark:text-text-secondary-dark">Subject: {rule.subject_pattern}</div>
 							{/if}
 							<div class="text-[10px] text-gray-400 mt-1 italic">
 								{rule.purpose || 'No description'}

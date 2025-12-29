@@ -8,6 +8,7 @@ NMi
 NONINFRINGEMENT
 Nginx
 Ollama
+omnibox
 PII
 PYTHONUNBUFFERED
 Procfile
@@ -255,7 +256,6 @@ libpq
 lighthouseci
 lighthouserc
 linting
-lockfiles
 lookback
 lucide
 lyft
