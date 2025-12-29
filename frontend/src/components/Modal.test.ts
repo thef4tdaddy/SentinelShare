@@ -179,4 +179,170 @@ describe('Modal Component', () => {
 		const closeButton = screen.getByLabelText('Close');
 		expect(document.activeElement).toBe(closeButton);
 	});
+
+	it('traps focus when Tab is pressed at the last element', async () => {
+		const onClose = vi.fn();
+		const { container } = render(Modal, {
+			isOpen: true,
+			onClose,
+			title: 'Test Modal',
+			showCloseButton: true
+		});
+
+		// Wait for modal to be rendered
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Manually add a second button to the modal content
+		const modalContent = container.querySelector('.p-6');
+		const secondButton = document.createElement('button');
+		secondButton.textContent = 'Second Button';
+		secondButton.setAttribute('data-testid', 'second-button');
+		modalContent?.appendChild(secondButton);
+
+		// Focus the close button (first element)
+		const closeButton = screen.getByLabelText('Close');
+		closeButton.focus();
+		expect(document.activeElement).toBe(closeButton);
+
+		// Focus the second button (last element)
+		secondButton.focus();
+		expect(document.activeElement).toBe(secondButton);
+
+		// Press Tab when on last element - should cycle to first
+		await fireEvent.keyDown(window, { key: 'Tab' });
+
+		// Small delay for focus to change
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		expect(document.activeElement).toBe(closeButton);
+	});
+
+	it('traps focus when Shift+Tab is pressed at the first element', async () => {
+		const onClose = vi.fn();
+		const { container } = render(Modal, {
+			isOpen: true,
+			onClose,
+			title: 'Test Modal',
+			showCloseButton: true
+		});
+
+		// Wait for modal to be rendered
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Manually add a second button to the modal content
+		const modalContent = container.querySelector('.p-6');
+		const secondButton = document.createElement('button');
+		secondButton.textContent = 'Second Button';
+		secondButton.setAttribute('data-testid', 'second-button');
+		modalContent?.appendChild(secondButton);
+
+		// Get both buttons
+		const closeButton = screen.getByLabelText('Close');
+
+		// Focus the first element (close button)
+		closeButton.focus();
+		expect(document.activeElement).toBe(closeButton);
+
+		// Press Shift+Tab when on first element - should cycle to last
+		await fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+
+		// Small delay for focus to change
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		expect(document.activeElement).toBe(secondButton);
+	});
+
+	it('does nothing when Tab is pressed and there are no focusable elements', async () => {
+		const onClose = vi.fn();
+		const { container } = render(Modal, {
+			isOpen: true,
+			onClose,
+			title: 'Test Modal',
+			showCloseButton: false
+		});
+
+		// Wait for modal to be rendered
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Add non-focusable content to the modal
+		const modalContent = container.querySelector('.p-6');
+		const div = document.createElement('div');
+		div.textContent = 'Just text content';
+		modalContent?.appendChild(div);
+
+		const activeElementBefore = document.activeElement;
+
+		// Press Tab
+		await fireEvent.keyDown(window, { key: 'Tab' });
+
+		// Should not change focus or throw error
+		expect(document.activeElement).toBe(activeElementBefore);
+	});
+
+	it('focuses the modal element when there are no focusable children', async () => {
+		const onClose = vi.fn();
+		const { container } = render(Modal, {
+			isOpen: true,
+			onClose,
+			showCloseButton: false
+		});
+
+		// Add non-focusable content to the modal
+		const modalContent = container.querySelector('.p-6');
+		const div = document.createElement('div');
+		div.textContent = 'Just text content';
+		modalContent?.appendChild(div);
+
+		// Wait for focus to be set
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// The modal element itself should be focused
+		const dialog = screen.getByRole('dialog');
+		expect(document.activeElement).toBe(dialog);
+	});
+
+	it('restores focus to previously focused element when modal closes', async () => {
+		const onClose = vi.fn();
+		
+		// Create a button outside the modal to focus initially
+		const externalButton = document.createElement('button');
+		externalButton.textContent = 'External Button';
+		externalButton.setAttribute('data-testid', 'external-button');
+		document.body.appendChild(externalButton);
+		externalButton.focus();
+		
+		expect(document.activeElement).toBe(externalButton);
+
+		// Render modal with isOpen=true
+		const { rerender } = render(Modal, {
+			isOpen: true,
+			onClose,
+			title: 'Test Modal',
+			showCloseButton: true
+		});
+
+		// Wait for modal focus
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Focus should have moved to modal
+		const closeButton = screen.getByLabelText('Close');
+		expect(document.activeElement).toBe(closeButton);
+
+		// Close the modal by changing isOpen to false
+		rerender({
+			isOpen: false,
+			onClose,
+			title: 'Test Modal',
+			showCloseButton: true
+		});
+
+		// Wait for focus restoration
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		// Focus should be restored to the external button
+		expect(document.activeElement).toBe(externalButton);
+
+		// Cleanup
+		document.body.removeChild(externalButton);
+	});
 });
