@@ -18,6 +18,15 @@ vi.mock('../lib/stores/toast', () => ({
 }));
 
 describe('Settings Component', () => {
+	// Helper function to mock all API calls that happen on component mount
+	const mockSettingsMountApis = () => {
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce([]) // PreferenceList preferences
+			.mockResolvedValueOnce([]) // PreferenceList rules
+			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
+			.mockResolvedValueOnce([]); // checkConnections
+	};
+
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -54,12 +63,7 @@ describe('Settings Component', () => {
 
 	it('triggers poll when Run Now is clicked and confirmed', async () => {
 		const mockResponse = { message: 'Poll triggered successfully' };
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -92,12 +96,7 @@ describe('Settings Component', () => {
 	});
 
 	it('does not trigger poll if user cancels confirmation', async () => {
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -125,12 +124,7 @@ describe('Settings Component', () => {
 	});
 
 	it('shows default message if API response has no message', async () => {
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -157,12 +151,7 @@ describe('Settings Component', () => {
 	});
 
 	it('handles trigger poll error gracefully', async () => {
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -189,15 +178,8 @@ describe('Settings Component', () => {
 	});
 
 	it('reprocessAllIgnored cancels when user declines confirmation', async () => {
-		// Mock window.confirm to return false
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -221,15 +203,8 @@ describe('Settings Component', () => {
 	});
 
 	it('reprocessAllIgnored successfully reprocesses emails', async () => {
-		// Mock window.confirm to return true
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -256,15 +231,8 @@ describe('Settings Component', () => {
 	});
 
 	it('reprocessAllIgnored handles error gracefully', async () => {
-		// Mock window.confirm to return true
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -307,12 +275,7 @@ describe('Settings Component', () => {
 	});
 
 	it('renders Test Connections button and triggers check on click', async () => {
-		// Mock all API calls that happen on mount
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+		mockSettingsMountApis();
 
 		render(Settings);
 
@@ -342,14 +305,11 @@ describe('Settings Component', () => {
 	});
 
 	it('displays successful connection with green indicator', async () => {
-		// Mock all API calls with successful connection
 		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce([]) // PreferenceList preferences
 			.mockResolvedValueOnce([]) // PreferenceList rules
 			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([
-				{ account: 'test@example.com', success: true }
-			]); // checkConnections
+			.mockResolvedValueOnce([{ account: 'test@example.com', success: true }]); // checkConnections
 
 		render(Settings);
 
@@ -364,7 +324,6 @@ describe('Settings Component', () => {
 	});
 
 	it('displays failed connection with red indicator and error tooltip', async () => {
-		// Mock all API calls with failed connection
 		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce([]) // PreferenceList preferences
 			.mockResolvedValueOnce([]) // PreferenceList rules
@@ -387,7 +346,6 @@ describe('Settings Component', () => {
 	});
 
 	it('displays multiple connection results with mixed success/failure states', async () => {
-		// Mock all API calls with mixed connection results
 		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce([]) // PreferenceList preferences
 			.mockResolvedValueOnce([]) // PreferenceList rules
@@ -413,12 +371,7 @@ describe('Settings Component', () => {
 	});
 
 	it('displays default message when no connection results exist', async () => {
-		// Mock all API calls with empty connection results
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections - empty array
+		mockSettingsMountApis();
 
 		render(Settings);
 
