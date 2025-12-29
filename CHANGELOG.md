@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.4.1...sentinel-share-v1.5.0) (2025-12-29)
+
+
+### Features
+
+* docker support, dark mode, email account management, and ci stabilization ([#247](https://github.com/thef4tdaddy/SentinelShare/issues/247)) ([65ae49e](https://github.com/thef4tdaddy/SentinelShare/commit/65ae49e6d7fcbfdf1d38239c091d2e5780f2e36f))
+
 ## [1.4.1](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.4.0...sentinel-share-v1.4.1) (2025-12-28)
 
 
