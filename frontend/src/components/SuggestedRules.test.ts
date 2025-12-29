@@ -110,7 +110,7 @@ describe('SuggestedRules Component', () => {
 	it('handles loadCandidates error gracefully', async () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		vi.mocked(api.learning.getCandidates).mockRejectedValue(new Error('Network error'));
-		
+
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
 		await waitFor(() => {
@@ -127,11 +127,11 @@ describe('SuggestedRules Component', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(mockCandidates);
 		vi.mocked(api.learning.scan).mockRejectedValue(new Error('Scan failed'));
-		
+
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
 		await waitFor(() => screen.getByText('Scan for Missed'));
-		
+
 		const scanButton = screen.getByText('Scan for Missed');
 		await fireEvent.click(scanButton);
 
@@ -146,7 +146,7 @@ describe('SuggestedRules Component', () => {
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(mockCandidates);
 		vi.mocked(api.learning.approve).mockResolvedValue(undefined);
 		const mockOnAdd = vi.fn();
-		
+
 		render(SuggestedRules, { onRuleAdded: mockOnAdd });
 
 		await waitFor(() => screen.getByText('Add Rule'));
@@ -163,7 +163,7 @@ describe('SuggestedRules Component', () => {
 	it('removes candidate from list after successful ignore', async () => {
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(mockCandidates);
 		vi.mocked(api.learning.ignore).mockResolvedValue(undefined);
-		
+
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
 		await waitFor(() => screen.getByText('Ignore'));
@@ -193,7 +193,7 @@ describe('SuggestedRules Component', () => {
 				created_at: new Date().toISOString()
 			}
 		];
-		
+
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(candidatesWithExample);
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
@@ -206,7 +206,7 @@ describe('SuggestedRules Component', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(mockCandidates);
 		vi.mocked(api.learning.approve).mockRejectedValue(new Error('Approval failed'));
-		
+
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
 		await waitFor(() => screen.getByText('Add Rule'));
@@ -226,7 +226,7 @@ describe('SuggestedRules Component', () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		vi.mocked(api.learning.getCandidates).mockResolvedValue(mockCandidates);
 		vi.mocked(api.learning.ignore).mockRejectedValue(new Error('Ignore failed'));
-		
+
 		render(SuggestedRules, { onRuleAdded: vi.fn() });
 
 		await waitFor(() => screen.getByText('Ignore'));
