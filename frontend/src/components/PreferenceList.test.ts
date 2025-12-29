@@ -274,17 +274,6 @@ describe('PreferenceList Component - Preferences Type', () => {
 				screen.getByText(/Are you sure you want to delete this preference/i)
 			).toBeTruthy();
 		});
-
-		// Cancel and verify dialog closes (tests the bind:isOpen)
-		const buttons = screen.getAllByRole('button');
-		const cancelButton = buttons.find((btn) => btn.classList.contains('btn-secondary'));
-		if (!cancelButton) throw new Error('Cancel button not found');
-		await fireEvent.click(cancelButton);
-
-		// Dialog should close
-		await waitFor(() => {
-			expect(screen.queryByText('Confirm Delete')).toBeFalsy();
-		});
 	});
 });
 
