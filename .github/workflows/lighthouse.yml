@@ -61,13 +61,17 @@ jobs:
               
               console.log('Report directory contents:', fs.readdirSync(reportDir));
               
-              const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
+              const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json') && !f.includes('manifest') && !f.includes('assertion'));
               if (files.length === 0) {
-                console.log('No JSON report files found');
+                console.log('No Lighthouse JSON report files found');
                 return;
               }
               
-              const reportPath = path.join(reportDir, files[0]);
+              // Sort by mtime to get the latest report if multiple exist
+              const reportFiles = files.map(f => ({ name: f, time: fs.statSync(path.join(reportDir, f)).mtime.getTime() }));
+              reportFiles.sort((a, b) => b.time - a.time);
+              
+              const reportPath = path.join(reportDir, reportFiles[0].name);
               console.log('Reading report from:', reportPath);
               
               const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
