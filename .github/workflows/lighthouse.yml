@@ -78,42 +78,47 @@ jobs:
               }
 
               const failures = [];
+              const scores = [];
               
-              // Categories under 0.9
               for (const category of Object.values(report.categories)) {
+                  const score = (category.score * 100).toFixed(0);
+                  scores.push(`**${category.title}**: ${score}%`);
                   if (category.score < 0.9) {
-                      failures.push(`**${category.title}**: ${(category.score * 100).toFixed(0)}%`);
+                      failures.push(`**${category.title}** is below baseline: ${score}%`);
                   }
               }
               
-              // Critical Audits
+              // Critical Audits (only if they are actually errors now that we use 'warn')
               for (const audit of Object.values(report.audits)) {
                   if (audit.score === 0 || audit.scoreDisplayMode === 'error') {
                        if (audit.id !== 'is-on-https') {
-                          failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
+                          failures.push(`- ❌ **${audit.title}**: ${audit.displayValue || 'Failed Audit'} _(${audit.id})_`);
                        }
                   }
               }
               
-              if (failures.length > 0) {
-                 if (!context.issue || !context.issue.number) {
-                    console.log('No issue number found (not a PR?), skipping comment.');
-                    console.log('Failures found:', failures);
-                    return;
-                 }
-
-                 console.log('Posting comment with suggestions...');
-                 const body = `### 💡 Lighthouse Suggestions\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
-                 
-                 await github.rest.issues.createComment({
-                     owner: context.repo.owner,
-                     repo: context.repo.repo,
-                     issue_number: context.issue.number,
-                     body: body
-                 });
-              } else {
-                console.log('No failures found in report to comment about.');
+              if (!context.issue || !context.issue.number) {
+                 console.log('No issue number found, skipping comment.');
+                 return;
               }
+
+              let body = `### 📊 Lighthouse Report Summary\n\n${scores.join(' | ')}\n\n`;
+              
+              if (failures.length > 0) {
+                 body += `#### ⚠️ Issues Found\n${failures.join('\n')}\n\n`;
+              } else {
+                 body += `✅ **All performance baselines met!**\n\n`;
+              }
+              
+              body += `[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+              
+              console.log('Posting report summary...');
+              await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+              });
             } catch (error) {
               console.error('Error in comment script:', error);
             }
