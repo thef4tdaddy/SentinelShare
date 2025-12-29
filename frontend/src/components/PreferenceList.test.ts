@@ -258,7 +258,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
 		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
 
-		const { container } = render(PreferenceList, { type: 'preferences' });
+		render(PreferenceList, { type: 'preferences' });
 
 		await waitFor(() => {
 			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
