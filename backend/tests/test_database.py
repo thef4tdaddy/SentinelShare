@@ -1,3 +1,5 @@
+import importlib
+
 from backend.database import create_db_and_tables, get_session
 from sqlmodel import Session, SQLModel
 
@@ -70,3 +72,23 @@ class TestDatabase:
             next(session_gen)
         except StopIteration:
             pass
+
+    def test_postgres_url_replacement(self, monkeypatch):
+        """Test that postgres:// is replaced with postgresql:// when DATABASE_URL is set (line 9)"""
+        # Set the environment variable with postgres:// prefix
+        test_url = "postgres://user:pass@localhost/testdb"
+        monkeypatch.setenv("DATABASE_URL", test_url)
+
+        # Reload the module to trigger the initialization code
+        import backend.database
+
+        importlib.reload(backend.database)
+
+        # Verify that the database_url was converted
+        from backend.database import engine
+
+        # The engine's URL should have postgresql:// instead of postgres://
+        assert "postgresql://" in str(engine.url)
+        assert "postgres://" not in str(engine.url) or "postgresql://" in str(
+            engine.url
+        )
