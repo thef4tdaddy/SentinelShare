@@ -2,12 +2,13 @@ import logging
 from unittest.mock import patch
 
 import pytest
-from backend.main import app
-from backend.models import LearningCandidate, ManualRule
-from backend.routers.learning import run_scan_wrapper
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
+
+from backend.main import app
+from backend.models import LearningCandidate, ManualRule
+from backend.routers.learning import run_scan_wrapper
 
 
 @pytest.fixture(name="session")

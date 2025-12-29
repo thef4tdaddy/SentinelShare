@@ -1,7 +1,8 @@
 import pytest
-from backend.models import ManualRule, Preference
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, Preference
 
 
 @pytest.fixture(name="session")
@@ -134,8 +135,9 @@ def test_delete_preference_success(session: Session):
 
 def test_delete_preference_not_found(session: Session):
     """Test deleting a non-existent preference raises 404"""
-    from backend.routers.settings import delete_preference
     from fastapi import HTTPException
+
+    from backend.routers.settings import delete_preference
 
     with pytest.raises(HTTPException) as exc_info:
         delete_preference(999, session=session)
@@ -145,8 +147,9 @@ def test_delete_preference_not_found(session: Session):
 
 def test_delete_rule_not_found(session: Session):
     """Test deleting a non-existent rule raises 404"""
-    from backend.routers.settings import delete_rule
     from fastapi import HTTPException
+
+    from backend.routers.settings import delete_rule
 
     with pytest.raises(HTTPException) as exc_info:
         delete_rule(999, session=session)
@@ -156,8 +159,9 @@ def test_delete_rule_not_found(session: Session):
 
 def test_update_email_template_empty(session: Session):
     """Test updating email template with empty string raises 400"""
-    from backend.routers.settings import EmailTemplateUpdate, update_email_template
     from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Test with empty string
     with pytest.raises(HTTPException) as exc_info:
@@ -174,8 +178,9 @@ def test_update_email_template_empty(session: Session):
 
 def test_update_email_template_too_long(session: Session):
     """Test updating email template with too long content raises 400"""
-    from backend.routers.settings import EmailTemplateUpdate, update_email_template
     from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Create a template longer than 10,000 characters
     long_template = "x" * 10001
@@ -265,8 +270,9 @@ def test_create_email_account(session: Session, monkeypatch):
 
 def test_create_email_account_duplicate(session: Session, monkeypatch):
     """Test creating a duplicate email account raises 400"""
-    from backend.routers.settings import EmailAccountCreate, create_email_account
     from fastapi import HTTPException
+
+    from backend.routers.settings import EmailAccountCreate, create_email_account
 
     monkeypatch.setenv("SECRET_KEY", "test-secret-key")
 
@@ -319,8 +325,9 @@ def test_delete_email_account(session: Session, monkeypatch):
 
 def test_delete_email_account_not_found(session: Session):
     """Test deleting a non-existent email account raises 404"""
-    from backend.routers.settings import delete_email_account
     from fastapi import HTTPException
+
+    from backend.routers.settings import delete_email_account
 
     with pytest.raises(HTTPException) as exc_info:
         delete_email_account(999, session=session)
@@ -364,8 +371,9 @@ def test_test_email_account(session: Session, monkeypatch):
 
 def test_test_email_account_not_found(session: Session):
     """Test testing a non-existent email account raises 404"""
-    from backend.routers.settings import test_email_account
     from fastapi import HTTPException
+
+    from backend.routers.settings import test_email_account
 
     with pytest.raises(HTTPException) as exc_info:
         test_email_account(999, session=session)
