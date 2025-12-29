@@ -39,3 +39,13 @@ jobs:
             cspell:typescript/dict/typescript.txt
             cspell:html/dict/html.txt
             cspell:filetypes/filetypes.txt
+            cspell:php/dict/php.txt
+            cspell:fullstack/dict/fullstack.txt
+            cspell:aws/aws.txt
+            cspell:node/dict/node.txt
+            cspell:r/src/r.txt
+            cspell:golang/dict/go.txt
+            cspell:k8s/dict/k8s.txt
+            cspell:dotnet/dict/dotnet.txt
+            cspell:django/requirements.txt
+            cspell:docker/src/docker-words.txt
