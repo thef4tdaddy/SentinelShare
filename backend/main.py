@@ -1,15 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
+from backend.routers import (actions, auth, dashboard, history, learning,
+                             settings)
+from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
-
-from backend.routers import (actions, auth, dashboard, history, learning,
-                             settings)
-from backend.services.scheduler import start_scheduler, stop_scheduler
 
 # actually CI says backend.models.ProcessedEmail imported but unused.
 # backend.database.create_db_and_tables imported but unused.

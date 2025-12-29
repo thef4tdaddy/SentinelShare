@@ -20,7 +20,9 @@
 				alt="SentinelShare Logo"
 				class="h-10 md:h-14 w-auto border-2 border-primary bg-white rounded-lg shadow-sm dark:border-primary-dark dark:bg-gray-800"
 			/>
-			<span class="hidden md:inline text-xs font-mono text-gray-400 mt-2 dark:text-gray-500">v{__APP_VERSION__}</span>
+			<span class="hidden md:inline text-xs font-mono text-gray-400 mt-2 dark:text-gray-500"
+				>v{__APP_VERSION__}</span
+			>
 		</button>
 
 		<!-- Desktop Navigation Links -->
