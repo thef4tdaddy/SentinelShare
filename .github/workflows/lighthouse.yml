@@ -41,8 +41,8 @@ jobs:
           name: lighthouse-results
           path: .lighthouseci/
 
-      - name: Comment on Failure
-        if: failure()
+      - name: Comment on Results
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -102,8 +102,8 @@ jobs:
                     return;
                  }
 
-                 console.log('Posting comment with failures...');
-                 const body = `### 🚨 Lighthouse CI Failures\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+                 console.log('Posting comment with suggestions...');
+                 const body = `### 💡 Lighthouse Suggestions\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
                  
                  await github.rest.issues.createComment({
                      owner: context.repo.owner,
