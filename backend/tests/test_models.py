@@ -1,8 +1,14 @@
 from datetime import datetime, timezone
 
 import pytest
-from backend.models import (EmailAccount, GlobalSettings, ManualRule,
-                            Preference, ProcessedEmail, Stats)
+from backend.models import (
+    EmailAccount,
+    GlobalSettings,
+    ManualRule,
+    Preference,
+    ProcessedEmail,
+    Stats,
+)
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
