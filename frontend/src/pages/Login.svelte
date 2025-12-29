@@ -65,6 +65,7 @@
 				<input
 					type="password"
 					id="password"
+					autocomplete="current-password"
 					bind:this={passwordField}
 					bind:value={password}
 					class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-primary-dark"

@@ -21,8 +21,8 @@ It turns a manual chore into a "set it and forget it" background process.
 
 ## 🚀 Features
 
-- **Smart Receipt Detection**: Automatically identifies receipts from retailers like Amazon, Starbucks, Apple, and more, separating them from shipping notifications and promotional spam.
-- **Multi-Account Support**: Connects to multiple IMAP accounts (Gmail, iCloud) to monitor for receipts.
+- **🌙 Dark Mode Support**: Sleek, modern interface with automatic system preference detection and manual override (theme persistence).
+- **📧 In-App Email Management**: Add and manage multiple IMAP accounts directly from the dashboard with encrypted credential storage.
 - **Intelligent Forwarding**: Forwards detected receipts to a target email address with a rich, summary header.
 - **Smart Actions**:
   - **Block**: Stop forwarding specific senders or categories with one click.
@@ -39,7 +39,8 @@ It turns a manual chore into a "set it and forget it" background process.
 
 - **Backend**: Python (FastAPI), SQLModel (SQLite), APScheduler, imaplib.
 - **Frontend**: Svelte 5, Tailwind CSS, Vite, Lucide Icons.
-- **Deployment**: Ready for Heroku, Docker, or Docker Compose environments.
+- **Deployment**: Ready for Heroku, Docker, or Docker Compose environments (PostgreSQL and SQLite supported).
+- **Quality Ensured**: 275+ tests (Pytest, Vitest, Playwright) and robust CI/CD stabilization.
 
 ## 📦 Installation & Setup
 
