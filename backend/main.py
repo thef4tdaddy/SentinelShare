@@ -18,12 +18,15 @@ from backend.services.scheduler import start_scheduler, stop_scheduler
 async def lifespan(app: FastAPI):
     # Startup
     # Check/Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
-    try:
-        from backend.migration_utils import run_migrations
+    if not os.environ.get("TESTING"):
+        try:
+            from backend.migration_utils import run_migrations
 
-        run_migrations()
-    except Exception as e:
-        print(f"Startup Migration Error: {e}")
+            run_migrations()
+        except Exception as e:
+            print(f"Startup Migration Error: {e}")
+    else:
+        print("Startup: Skipping migrations in test environment.")
 
     print("Startup: Database checks complete.")
     start_scheduler()

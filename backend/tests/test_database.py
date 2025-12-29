@@ -1,5 +1,3 @@
-import importlib
-
 from sqlmodel import Session, SQLModel
 
 from backend.database import create_db_and_tables, get_session
@@ -40,21 +38,19 @@ class TestDatabase:
 
     def test_database_url_parsing_logic(self):
         """Test the logic used for DATABASE_URL replacement"""
-
-        def parse_url(url: str) -> str:
-            if url and url.startswith("postgres://"):
-                return url.replace("postgres://", "postgresql://", 1)
-            return url
+        from backend.database import format_database_url
 
         assert (
-            parse_url("postgres://user:pass@localhost/db")
+            format_database_url("postgres://user:pass@localhost/db")
             == "postgresql://user:pass@localhost/db"
         )
         assert (
-            parse_url("postgresql://user:pass@localhost/db")
+            format_database_url("postgresql://user:pass@localhost/db")
             == "postgresql://user:pass@localhost/db"
         )
-        assert parse_url("sqlite:///test.db") == "sqlite:///test.db"
+        assert format_database_url("sqlite:///test.db") == "sqlite:///test.db"
+        assert format_database_url(None) == "sqlite:///./local_dev.db"
+        assert format_database_url("") == "sqlite:///./local_dev.db"
 
     def test_engine_exists(self):
         """Test that engine is created"""
@@ -76,33 +72,11 @@ class TestDatabase:
         except StopIteration:
             pass
 
-    def test_postgres_url_replacement(self, monkeypatch):
-        """Test that postgres:// is replaced with postgresql:// when DATABASE_URL is set (line 9)"""
-        # Set the environment variable with postgres:// prefix
+    def test_postgres_url_replacement_behavior(self):
+        """Test that the helper replaces postgres:// with postgresql:// correctly"""
+        from backend.database import format_database_url
+
         test_url = "postgres://user:pass@localhost/testdb"
         expected_url = "postgresql://user:pass@localhost/testdb"
-        monkeypatch.setenv("DATABASE_URL", test_url)
 
-        # Reload the module to trigger the initialization code
-        import backend.database
-
-        importlib.reload(backend.database)
-
-        # Import the database_url variable to verify line 9 was executed
-        from backend.database import database_url, engine
-
-        # Verify that database_url was set from the environment variable (line 7)
-        # and that the replacement happened (line 9)
-        assert database_url is not None, "database_url was not set from DATABASE_URL"
-        assert database_url == expected_url, (
-            f"Line 9 was not executed correctly: expected '{expected_url}', "
-            f"got '{database_url}'. The postgres:// prefix should have been replaced."
-        )
-
-        # Additional verification: the engine's URL should match
-        assert "postgresql://" in str(
-            engine.url
-        ), "Engine URL does not contain postgresql://"
-        assert "postgres://" not in str(
-            engine.url
-        ), "Engine URL still contains postgres:// (should be postgresql://)"
+        assert format_database_url(test_url) == expected_url

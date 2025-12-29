@@ -2,16 +2,18 @@ import os
 
 from sqlmodel import Session, SQLModel, create_engine
 
-# Heroku provides DATABASE_URL, but imports it with 'postgres://' which SQLAlchemy doesn't like.
-# We need to replace it with 'postgresql://'
-database_url = os.environ.get("DATABASE_URL")
-if database_url and database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-# Fallback for local development
-if not database_url:
-    database_url = "sqlite:///./local_dev.db"
+def format_database_url(url: str | None) -> str:
+    """Helper to ensure DATABASE_URL is valid for SQLAlchemy"""
+    if not url:
+        return "sqlite:///./local_dev.db"
+    # Heroku provides DATABASE_URL, but imports it with 'postgres://' which SQLAlchemy doesn't like.
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql://", 1)
+    return url
 
+
+database_url = format_database_url(os.environ.get("DATABASE_URL"))
 engine = create_engine(database_url, echo=False)
 
 
