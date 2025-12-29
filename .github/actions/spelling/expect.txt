@@ -259,6 +259,7 @@ learningcandidate
 levelname
 lhci
 libpq
+lighthouseci
 lighthouserc
 linting
 lockfiles
