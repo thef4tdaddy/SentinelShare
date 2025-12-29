@@ -2,6 +2,7 @@
 	import { fetchJson } from '../lib/api';
 	import DOMPurify from 'dompurify';
 	import { onMount } from 'svelte';
+	import { toasts } from '../lib/stores/toast';
 	import { Save, Eye, EyeOff } from 'lucide-svelte';
 
 	let template = '';
@@ -21,7 +22,7 @@
 			originalTemplate = template;
 		} catch {
 			console.error('Error loading template');
-			alert('Error loading template');
+			toasts.trigger('Error loading template', 'error');
 		} finally {
 			loading = false;
 		}
@@ -36,9 +37,9 @@
 				body: JSON.stringify({ template })
 			});
 			originalTemplate = template;
-			alert('Template saved successfully!');
+			toasts.trigger('Template saved successfully!', 'success');
 		} catch {
-			alert('Error saving template');
+			toasts.trigger('Error saving template', 'error');
 		} finally {
 			saving = false;
 		}
@@ -74,13 +75,15 @@
 <div class="card">
 	<div class="p-6">
 		<div class="mb-6">
-			<p class="text-sm text-text-secondary">
+			<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
 				Customize how forwarded emails appear. You can write full HTML here.
 			</p>
 		</div>
 
 		{#if loading}
-			<div class="text-center py-8 text-text-secondary">Loading template...</div>
+			<div class="text-center py-8 text-text-secondary dark:text-text-secondary-dark">
+				Loading template...
+			</div>
 		{:else}
 			<div class="space-y-4">
 				<!-- Template Editor -->

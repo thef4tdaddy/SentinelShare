@@ -1,7 +1,8 @@
 import pytest
-from backend.models import ManualRule, Preference
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, Preference
 
 
 @pytest.fixture(name="session")
@@ -70,9 +71,11 @@ def test_update_preference(session: Session):
 
 
 def test_email_template_endpoints(session: Session):
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          get_email_template,
-                                          update_email_template)
+    from backend.routers.settings import (
+        EmailTemplateUpdate,
+        get_email_template,
+        update_email_template,
+    )
 
     # Default template
     tpl = get_email_template(session=session)
@@ -111,8 +114,11 @@ def test_trigger_poll(session: Session):
 
 def test_delete_preference_success(session: Session):
     """Test successfully deleting a preference (lines 33-35)"""
-    from backend.routers.settings import (create_preference, delete_preference,
-                                          get_preferences)
+    from backend.routers.settings import (
+        create_preference,
+        delete_preference,
+        get_preferences,
+    )
 
     # Create a preference first
     pref = Preference(item="test_delete", type="Blocked Category")
@@ -129,8 +135,9 @@ def test_delete_preference_success(session: Session):
 
 def test_delete_preference_not_found(session: Session):
     """Test deleting a non-existent preference raises 404"""
-    from backend.routers.settings import delete_preference
     from fastapi import HTTPException
+
+    from backend.routers.settings import delete_preference
 
     with pytest.raises(HTTPException) as exc_info:
         delete_preference(999, session=session)
@@ -140,8 +147,9 @@ def test_delete_preference_not_found(session: Session):
 
 def test_delete_rule_not_found(session: Session):
     """Test deleting a non-existent rule raises 404"""
-    from backend.routers.settings import delete_rule
     from fastapi import HTTPException
+
+    from backend.routers.settings import delete_rule
 
     with pytest.raises(HTTPException) as exc_info:
         delete_rule(999, session=session)
@@ -151,9 +159,9 @@ def test_delete_rule_not_found(session: Session):
 
 def test_update_email_template_empty(session: Session):
     """Test updating email template with empty string raises 400"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
     from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Test with empty string
     with pytest.raises(HTTPException) as exc_info:
@@ -170,9 +178,9 @@ def test_update_email_template_empty(session: Session):
 
 def test_update_email_template_too_long(session: Session):
     """Test updating email template with too long content raises 400"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
     from fastapi import HTTPException
+
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # Create a template longer than 10,000 characters
     long_template = "x" * 10001
@@ -187,8 +195,7 @@ def test_update_email_template_too_long(session: Session):
 
 def test_update_email_template_create_new(session: Session):
     """Test creating a new email template setting (lines 110-115)"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          update_email_template)
+    from backend.routers.settings import EmailTemplateUpdate, update_email_template
 
     # First time creating the template - should hit the else branch on lines 110-115
     result = update_email_template(
@@ -202,9 +209,11 @@ def test_update_email_template_create_new(session: Session):
 
 def test_update_email_template_existing(session: Session):
     """Test updating an existing email template setting (line 108)"""
-    from backend.routers.settings import (EmailTemplateUpdate,
-                                          get_email_template,
-                                          update_email_template)
+    from backend.routers.settings import (
+        EmailTemplateUpdate,
+        get_email_template,
+        update_email_template,
+    )
 
     # First, create a template
     update_email_template(
@@ -222,3 +231,152 @@ def test_update_email_template_existing(session: Session):
     # Verify it was actually updated
     current = get_email_template(session=session)
     assert current["template"] == "Updated template"
+
+
+# Email Account Management Tests
+
+
+def test_get_email_accounts_empty(session: Session):
+    """Test getting email accounts when none exist"""
+    from backend.routers.settings import get_email_accounts
+
+    accounts = get_email_accounts(session=session)
+    assert len(accounts) == 0
+
+
+def test_create_email_account(session: Session, monkeypatch):
+    """Test creating a new email account"""
+    from backend.routers.settings import EmailAccountCreate, create_email_account
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+
+    account_data = EmailAccountCreate(
+        email="test@example.com",
+        host="imap.gmail.com",
+        port=993,
+        username="test@example.com",
+        password="test-password-123",
+    )
+
+    result = create_email_account(account_data, session=session)
+
+    assert result.email == "test@example.com"
+    assert result.host == "imap.gmail.com"
+    assert result.port == 993
+    assert result.username == "test@example.com"
+    assert result.is_active is True
+    assert result.id is not None
+
+
+def test_create_email_account_duplicate(session: Session, monkeypatch):
+    """Test creating a duplicate email account raises 400"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import EmailAccountCreate, create_email_account
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+
+    account_data = EmailAccountCreate(
+        email="duplicate@example.com",
+        host="imap.gmail.com",
+        port=993,
+        username="duplicate@example.com",
+        password="password1",
+    )
+
+    # Create first account
+    create_email_account(account_data, session=session)
+
+    # Try to create duplicate
+    with pytest.raises(HTTPException) as exc_info:
+        create_email_account(account_data, session=session)
+
+    assert exc_info.value.status_code == 400
+    assert "already exists" in str(exc_info.value.detail)
+
+
+def test_delete_email_account(session: Session, monkeypatch):
+    """Test deleting an email account"""
+    from backend.routers.settings import (
+        EmailAccountCreate,
+        create_email_account,
+        delete_email_account,
+        get_email_accounts,
+    )
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+
+    # Create an account
+    account_data = EmailAccountCreate(
+        email="delete@example.com",
+        username="delete@example.com",
+        password="password",
+    )
+    created = create_email_account(account_data, session=session)
+
+    # Delete it
+    result = delete_email_account(created.id, session=session)
+    assert result["ok"] is True
+
+    # Verify it's gone
+    accounts = get_email_accounts(session=session)
+    assert len(accounts) == 0
+
+
+def test_delete_email_account_not_found(session: Session):
+    """Test deleting a non-existent email account raises 404"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import delete_email_account
+
+    with pytest.raises(HTTPException) as exc_info:
+        delete_email_account(999, session=session)
+
+    assert exc_info.value.status_code == 404
+    assert "Account not found" in str(exc_info.value.detail)
+
+
+def test_test_email_account(session: Session, monkeypatch):
+    """Test the test connection endpoint for email account"""
+    from unittest.mock import patch
+
+    from backend.routers.settings import (
+        EmailAccountCreate,
+        create_email_account,
+        test_email_account,
+    )
+
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key")
+
+    # Create an account
+    account_data = EmailAccountCreate(
+        email="test@example.com",
+        username="test@example.com",
+        password="password",
+    )
+    created = create_email_account(account_data, session=session)
+
+    # Mock the EmailService.test_connection
+    with patch("backend.routers.settings.EmailService.test_connection") as mock_test:
+        mock_test.return_value = {"success": True, "error": None}
+
+        result = test_email_account(created.id, session=session)
+
+        assert result["account"] == "test@example.com"
+        assert result["success"] is True
+        assert result["error"] is None
+
+        mock_test.assert_called_once()
+
+
+def test_test_email_account_not_found(session: Session):
+    """Test testing a non-existent email account raises 404"""
+    from fastapi import HTTPException
+
+    from backend.routers.settings import test_email_account
+
+    with pytest.raises(HTTPException) as exc_info:
+        test_email_account(999, session=session)
+
+    assert exc_info.value.status_code == 404
+    assert "Account not found" in str(exc_info.value.detail)

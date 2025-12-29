@@ -1,5 +1,6 @@
-from backend.database import create_db_and_tables, get_session
 from sqlmodel import Session, SQLModel
+
+from backend.database import create_db_and_tables, get_session
 
 
 class TestDatabase:
@@ -20,6 +21,8 @@ class TestDatabase:
     def test_create_db_and_tables(self):
         """Test that create_db_and_tables creates tables without errors"""
         # This should not raise any exceptions
+        import backend.models  # noqa: F401
+
         create_db_and_tables()
 
         # Verify tables were created by checking metadata
@@ -35,21 +38,19 @@ class TestDatabase:
 
     def test_database_url_parsing_logic(self):
         """Test the logic used for DATABASE_URL replacement"""
-
-        def parse_url(url: str) -> str:
-            if url and url.startswith("postgres://"):
-                return url.replace("postgres://", "postgresql://", 1)
-            return url
+        from backend.database import format_database_url
 
         assert (
-            parse_url("postgres://user:pass@localhost/db")
+            format_database_url("postgres://user:pass@localhost/db")
             == "postgresql://user:pass@localhost/db"
         )
         assert (
-            parse_url("postgresql://user:pass@localhost/db")
+            format_database_url("postgresql://user:pass@localhost/db")
             == "postgresql://user:pass@localhost/db"
         )
-        assert parse_url("sqlite:///test.db") == "sqlite:///test.db"
+        assert format_database_url("sqlite:///test.db") == "sqlite:///test.db"
+        assert format_database_url(None) == "sqlite:///./local_dev.db"
+        assert format_database_url("") == "sqlite:///./local_dev.db"
 
     def test_engine_exists(self):
         """Test that engine is created"""
@@ -70,3 +71,12 @@ class TestDatabase:
             next(session_gen)
         except StopIteration:
             pass
+
+    def test_postgres_url_replacement_behavior(self):
+        """Test that the helper replaces postgres:// with postgresql:// correctly"""
+        from backend.database import format_database_url
+
+        test_url = "postgres://user:pass@localhost/testdb"
+        expected_url = "postgresql://user:pass@localhost/testdb"
+
+        assert format_database_url(test_url) == expected_url

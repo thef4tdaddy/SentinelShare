@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
 	import { onMount } from 'svelte';
+	import { toasts } from '../lib/stores/toast';
 	import { Trash2, Plus } from 'lucide-svelte';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 
@@ -60,8 +61,9 @@
 			});
 			items = [...items, res];
 			newItem = {}; // Reset
+			toasts.trigger('Item added successfully', 'success');
 		} catch {
-			alert('Error adding item');
+			toasts.trigger('Error adding item', 'error');
 		} finally {
 			loading = false;
 		}
@@ -78,8 +80,9 @@
 		try {
 			await fetchJson(`/settings/${type}/${itemToDelete}`, { method: 'DELETE' });
 			items = items.filter((i) => i.id !== itemToDelete);
+			toasts.trigger('Item deleted', 'success');
 		} catch {
-			alert('Error deleting item');
+			toasts.trigger('Error deleting item', 'error');
 		} finally {
 			itemToDelete = null;
 		}
@@ -136,7 +139,7 @@
 	<div class="hidden md:block overflow-x-auto">
 		<table class="w-full text-left text-sm">
 			<thead>
-				<tr class="border-b border-gray-100">
+				<tr class="border-b border-gray-100 dark:border-gray-700">
 					{#each fields as field (field.key)}
 						<th
 							class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 first:rounded-tl-lg"
@@ -188,7 +191,7 @@
 							<span class="text-[10px] uppercase font-bold text-gray-400 tracking-tight">
 								{field.label.split('(')[0].trim()}
 							</span>
-							<span class="text-sm font-medium text-text-main">
+							<span class="text-sm font-medium text-text-main dark:text-text-main-dark">
 								{item[field.key] || '-'}
 							</span>
 						</div>

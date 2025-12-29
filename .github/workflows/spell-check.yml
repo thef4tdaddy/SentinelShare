@@ -30,3 +30,22 @@ jobs:
           use_magic_file: 1
           extra_dictionary_limit: 10
           quit_without_error: 0
+          extra_dictionaries: |
+            cspell:software-terms/dict/softwareTerms.txt
+            cspell:python/src/python/python-lib.txt
+            cspell:npm/dict/npm.txt
+            cspell:python/src/python/python.txt
+            cspell:python/src/common/extra.txt
+            cspell:typescript/dict/typescript.txt
+            cspell:html/dict/html.txt
+            cspell:filetypes/filetypes.txt
+            cspell:php/dict/php.txt
+            cspell:fullstack/dict/fullstack.txt
+            cspell:aws/aws.txt
+            cspell:node/dict/node.txt
+            cspell:r/src/r.txt
+            cspell:golang/dict/go.txt
+            cspell:k8s/dict/k8s.txt
+            cspell:dotnet/dict/dotnet.txt
+            cspell:django/requirements.txt
+            cspell:docker/src/docker-words.txt

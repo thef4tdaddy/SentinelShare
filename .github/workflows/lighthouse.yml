@@ -8,6 +8,7 @@ permissions:
   contents: read
   pull-requests: write
   statuses: write
+  actions: write
 
 jobs:
   lighthouse:
@@ -31,5 +32,105 @@ jobs:
         uses: treosh/lighthouse-ci-action@v10
         with:
           configPath: "./frontend/lighthouserc.json"
-          uploadArtifacts: true
-          temporaryPublicStorage: true
+          uploadArtifacts: false
+          temporaryPublicStorage: false
+
+      - name: Upload Lighthouse Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+      - name: Comment on Results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              
+              // Debug info
+              console.log('Current directory:', process.cwd());
+              const reportDir = '.lighthouseci';
+              
+              if (!fs.existsSync(reportDir)) {
+                 console.log('Report directory not found at:', reportDir);
+                 return;
+              }
+              
+              console.log('Report directory contents:', fs.readdirSync(reportDir));
+              
+              const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json') && !f.includes('manifest') && !f.includes('assertion'));
+              if (files.length === 0) {
+                console.log('No Lighthouse JSON report files found');
+                return;
+              }
+              
+              // Sort by mtime to get the latest report if multiple exist
+              const reportFiles = files.map(f => ({ name: f, time: fs.statSync(path.join(reportDir, f)).mtime.getTime() }));
+              reportFiles.sort((a, b) => b.time - a.time);
+              
+              const reportPath = path.join(reportDir, reportFiles[0].name);
+              console.log('Reading report from:', reportPath);
+              
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              
+              if (!report.categories || !report.audits) {
+                 console.log('Report is missing categories or audits structure.');
+                 return;
+              }
+
+              const failures = [];
+              const scores = [];
+              
+              // We only care about Performance, Accessibility, Best Practices, and SEO for now
+              const relevantCategories = ['performance', 'accessibility', 'best-practices', 'seo'];
+              
+              for (const category of Object.values(report.categories)) {
+                  const score = (category.score * 100).toFixed(0);
+                  scores.push(`**${category.title}**: ${score}%`);
+                  
+                  if (relevantCategories.includes(category.id)) {
+                      const baseline = category.id === 'accessibility' ? 0.5 : (category.id === 'best-practices' ? 0.8 : 0.9);
+                      if (category.score < baseline) {
+                          failures.push(`**${category.title}** is below baseline: ${score}% (expected ${(baseline * 100)}%)`);
+                      }
+                  }
+              }
+              
+              // Critical Audits - only if they are not in the 'PWA' or 'Best Practices' categories that we are relaxing
+              // and only if they are actually scored as 0. 
+              const ignoredAudits = ['service-worker', 'installable-manifest', 'splash-screen', 'themed-omnibox', 'maskable-icon', 'is-on-https', 'color-contrast', 'errors-in-console'];
+              
+              for (const audit of Object.values(report.audits)) {
+                  if (audit.score === 0 && !ignoredAudits.includes(audit.id)) {
+                      failures.push(`- ❌ **${audit.title}**: ${audit.displayValue || 'Failed Audit'} _(${audit.id})_`);
+                  }
+              }
+              
+              if (!context.issue || !context.issue.number) {
+                 console.log('No issue number found, skipping comment.');
+                 return;
+              }
+
+              let body = `### 📊 Lighthouse Report Summary\n\n${scores.join(' | ')}\n\n`;
+              
+              if (failures.length > 0) {
+                 body += `#### ⚠️ Issues Found\n${failures.join('\n')}\n\n`;
+              } else {
+                 body += `✅ **All critical performance baselines met!**\n\n`;
+              }
+              
+              body += `[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+              
+              console.log('Posting report summary...');
+              await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+              });
+            } catch (error) {
+              console.error('Error in comment script:', error);
+            }

@@ -1,10 +1,17 @@
 from datetime import datetime, timezone
 
 import pytest
-from backend.models import (GlobalSettings, ManualRule, Preference,
-                            ProcessedEmail, Stats)
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import (
+    EmailAccount,
+    GlobalSettings,
+    ManualRule,
+    Preference,
+    ProcessedEmail,
+    Stats,
+)
 
 
 @pytest.fixture(name="session")
@@ -266,3 +273,107 @@ class TestManualRule:
         assert rules[0].priority == 1
         assert rules[1].priority == 10
         assert rules[2].priority == 20
+
+
+class TestEmailAccount:
+
+    def test_create_email_account(self, session: Session):
+        """Test creating an EmailAccount instance"""
+        account = EmailAccount(
+            email="test@example.com",
+            host="imap.gmail.com",
+            port=993,
+            username="test@example.com",
+            encrypted_password="encrypted_password_string",
+            is_active=True,
+        )
+
+        session.add(account)
+        session.commit()
+        session.refresh(account)
+
+        assert account.id is not None
+        assert account.email == "test@example.com"
+        assert account.host == "imap.gmail.com"
+        assert account.port == 993
+        assert account.username == "test@example.com"
+        assert account.encrypted_password == "encrypted_password_string"
+        assert account.is_active is True
+        assert account.created_at is not None
+        assert account.updated_at is not None
+
+    def test_email_account_unique_email(self, session: Session):
+        """Test that email must be unique"""
+        from sqlalchemy.exc import IntegrityError
+
+        account1 = EmailAccount(
+            email="duplicate@example.com",
+            host="imap.gmail.com",
+            port=993,
+            username="duplicate@example.com",
+            encrypted_password="encrypted1",
+        )
+        session.add(account1)
+        session.commit()
+
+        # Try to add another with same email
+        account2 = EmailAccount(
+            email="duplicate@example.com",
+            host="imap.yahoo.com",
+            port=993,
+            username="duplicate@example.com",
+            encrypted_password="encrypted2",
+        )
+        session.add(account2)
+
+        with pytest.raises(IntegrityError):
+            session.commit()
+
+    def test_email_account_default_values(self, session: Session):
+        """Test that default values are set correctly"""
+        account = EmailAccount(
+            email="test@example.com",
+            username="test@example.com",
+            encrypted_password="encrypted",
+        )
+
+        session.add(account)
+        session.commit()
+        session.refresh(account)
+
+        assert account.host == "imap.gmail.com"
+        assert account.port == 993
+        assert account.is_active is True
+
+    def test_query_active_accounts(self, session: Session):
+        """Test querying only active accounts"""
+        account1 = EmailAccount(
+            email="active@example.com",
+            username="active@example.com",
+            encrypted_password="encrypted1",
+            is_active=True,
+        )
+        account2 = EmailAccount(
+            email="inactive@example.com",
+            username="inactive@example.com",
+            encrypted_password="encrypted2",
+            is_active=False,
+        )
+        account3 = EmailAccount(
+            email="active2@example.com",
+            username="active2@example.com",
+            encrypted_password="encrypted3",
+            is_active=True,
+        )
+
+        session.add(account1)
+        session.add(account2)
+        session.add(account3)
+        session.commit()
+
+        active_accounts = session.exec(
+            select(EmailAccount).where(EmailAccount.is_active)
+        ).all()
+
+        assert len(active_accounts) == 2
+        assert all(acc.is_active for acc in active_accounts)

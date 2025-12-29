@@ -37,18 +37,15 @@ def test_app_lifespan():
         assert response.status_code == 200
 
 
-def test_migration_error_handling():
-    """Test that startup handles migration errors gracefully (lines 24-25)"""
+def test_migration_error_handling(monkeypatch):
+    """Test that startup handles migration errors gracefully (lines 22-27)"""
+    from backend.main import app
+
+    # Temporarily unset TESTING to allow migration logic to run
+    monkeypatch.delenv("TESTING", raising=False)
+
     with patch("backend.migration_utils.run_migrations") as mock_migrations:
         mock_migrations.side_effect = Exception("Migration failed")
-
-        # Re-import app to trigger lifespan
-        import importlib
-
-        module = importlib.import_module("backend.main")
-
-        importlib.reload(module)
-        from backend.main import app
 
         # The app should still start even if migrations fail
         with TestClient(app) as c:

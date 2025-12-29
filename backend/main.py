@@ -1,14 +1,14 @@
 import os
 from contextlib import asynccontextmanager
 
-from backend.routers import (actions, auth, dashboard, history, learning,
-                             settings)
-from backend.services.scheduler import start_scheduler, stop_scheduler
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
+
+from backend.routers import actions, auth, dashboard, history, learning, settings
+from backend.services.scheduler import start_scheduler, stop_scheduler
 
 # actually CI says backend.models.ProcessedEmail imported but unused.
 # backend.database.create_db_and_tables imported but unused.
@@ -18,12 +18,15 @@ from starlette.requests import Request
 async def lifespan(app: FastAPI):
     # Startup
     # Check/Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
-    try:
-        from backend.migration_utils import run_migrations
+    if not os.environ.get("TESTING"):
+        try:
+            from backend.migration_utils import run_migrations
 
-        run_migrations()
-    except Exception as e:
-        print(f"Startup Migration Error: {e}")
+            run_migrations()
+        except Exception as e:
+            print(f"Startup Migration Error: {e}")
+    else:
+        print("Startup: Skipping migrations in test environment.")
 
     print("Startup: Database checks complete.")
     start_scheduler()
@@ -47,6 +50,8 @@ async def auth_middleware(request: Request, call_next):
         or path in ["/api/health", "/health"]
         or path.startswith("/assets")
         or path == "/"
+        or path.startswith("/api/actions/quick")
+        or path.startswith("/api/actions/update-preferences")
         or not path.startswith("/api")  # Serve frontend assets/SPA routes freely
     ):
         return await call_next(request)

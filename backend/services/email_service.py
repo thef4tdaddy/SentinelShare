@@ -12,12 +12,46 @@ class EmailService:
     @staticmethod
     def get_all_accounts() -> list:
         """
-        Retrieves all configured email accounts from environment variables.
-        Handles both the legacy single-account setup and the multi-account EMAIL_ACCOUNTS JSON.
+        Retrieves all configured email accounts from both database and environment variables.
+        Database accounts take precedence. Handles both the legacy single-account setup
+        and the multi-account EMAIL_ACCOUNTS JSON for backward compatibility.
         """
         all_accounts = []
 
-        # 1. Check Multi-Account Config
+        # 1. Fetch accounts from database (new method)
+        try:
+            from sqlmodel import Session, select
+
+            from backend.database import engine
+            from backend.models import EmailAccount
+            from backend.services.encryption_service import EncryptionService
+
+            with Session(engine) as session:
+                db_accounts = session.exec(
+                    select(EmailAccount).where(EmailAccount.is_active)
+                ).all()
+
+                for acc in db_accounts:
+                    try:
+                        decrypted_password = EncryptionService.decrypt(
+                            acc.encrypted_password
+                        )
+                        if decrypted_password:
+                            all_accounts.append(
+                                {
+                                    "email": acc.email.lower(),  # Normalize to lowercase
+                                    "password": decrypted_password,
+                                    "imap_server": acc.host,
+                                }
+                            )
+                    except Exception as e:
+                        logging.error(
+                            f"Failed to decrypt password for {acc.email}: {e}"
+                        )
+        except Exception as e:
+            logging.warning(f"Could not fetch accounts from database: {e}")
+
+        # 2. Check Multi-Account Config (Environment)
         email_accounts_json = os.environ.get("EMAIL_ACCOUNTS")
         if email_accounts_json:
             try:
@@ -31,19 +65,24 @@ class EmailService:
                 if isinstance(accounts, list):
                     for acc in accounts:
                         if acc.get("email") and acc.get("password"):
-                            all_accounts.append(
-                                {
-                                    "email": acc.get("email"),
-                                    "password": acc.get("password"),
-                                    "imap_server": acc.get(
-                                        "imap_server", "imap.gmail.com"
-                                    ),
-                                }
-                            )
+                            # Check if already added from DB
+                            if not any(
+                                a["email"].lower() == acc.get("email").lower()
+                                for a in all_accounts
+                            ):
+                                all_accounts.append(
+                                    {
+                                        "email": acc.get("email"),
+                                        "password": acc.get("password"),
+                                        "imap_server": acc.get(
+                                            "imap_server", "imap.gmail.com"
+                                        ),
+                                    }
+                                )
             except Exception as e:
                 print(f"❌ Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
 
-        # 2. Legacy / Primary Account Fallback
+        # 3. Legacy / Primary Account Fallback
         # Only add if it wasn't already included in EMAIL_ACCOUNTS and exists
         legacy_user = os.environ.get("GMAIL_EMAIL") or os.environ.get("SENDER_EMAIL")
         legacy_pass = os.environ.get("GMAIL_PASSWORD") or os.environ.get(
@@ -62,7 +101,7 @@ class EmailService:
                     }
                 )
 
-        # 3. Dedicated iCloud check
+        # 4. Dedicated iCloud check
         icloud_user = os.environ.get("ICLOUD_EMAIL")
         icloud_pass = os.environ.get("ICLOUD_PASSWORD")
         if icloud_user and icloud_pass:
@@ -171,6 +210,7 @@ class EmailService:
             mail.login(username, password)
             mail.select("inbox")
 
+            custom_criterion_provided = search_criterion is not None
             if search_criterion is None:
                 # Default to last N days
                 since_date = (datetime.now() - timedelta(days=lookback_days)).strftime(
@@ -215,7 +255,7 @@ class EmailService:
                 email_ids = email_ids[-batch_limit:]
 
             # Log appropriately based on whether custom criterion was used
-            if search_criterion is None:
+            if not custom_criterion_provided:
                 print(
                     f"📬 Recent emails found (last {lookback_days} days): {len(email_ids)}"
                 )

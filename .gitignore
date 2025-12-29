@@ -7,6 +7,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+*.log
+.lighthouseci/
 
 # Testing
 /coverage
@@ -46,3 +48,6 @@ htmlcov/
 # Database
 local_dev.db
 *.db
+
+# Docker
+data/

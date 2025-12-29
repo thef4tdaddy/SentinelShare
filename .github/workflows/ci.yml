@@ -37,57 +37,62 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Backend Dependencies
+        id: setup_backend
         run: |
-          cd backend
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r ../requirements.txt
-          pip install pytest pytest-cov black ruff mypy
+          {
+            python -m venv venv
+            source venv/bin/activate
+            cd backend
+            pip install -r ../requirements.txt
+            pip install pytest pytest-cov black ruff mypy
+          } && echo "STATUS_SETUP_BACKEND:0" || { echo "STATUS_SETUP_BACKEND:1"; exit 1; }
 
       - name: Install Frontend Dependencies
+        id: setup_frontend
         run: |
-          cd frontend
-          npm ci
-          npx playwright install --with-deps
+          {
+            cd frontend
+            npm ci
+            npx playwright install --with-deps
+          } && echo "STATUS_SETUP_FRONTEND:0" || { echo "STATUS_SETUP_FRONTEND:1"; exit 1; }
 
       # --- Backend Salvo ---
       - name: Backend Linting (Black, Ruff, Mypy)
         id: backend_lint
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           {
             EXIT_CODE=0
             
             echo "::group::Black"
-            # Use '||' to prevent set -e from killing the script on failure
-            python -m black --check . && BLACK_RES=0 || BLACK_RES=$?
-            echo "STATUS_BLACK:$BLACK_RES"
+            python -m black --check . > ../black.log 2>&1 && BLACK_RES=0 || BLACK_RES=$?
+            echo "STATUS_BLACK:$BLACK_RES" | tee -a ../black.log
             if [ $BLACK_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Ruff"
-            python -m ruff check . && RUFF_RES=0 || RUFF_RES=$?
-            echo "STATUS_RUFF:$RUFF_RES"
+            python -m ruff check . > ../ruff.log 2>&1 && RUFF_RES=0 || RUFF_RES=$?
+            echo "STATUS_RUFF:$RUFF_RES" | tee -a ../ruff.log
             if [ $RUFF_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Mypy"
-            python -m mypy . --ignore-missing-imports && MYPY_RES=0 || MYPY_RES=$?
-            echo "STATUS_MYPY:$MYPY_RES"
+            python -m mypy . --ignore-missing-imports > ../mypy.log 2>&1 && MYPY_RES=0 || MYPY_RES=$?
+            echo "STATUS_MYPY:$MYPY_RES" | tee -a ../mypy.log
             if [ $MYPY_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             exit $EXIT_CODE
-          } 2>&1 | tee ../backend_lint.log
+          }
         continue-on-error: true
 
       - name: Backend Tests (Pytest)
         id: backend_test
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
           {
@@ -107,25 +112,25 @@ jobs:
             EXIT_CODE=0
             
             echo "::group::Prettier"
-            npx prettier --check "src/**/*.{ts,js,svelte,css}" && PRETTIER_RES=0 || PRETTIER_RES=$?
-            echo "STATUS_PRETTIER:$PRETTIER_RES"
+            npx prettier --check "src/**/*.{ts,js,svelte,css}" > ../prettier.log 2>&1 && PRETTIER_RES=0 || PRETTIER_RES=$?
+            echo "STATUS_PRETTIER:$PRETTIER_RES" | tee -a ../prettier.log
             if [ $PRETTIER_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::ESLint"
-            npm run lint && ESLINT_RES=0 || ESLINT_RES=$?
-            echo "STATUS_ESLINT:$ESLINT_RES"
+            npm run lint > ../eslint.log 2>&1 && ESLINT_RES=0 || ESLINT_RES=$?
+            echo "STATUS_ESLINT:$ESLINT_RES" | tee -a ../eslint.log
             if [ $ESLINT_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             echo "::group::Svelte Check"
-            npm run check && SVELTE_RES=0 || SVELTE_RES=$?
-            echo "STATUS_SVELTE:$SVELTE_RES"
+            npm run check > ../svelte.log 2>&1 && SVELTE_RES=0 || SVELTE_RES=$?
+            echo "STATUS_SVELTE:$SVELTE_RES" | tee -a ../svelte.log
             if [ $SVELTE_RES -ne 0 ]; then EXIT_CODE=1; fi
             echo "::endgroup::"
             
             exit $EXIT_CODE
-          } 2>&1 | tee ../frontend_lint.log
+          }
         continue-on-error: true
 
       - name: Frontend Tests (Vitest)
@@ -145,8 +150,11 @@ jobs:
         run: |
           # Start Backend in Background
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
+
+          # Generate a secure key for testing, ensuring consistency between Backend and Playwright
+          export SECRET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 
           # Fix: Include root directory in PYTHONPATH so 'backend' module is found
           export PYTHONPATH=$PYTHONPATH:$(pwd)/..
@@ -158,7 +166,8 @@ jobs:
 
           # Wait for Backend to be ready
           echo "Waiting for Backend to start..."
-          timeout 30s bash -c 'until curl -s http://0.0.0.0:8000/api/health; do sleep 1; done'
+          # Use curl with retry to avoid hard failure if it takes a sec
+          curl --retry 5 --retry-delay 2 --retry-connrefused -s http://0.0.0.0:8000/api/health || { echo "ERROR: Backend failed to start"; exit 1; }
           echo "Backend started!"
 
           # Run Playwright
@@ -180,6 +189,8 @@ jobs:
           OUTCOME_FRONTEND_LINT: ${{ steps.frontend_lint.outcome }}
           OUTCOME_FRONTEND_TEST: ${{ steps.frontend_test.outcome }}
           OUTCOME_E2E: ${{ steps.e2e.outcome }}
+          OUTCOME_SETUP_BACKEND: ${{ steps.setup_backend.outcome }}
+          OUTCOME_SETUP_FRONTEND: ${{ steps.setup_frontend.outcome }}
         with:
           script: |
             const fs = require('fs');
@@ -192,32 +203,42 @@ jobs:
 
             // Read all logs
             const logs = {
-              backend_lint: '',
-              backend_test: '',
-              frontend_lint: '',
-              frontend_test: '',
-              e2e: ''
+              black: 'black.log',
+              ruff: 'ruff.log',
+              mypy: 'mypy.log',
+              pytest: 'backend_test.log',
+              prettier: 'prettier.log',
+              eslint: 'eslint.log',
+              svelte: 'svelte.log',
+              vitest: 'frontend_test.log',
+              e2e: 'e2e_report.log',
+              backend_setup: 'setup_backend_installer.log',
+              frontend_setup: 'setup_frontend_installer.log'
             };
 
-            for (const key of Object.keys(logs)) {
+            const logContents = {};
+            for (const [key, filename] of Object.entries(logs)) {
               try { 
-                logs[key] = stripAnsi(fs.readFileSync(`${key}.log`, 'utf8')); 
+                const actualFile = filename || `${key}.log`;
+                logContents[key] = stripAnsi(fs.readFileSync(actualFile, 'utf8')); 
               } catch (e) { 
-                logs[key] = 'Log file not found (Step might have been skipped).'; 
+                logContents[key] = 'Log file not found (Step might have been skipped).'; 
               }
             }
 
-            // --- Tool Status Parsing ---
+            // --- Tool Status Mapping ---
             const tools = [
-                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logs.backend_lint, type: 'warning' },
-                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logs.backend_lint, type: 'critical' },
-                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logs.backend_lint, type: 'critical' },
-                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logs.backend_test, type: 'critical' },
-                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint, type: 'warning' },
-                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint, type: 'critical' },
-                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint, type: 'critical' },
-                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical' },
-                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' }
+                { key: 'STATUS_SETUP_BACKEND', name: 'Setup (Backend)', log: '', outcomeKey: 'OUTCOME_SETUP_BACKEND', type: 'critical' },
+                { key: 'STATUS_SETUP_FRONTEND', name: 'Setup (Frontend)', log: '', outcomeKey: 'OUTCOME_SETUP_FRONTEND', type: 'critical' },
+                { key: 'STATUS_BLACK', name: 'Black (Format)', log: logContents.black, outcomeKey: 'OUTCOME_BACKEND_LINT', type: 'warning' },
+                { key: 'STATUS_RUFF', name: 'Ruff (Lint)', log: logContents.ruff, outcomeKey: 'OUTCOME_BACKEND_LINT', type: 'critical' },
+                { key: 'STATUS_MYPY', name: 'Mypy (Type Check)', log: logContents.mypy, outcomeKey: 'OUTCOME_BACKEND_LINT', type: 'critical' },
+                { key: 'STATUS_PYTEST', name: 'Pytest (Unit)', log: logContents.pytest, outcomeKey: 'OUTCOME_BACKEND_TEST', type: 'critical' },
+                { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logContents.prettier, outcomeKey: 'OUTCOME_FRONTEND_LINT', type: 'warning' },
+                { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logContents.eslint, outcomeKey: 'OUTCOME_FRONTEND_LINT', type: 'critical' },
+                { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logContents.svelte, outcomeKey: 'OUTCOME_FRONTEND_LINT', type: 'critical' },
+                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logContents.vitest, outcomeKey: 'OUTCOME_FRONTEND_TEST', type: 'critical' },
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logContents.e2e, outcomeKey: 'OUTCOME_E2E', type: 'critical' }
             ];
 
             let toolRows = [];
@@ -226,33 +247,47 @@ jobs:
             let hasWarningFailure = false;
 
             for (const tool of tools) {
-                const match = tool.log.match(new RegExp(`${tool.key}:(\\d+)`));
+                const stepOutcome = process.env[tool.outcomeKey];
                 let statusIcon = '❓';
                 let outcome = 'UNKNOWN';
-                
-                if (match) {
-                    const code = parseInt(match[1]);
-                    if (code === 0) {
-                        statusIcon = '✅';
-                        outcome = 'PASS';
-                    } else {
-                        // Determine failure icon based on severity
-                        if (tool.type === 'critical') {
-                            statusIcon = '❌'; // Red Flag
-                            hasCriticalFailure = true;
+
+                if (stepOutcome === 'skipped') {
+                    statusIcon = '⚪';
+                    outcome = 'SKIPPED';
+                } else if (stepOutcome === 'success' || stepOutcome === 'failure') {
+                    // Try to find the specific marker in the log
+                    // Note: Setup steps don't have log files in the 'logs' object yet, 
+                    // we'll mainly rely on stepOutcome for now or can extend logs.
+                    const match = tool.log.match(new RegExp(`${tool.key}:(\\d+)`));
+                    
+                    if (match) {
+                        const code = parseInt(match[1]);
+                        if (code === 0) {
+                            statusIcon = '✅';
+                            outcome = 'PASS';
                         } else {
-                            statusIcon = '⚠️'; // Yellow Flag
-                            hasWarningFailure = true;
+                            if (tool.type === 'critical') {
+                                statusIcon = '❌';
+                                hasCriticalFailure = true;
+                            } else {
+                                statusIcon = '⚠️';
+                                hasWarningFailure = true;
+                            }
+                            outcome = 'FAIL';
+                            failures.push(tool.name);
                         }
-                        outcome = 'FAIL';
-                        failures.push(tool.name);
+                    } else {
+                        // If the step ran but we don't have a marker
+                        if (stepOutcome === 'success') {
+                            statusIcon = '✅';
+                            outcome = 'PASS';
+                        } else {
+                            statusIcon = '❌';
+                            outcome = 'CRASH';
+                            hasCriticalFailure = true;
+                            failures.push(`${tool.name} (Crash)`);
+                        }
                     }
-                } else if (!tool.log.includes('Log file not found')) {
-                     // If log exists but marker missing, it likely crashed hard
-                     statusIcon = '❌';
-                     outcome = 'CRASH';
-                     hasCriticalFailure = true;
-                     failures.push(`${tool.name} (Crash)`);
                 }
 
                 toolRows.push(`| ${tool.name} | ${statusIcon} | ${outcome} |`);
@@ -298,17 +333,23 @@ jobs:
             // Only show logs for steps that had a failure
              if (failures.length > 0) {
                  details += `### ❌ Failure Details\n`;
-                 // Naive mapping of tool failure to log file
-                  for (const tool of tools) {
-                      if (toolRows.find(r => r.includes(tool.name) && r.includes('FAIL'))) {
-                          // Find key for this tool
-                           if (tool.name.includes('Black') || tool.name.includes('Ruff') || tool.name.includes('Mypy')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.backend_lint)}\n\`\`\`\n\n`;
-                           else if (tool.name.includes('Pytest')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.backend_test)}\n\`\`\`\n\n`;
-                           else if (tool.name.includes('Prettier') || tool.name.includes('ESLint') || tool.name.includes('Svelte')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.frontend_lint)}\n\`\`\`\n\n`;
-                           else if (tool.name.includes('Vitest')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.frontend_test)}\n\`\`\`\n\n`;
-                           else if (tool.name.includes('Playwright')) details += `#### ${tool.name}\n\`\`\`\n${getBriefLog(logs.e2e)}\n\`\`\`\n\n`;
-                      }
-                  }
+                 const toolMappings = [
+                   { name: 'Black (Format)', log: logContents.black },
+                   { name: 'Ruff (Lint)', log: logContents.ruff },
+                   { name: 'Mypy (Type Check)', log: logContents.mypy },
+                   { name: 'Pytest (Unit)', log: logContents.pytest },
+                   { name: 'Prettier (Format)', log: logContents.prettier },
+                   { name: 'ESLint (Lint)', log: logContents.eslint },
+                   { name: 'Svelte Check (Types)', log: logContents.svelte },
+                   { name: 'Vitest (Unit)', log: logContents.vitest },
+                   { name: 'Playwright (E2E)', log: logContents.e2e }
+                 ];
+
+                 for (const tm of toolMappings) {
+                    if (failures.includes(tm.name) || failures.some(f => f.includes(tm.name))) {
+                        details += `#### ${tm.name}\n\`\`\`\n${getBriefLog(tm.log)}\n\`\`\`\n\n`;
+                    }
+                 }
              }
 
             const fullBody = `**Full Salvo Verification Status**: ${overallStatus.toUpperCase()}

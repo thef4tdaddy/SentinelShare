@@ -1,5 +1,11 @@
-from backend.security import (generate_dashboard_token, get_email_content_hash,
-                              verify_dashboard_token)
+from datetime import datetime, timezone
+
+from backend.security import (
+    generate_dashboard_token,
+    generate_hmac_signature,
+    get_email_content_hash,
+    verify_dashboard_token,
+)
 
 
 def test_get_email_content_hash_consistency():
@@ -58,3 +64,16 @@ def test_dashboard_token_case_sensitivity():
     token = generate_dashboard_token(email)
     # verify_dashboard_token should return the original string if sig matches
     assert verify_dashboard_token(token) == email
+
+
+def test_dashboard_token_expiration():
+    """Test that tokens older than 30 days are rejected."""
+    email = "test@example.com"
+    # Create a token with a timestamp from 31 days ago (30 days * 24 hours * 3600 seconds + 1 second)
+    old_timestamp = str(int(datetime.now(timezone.utc).timestamp() - (31 * 24 * 3600)))
+    msg = f"dashboard:{email}:{old_timestamp}"
+    sig = generate_hmac_signature(msg)
+    expired_token = f"{email}:{old_timestamp}:{sig}"
+
+    # Verify that the expired token is rejected
+    assert verify_dashboard_token(expired_token) is None

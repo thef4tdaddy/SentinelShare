@@ -21,8 +21,8 @@ It turns a manual chore into a "set it and forget it" background process.
 
 ## 🚀 Features
 
-- **Smart Receipt Detection**: Automatically identifies receipts from retailers like Amazon, Starbucks, Apple, and more, separating them from shipping notifications and promotional spam.
-- **Multi-Account Support**: Connects to multiple IMAP accounts (Gmail, iCloud) to monitor for receipts.
+- **🌙 Dark Mode Support**: Sleek, modern interface with automatic system preference detection and manual override (theme persistence).
+- **📧 In-App Email Management**: Add and manage multiple IMAP accounts directly from the dashboard with encrypted credential storage.
 - **Intelligent Forwarding**: Forwards detected receipts to a target email address with a rich, summary header.
 - **Smart Actions**:
   - **Block**: Stop forwarding specific senders or categories with one click.
@@ -39,11 +39,63 @@ It turns a manual chore into a "set it and forget it" background process.
 
 - **Backend**: Python (FastAPI), SQLModel (SQLite), APScheduler, imaplib.
 - **Frontend**: Svelte 5, Tailwind CSS, Vite, Lucide Icons.
-- **Deployment**: Ready for Heroku or Docker-based environments.
+- **Deployment**: Ready for Heroku, Docker, or Docker Compose environments (PostgreSQL and SQLite supported).
+- **Quality Ensured**: 275+ tests (Pytest, Vitest, Playwright) and robust CI/CD stabilization.
 
 ## 📦 Installation & Setup
 
-### Prerequisites
+### 🐳 Docker Quickstart
+
+You can run SentinelShare with a single command using our official Docker image.
+
+```bash
+# Pull and run the latest version (GHCR)
+# Note: Mount a local data directory to persist receipts and logs
+docker run -d \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  --name sentinelshare \
+  ghcr.io/thef4tdaddy/sentinelshare:latest
+```
+
+Or using `docker-compose.yml` (included in repo):
+
+```bash
+docker-compose up -d
+```
+
+### Quick Start with Docker (Recommended)
+
+The easiest way to get started is with Docker. Choose between SQLite (simpler) or PostgreSQL (production-ready):
+
+**SQLite (Single Container, No Database Setup):**
+
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
+cp .env.example .env
+# Edit .env with your configuration
+docker compose -f docker-compose.sqlite.yml up -d
+```
+
+**PostgreSQL (Production-Ready):**
+
+```bash
+git clone https://github.com/f4tdaddy/SentinelShare.git
+cd SentinelShare
+cp .env.example .env
+# Edit .env with your configuration (including POSTGRES_PASSWORD)
+docker compose up -d
+```
+
+Visit `http://localhost:8000` and log in with your `DASHBOARD_PASSWORD`.
+
+**👉 See [DOCKER.md](DOCKER.md) for detailed Docker setup instructions.**
+
+### Manual Setup
+
+#### Prerequisites
 
 - Python 3.12+
 - Node.js 18+

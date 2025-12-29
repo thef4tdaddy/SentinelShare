@@ -2,17 +2,24 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import PreferenceList from './PreferenceList.svelte';
 import * as api from '../lib/api';
+import { toasts } from '../lib/stores/toast';
 
 // Mock the api module
 vi.mock('../lib/api', () => ({
 	fetchJson: vi.fn()
 }));
 
+vi.mock('../lib/stores/toast', () => ({
+	toasts: {
+		trigger: vi.fn(),
+		subscribe: vi.fn(() => () => {}),
+		remove: vi.fn()
+	}
+}));
+
 describe('PreferenceList Component - Preferences Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Mock window.alert
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -164,7 +171,7 @@ describe('PreferenceList Component - Preferences Type', () => {
 		await fireEvent.click(addButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error adding item');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error adding item', 'error');
 		});
 	});
 
@@ -194,7 +201,76 @@ describe('PreferenceList Component - Preferences Type', () => {
 		await fireEvent.click(confirmButton);
 
 		await waitFor(() => {
-			expect(window.alert).toHaveBeenCalledWith('Error deleting item');
+			expect(toasts.trigger).toHaveBeenCalledWith('Error deleting item', 'error');
+		});
+	});
+
+	it('handles load error gracefully and logs to console', async () => {
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(api.fetchJson).mockRejectedValueOnce(new Error('API Error'));
+
+		render(PreferenceList, { type: 'preferences' });
+
+		await waitFor(() => {
+			expect(consoleErrorSpy).toHaveBeenCalledWith('Error loading items');
+		});
+
+		consoleErrorSpy.mockRestore();
+	});
+
+	it('deletes a preference item from mobile view', async () => {
+		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
+		vi.mocked(api.fetchJson).mockResolvedValueOnce({});
+
+		render(PreferenceList, { type: 'preferences' });
+
+		await waitFor(() => {
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
+		});
+
+		// Find delete button by aria-label for mobile view
+		const deleteButtons = screen.getAllByLabelText('Delete');
+		// Assume the first delete button corresponds to the mobile view
+		const mobileDeleteButton = deleteButtons[0];
+		if (!mobileDeleteButton) throw new Error('Delete button not found');
+		await fireEvent.click(mobileDeleteButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+		});
+
+		// Click confirm button
+		const buttons = screen.getAllByRole('button');
+		const confirmButton = buttons.find((btn) => btn.classList.contains('btn-danger'));
+		if (!confirmButton) throw new Error('Confirm button not found');
+		await fireEvent.click(confirmButton);
+
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith('/settings/preferences/1', {
+				method: 'DELETE'
+			});
+		});
+	});
+
+	it('renders ConfirmDialog with correct props', async () => {
+		const mockPreferences = [{ id: 1, item: 'amazon', type: 'Always Forward' }];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockPreferences);
+
+		render(PreferenceList, { type: 'preferences' });
+
+		await waitFor(() => {
+			expect(screen.getAllByText('amazon').length).toBeGreaterThanOrEqual(1);
+		});
+
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
+
+		// Modal should open with correct message for preferences
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+			expect(screen.getByText(/Are you sure you want to delete this preference/i)).toBeTruthy();
 		});
 	});
 });
@@ -202,7 +278,6 @@ describe('PreferenceList Component - Preferences Type', () => {
 describe('PreferenceList Component - Rules Type', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		window.alert = vi.fn();
 	});
 
 	afterEach(() => {
@@ -253,6 +328,57 @@ describe('PreferenceList Component - Rules Type', () => {
 			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
 			const dashes = screen.getAllByText('-');
 			expect(dashes.length).toBeGreaterThan(0);
+		});
+	});
+
+	it('renders ConfirmDialog with correct props for rules', async () => {
+		const mockRules = [
+			{ id: 1, email_pattern: '@amazon.com', subject_pattern: 'order', purpose: 'Amazon orders' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockRules);
+
+		render(PreferenceList, { type: 'rules' });
+
+		await waitFor(() => {
+			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
+		});
+
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
+
+		// Modal should open with correct message for rules
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+			expect(screen.getByText(/Are you sure you want to delete this rule/i)).toBeTruthy();
+		});
+	});
+
+	it('closes dialog with Escape key', async () => {
+		const mockRules = [
+			{ id: 1, email_pattern: '@amazon.com', subject_pattern: 'order', purpose: 'Amazon orders' }
+		];
+		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockRules);
+
+		render(PreferenceList, { type: 'rules' });
+
+		await waitFor(() => {
+			expect(screen.getAllByText('@amazon.com').length).toBeGreaterThanOrEqual(1);
+		});
+
+		const deleteButton = screen.getByTitle('Delete');
+		await fireEvent.click(deleteButton);
+
+		// Modal should open
+		await waitFor(() => {
+			expect(screen.getByText('Confirm Delete')).toBeTruthy();
+		});
+
+		// Press Escape to close
+		await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+		// Dialog should close via the binding
+		await waitFor(() => {
+			expect(screen.queryByText('Confirm Delete')).toBeFalsy();
 		});
 	});
 });
