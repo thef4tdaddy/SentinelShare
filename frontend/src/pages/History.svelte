@@ -289,7 +289,9 @@
 				<p class="text-text-secondary text-sm mb-1">Forwarded</p>
 				<p class="text-2xl font-bold text-emerald-600">{stats.forwarded}</p>
 			</div>
-			<div class="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 rounded-lg">
+			<div
+				class="p-3 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400 rounded-lg"
+			>
 				<CheckCircle size={24} />
 			</div>
 		</div>
@@ -439,7 +441,10 @@
 				<tbody>
 					{#if loading}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
+							<td
+								colspan="6"
+								class="py-12 text-center text-text-secondary dark:text-text-secondary-dark"
+							>
 								<div class="flex items-center justify-center gap-2">
 									<Clock size={20} class="animate-spin" />
 									Loading...
@@ -448,7 +453,10 @@
 						</tr>
 					{:else if emails.length === 0}
 						<tr>
-							<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
+							<td
+								colspan="6"
+								class="py-12 text-center text-text-secondary dark:text-text-secondary-dark"
+							>
 								<div class="flex flex-col items-center justify-center gap-3">
 									<div class="bg-gray-100 dark:bg-gray-800 p-3 rounded-full">
 										<Mail size={24} class="text-gray-400 dark:text-gray-500" />
@@ -613,7 +621,9 @@
 	</div>
 	<!-- Pagination -->
 	{#if pagination.total_pages > 1}
-		<div class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700">
+		<div
+			class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-700"
+		>
 			<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
 				Page {pagination.page} of {pagination.total_pages} ({pagination.total} total)
 			</div>
@@ -641,7 +651,9 @@
 	<!-- Processing Runs -->
 	<div class="card">
 		<div class="flex items-center gap-2 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-			<div class="p-2 bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 rounded-lg">
+			<div
+				class="p-2 bg-purple-50 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400 rounded-lg"
+			>
 				<HistoryIcon size={20} />
 			</div>
 			<h3 class="text-lg font-bold text-text-main m-0">Recent Processing Runs</h3>
@@ -678,21 +690,27 @@
 							<div class="flex items-center gap-2">
 								<CheckCircle size={16} class="text-emerald-600" />
 								<div>
-									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Forwarded</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
+										Forwarded
+									</div>
 									<div class="font-semibold text-emerald-600">{run.forwarded}</div>
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								<XCircle size={16} class="text-gray-600" />
 								<div>
-									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Blocked</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
+										Blocked
+									</div>
 									<div class="font-semibold text-gray-600">{run.blocked}</div>
 								</div>
 							</div>
 							<div class="flex items-center gap-2">
 								<AlertCircle size={16} class="text-red-600" />
 								<div>
-									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">Errors</div>
+									<div class="text-sm text-text-secondary dark:text-text-secondary-dark">
+										Errors
+									</div>
 									<div class="font-semibold text-red-600">{run.errors}</div>
 								</div>
 							</div>
@@ -727,7 +745,9 @@
 		>
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
-				<h3 id="modal-title" class="text-lg font-bold text-text-main dark:text-text-main-dark">Forward Ignored Email</h3>
+				<h3 id="modal-title" class="text-lg font-bold text-text-main dark:text-text-main-dark">
+					Forward Ignored Email
+				</h3>
 				<button
 					onclick={closeModal}
 					class="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -761,15 +781,20 @@
 				{#if isAnalyzing}
 					<div class="py-12 text-center">
 						<RefreshCw size={24} class="animate-spin text-primary mx-auto mb-2" />
-						<p class="text-sm text-text-secondary dark:text-text-secondary-dark">Analyzing rule logic...</p>
+						<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
+							Analyzing rule logic...
+						</p>
 					</div>
 				{:else if selectedAnalysis}
 					<div class="mb-4">
 						<h4 class="text-sm font-bold text-text-main mb-2">Detection Trace</h4>
-						<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+						<div
+							class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto"
+						>
 							{#each selectedAnalysis.analysis.steps as step (step.step)}
 								<div class="flex items-center justify-between text-xs">
-									<span class="text-text-secondary dark:text-text-secondary-dark">{step.step}:</span>
+									<span class="text-text-secondary dark:text-text-secondary-dark">{step.step}:</span
+									>
 									<span class={step.result ? 'text-emerald-600 font-bold' : 'text-red-500'}>
 										{step.result ? 'MATCH' : 'MISS'}
 									</span>
@@ -795,7 +820,9 @@
 					Help improve the adaptive rule engine by providing feedback.
 				</p>
 
-				<div class="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-100 dark:border-gray-700">
+				<div
+					class="bg-gray-50 rounded-lg p-4 space-y-2 border border-gray-100 dark:border-gray-700"
+				>
 					<div>
 						<span class="text-xs font-semibold text-text-secondary uppercase">Subject:</span>
 						<p class="text-sm text-text-main font-medium break-all">{selectedEmail.subject}</p>
