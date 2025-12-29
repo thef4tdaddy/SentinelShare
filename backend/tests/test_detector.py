@@ -814,3 +814,32 @@ def test_transactional_score_triggers_receipt():
     assert score >= 3, f"Expected score >= 3, got {score}"
     # This should be detected as receipt via transactional score path (lines 104-105)
     assert ReceiptDetector.is_receipt(email) is True
+
+
+# ============================================================================
+# _mask_text Helper Tests - Line 186 (empty text handling)
+# ============================================================================
+
+
+def test_mask_text_with_empty_string():
+    """Test _mask_text returns empty string when given empty string"""
+    result = ReceiptDetector._mask_text("")
+    assert result == ""
+
+
+def test_mask_text_with_none():
+    """Test _mask_text returns empty string when given None"""
+    result = ReceiptDetector._mask_text(None)
+    assert result == ""
+
+
+def test_mask_text_with_normal_text():
+    """Test _mask_text masks normal text and shows length"""
+    result = ReceiptDetector._mask_text("sensitive data here")
+    assert result == "*** (masked, 19 chars)"
+
+
+def test_mask_text_with_short_text():
+    """Test _mask_text masks short text correctly"""
+    result = ReceiptDetector._mask_text("test")
+    assert result == "*** (masked, 4 chars)"
