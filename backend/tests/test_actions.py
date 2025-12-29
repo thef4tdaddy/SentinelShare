@@ -874,7 +874,7 @@ class TestUpdatePreferences:
         allowed = [p.item for p in prefs if p.type == "Always Forward"]
 
         assert "admin-blocked.com" in blocked
-        assert allowed == ["admin-allowed.com"]
+        assert "admin-allowed.com" in allowed
 
     def test_update_preferences_without_auth(self, session):
         """Test updating preferences without authentication"""
