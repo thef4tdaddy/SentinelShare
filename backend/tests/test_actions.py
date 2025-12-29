@@ -2,10 +2,14 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from backend.models import ManualRule, ProcessedEmail
-from backend.routers import actions
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, ProcessedEmail
+from backend.routers import actions
+
+MOCK_SECRET = "mock-secret-for-testing-only"
+MOCK_PASSWORD = "mock-password-for-testing"
 
 
 @pytest.fixture(name="engine")
@@ -274,7 +278,7 @@ class TestAccountSelection:
             [
                 {
                     "email": "user1@example.com",
-                    "password": "user1pass",
+                    "password": MOCK_PASSWORD,
                     "imap_server": "imap.test.com",
                 }
             ]
@@ -302,7 +306,7 @@ class TestAccountSelection:
 
                     mock_fetch.assert_called_once_with(
                         "user1@example.com",
-                        "user1pass",
+                        MOCK_PASSWORD,
                         sample_ignored_email.email_id,
                         "imap.test.com",
                     )
@@ -314,8 +318,8 @@ class TestAccountSelection:
 
         accounts_json = json.dumps(
             [
-                {"email": "primary@test.com", "password": "p1"},
-                {"email": "fallback@test.com", "password": "f1"},
+                {"email": "primary@test.com", "password": MOCK_PASSWORD},
+                {"email": "fallback@test.com", "password": MOCK_PASSWORD},
             ]
         )
 
@@ -355,7 +359,7 @@ class TestAccountSelection:
             {
                 "WIFE_EMAIL": "wife@example.com",
                 "ICLOUD_EMAIL": "user1@example.com",
-                "ICLOUD_PASSWORD": "icloudpass",
+                "ICLOUD_PASSWORD": MOCK_PASSWORD,
             },
         ):
             sample_ignored_email.account_email = "user1@example.com"
@@ -376,7 +380,7 @@ class TestAccountSelection:
                     actions.toggle_ignored_email(request, session)
                     mock_fetch.assert_called_once_with(
                         "user1@example.com",
-                        "icloudpass",
+                        MOCK_PASSWORD,
                         sample_ignored_email.email_id,
                         "imap.mail.me.com",
                     )
@@ -391,10 +395,10 @@ class TestAccountSelection:
             [
                 {
                     "email": "sender@test.com",
-                    "password": "p1",
+                    "password": MOCK_PASSWORD,
                     "imap_server": "imap.test.com",
                 },
-                {"email": "fallback@test.com", "password": "f1"},
+                {"email": "fallback@test.com", "password": "mock-f1"},
             ]
         )
 
@@ -404,7 +408,7 @@ class TestAccountSelection:
                 "WIFE_EMAIL": "wife@example.com",
                 "EMAIL_ACCOUNTS": accounts_json,
                 "SENDER_EMAIL": "sender@test.com",
-                "SENDER_PASSWORD": "p1",
+                "SENDER_PASSWORD": MOCK_PASSWORD,
             },
         ):
             # Set sample_ignored_email.account_email to match SENDER_EMAIL
@@ -443,7 +447,7 @@ class TestAccountSelection:
                 "WIFE_EMAIL": "wife@example.com",
                 "EMAIL_ACCOUNTS": "invalid-json{[",
                 "SENDER_EMAIL": "test@test.com",
-                "SENDER_PASSWORD": "pass",
+                "SENDER_PASSWORD": MOCK_PASSWORD,
             },
         ):
             sample_ignored_email.account_email = "test@test.com"
@@ -476,7 +480,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -500,7 +504,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -531,7 +535,7 @@ class TestQuickAction:
         session.add(Preference(item="uber", type="Always Forward"))
         session.commit()
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -554,7 +558,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -585,7 +589,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -606,7 +610,7 @@ class TestQuickAction:
         import hashlib
         import hmac
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -627,7 +631,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -649,7 +653,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -663,3 +667,273 @@ class TestQuickAction:
 
         response = actions.quick_action(cmd, arg, ts, sig)
         assert "Unknown Command" in response
+
+
+class TestVerifyDashboard:
+    """Tests for the verify-dashboard endpoint"""
+
+    def test_verify_dashboard_valid_token(self, monkeypatch):
+        """Test verifying a valid dashboard token"""
+        from backend.security import generate_dashboard_token
+
+        secret = MOCK_SECRET
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Call the endpoint
+        result = actions.verify_dashboard(token)
+
+        assert result["success"] is True
+        assert result["email"] == email
+
+    def test_verify_dashboard_invalid_token(self):
+        """Test verifying an invalid dashboard token"""
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc:
+            actions.verify_dashboard("invalid-token")
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+
+class TestGetPreferencesForSendee:
+    """Tests for the get-preferences-for-sendee endpoint"""
+
+    def test_get_preferences_with_valid_token(self, session, monkeypatch):
+        """Test getting preferences with a valid token"""
+        from unittest.mock import Mock
+
+        from backend.models import Preference
+        from backend.security import generate_dashboard_token
+
+        secret = MOCK_SECRET
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Add some preferences
+        session.add(Preference(item="amazon.com", type="Blocked Sender"))
+        session.add(Preference(item="uber.com", type="Always Forward"))
+        session.commit()
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request = Mock()
+        request.session = {}
+
+        # Call the endpoint
+        result = actions.get_preferences_for_sendee(request, token, session)
+
+        assert result["success"] is True
+        assert result["email"] == email
+        assert result["blocked"] == ["amazon.com"]
+        assert result["allowed"] == ["uber.com"]
+
+    def test_get_preferences_with_invalid_token(self, session):
+        """Test getting preferences with an invalid token"""
+        from unittest.mock import Mock
+
+        from fastapi import HTTPException
+
+        request = Mock()
+        request.session = {}
+
+        with pytest.raises(HTTPException) as exc:
+            actions.get_preferences_for_sendee(request, "invalid-token", session)
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+    def test_get_preferences_with_admin_session(self, session):
+        """Test getting preferences with admin session"""
+        from unittest.mock import Mock
+
+        from backend.models import Preference
+
+        # Add some preferences
+        session.add(Preference(item="test.com", type="Blocked Sender"))
+        session.commit()
+
+        # Create a mock request with authenticated session
+        request = Mock()
+        request.session = {"authenticated": True}
+
+        # Call the endpoint without token
+        result = actions.get_preferences_for_sendee(request, None, session)
+
+        assert result["success"] is True
+        assert result["email"] == "Admin"
+        assert result["blocked"] == ["test.com"]
+
+    def test_get_preferences_without_auth(self, session):
+        """Test getting preferences without authentication"""
+        from unittest.mock import Mock
+
+        from fastapi import HTTPException
+
+        # Create a mock request without authentication
+        request = Mock()
+        request.session = {}
+
+        with pytest.raises(HTTPException) as exc:
+            actions.get_preferences_for_sendee(request, None, session)
+
+        assert exc.value.status_code == 401
+        assert "Unauthorized" in str(exc.value.detail)
+
+
+class TestUpdatePreferences:
+    """Tests for the update-preferences endpoint"""
+
+    def test_update_preferences_with_valid_token(self, session, monkeypatch):
+        """Test updating preferences with a valid token"""
+        from unittest.mock import Mock
+
+        from backend.models import Preference
+        from backend.security import generate_dashboard_token
+
+        secret = MOCK_SECRET
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Add existing preferences
+        session.add(Preference(item="old.com", type="Blocked Sender"))
+        session.commit()
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request_mock = Mock()
+        request_mock.session = {}
+
+        # Create update request
+        data = actions.UpdatePreferencesRequest(
+            token=token,
+            blocked_senders=["new-blocked.com"],
+            allowed_senders=["new-allowed.com"],
+        )
+
+        # Call the endpoint
+        result = actions.update_preferences(data, request_mock, session)
+
+        assert result["success"] is True
+        assert "Preferences updated" in result["message"]
+
+        # Verify preferences were updated
+        prefs = session.exec(select(Preference)).all()
+        blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
+        allowed = [p.item for p in prefs if p.type == "Always Forward"]
+
+        assert blocked == ["new-blocked.com"]
+        assert allowed == ["new-allowed.com"]
+        assert "old.com" not in blocked  # Old preference should be removed
+
+    def test_update_preferences_with_invalid_token(self, session):
+        """Test updating preferences with an invalid token"""
+        from unittest.mock import Mock
+
+        from fastapi import HTTPException
+
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token="invalid-token", blocked_senders=[], allowed_senders=[]
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            actions.update_preferences(data, request_mock, session)
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+    def test_update_preferences_with_admin_session(self, session):
+        """Test updating preferences with admin session"""
+        from unittest.mock import Mock
+
+        from backend.models import Preference
+
+        # Add existing preferences
+        session.add(Preference(item="old.com", type="Blocked Sender"))
+        session.commit()
+
+        # Create a mock request with authenticated session
+        request_mock = Mock()
+        request_mock.session = {"authenticated": True}
+
+        # Create update request without token
+        data = actions.UpdatePreferencesRequest(
+            token=None,
+            blocked_senders=["admin-blocked.com"],
+            allowed_senders=["admin-allowed.com"],
+        )
+
+        # Call the endpoint
+        result = actions.update_preferences(data, request_mock, session)
+
+        assert result["success"] is True
+
+        # Verify preferences were updated
+        prefs = session.exec(select(Preference)).all()
+        blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
+        allowed = [p.item for p in prefs if p.type == "Always Forward"]
+
+        assert blocked == ["admin-blocked.com"]
+        assert allowed == ["admin-allowed.com"]
+
+    def test_update_preferences_without_auth(self, session):
+        """Test updating preferences without authentication"""
+        from unittest.mock import Mock
+
+        from fastapi import HTTPException
+
+        # Create a mock request without authentication
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token=None, blocked_senders=[], allowed_senders=[]
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            actions.update_preferences(data, request_mock, session)
+
+        assert exc.value.status_code == 401
+        assert "Unauthorized" in str(exc.value.detail)
+
+    def test_update_preferences_exception_handling(self, session, monkeypatch):
+        """Test exception handling during preference update"""
+        from unittest.mock import Mock, patch
+
+        from fastapi import HTTPException
+
+        from backend.security import generate_dashboard_token
+
+        secret = MOCK_SECRET
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token=token, blocked_senders=["test.com"], allowed_senders=[]
+        )
+
+        # Mock session.commit to raise an exception
+        with patch.object(session, "commit", side_effect=Exception("Database error")):
+            with pytest.raises(HTTPException) as exc:
+                actions.update_preferences(data, request_mock, session)
+
+            assert exc.value.status_code == 500
+            assert "Database error" in str(exc.value.detail)
