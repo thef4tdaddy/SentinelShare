@@ -194,7 +194,8 @@ describe('App Component', () => {
 			);
 		} finally {
 			// Restore original location
-			window.location = originalLocation;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			window.location = originalLocation as any;
 		}
 	});
 
