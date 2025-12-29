@@ -86,7 +86,7 @@
 <div class="container-custom max-w-2xl">
 	<div class="mb-8">
 		<h1 class="text-3xl font-bold text-primary mb-2">Forwarding Preferences</h1>
-		<p class="text-text-secondary">
+		<p class="text-text-secondary dark:text-text-secondary-dark">
 			{#if isAdmin}
 				Manage global forwarding preferences.
 			{:else}

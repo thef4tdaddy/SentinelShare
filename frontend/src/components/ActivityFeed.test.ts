@@ -167,4 +167,27 @@ describe('ActivityFeed Component', () => {
 		expect(screen.getByText('Receipt 2')).toBeTruthy();
 		expect(screen.getAllByRole('row').length).toBe(4); // Header + 3 rows
 	});
+
+	it('renders default empty activities when prop is not provided', () => {
+		// Test default prop value (line 15)
+		render(ActivityFeed);
+		expect(screen.getByText('No activity found.')).toBeTruthy();
+	});
+
+	it('renders account_email when present', () => {
+		// Test lines 83-84
+		const activities = [
+			{
+				id: 1,
+				subject: 'Test Receipt',
+				sender: 'test@example.com',
+				status: 'forwarded',
+				category: 'test',
+				account_email: 'account@example.com',
+				processed_at: new Date().toISOString()
+			}
+		];
+		render(ActivityFeed, { activities });
+		expect(screen.getByText('account@example.com')).toBeTruthy();
+	});
 });
