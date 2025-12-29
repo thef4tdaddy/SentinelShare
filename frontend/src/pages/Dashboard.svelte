@@ -33,7 +33,9 @@
 
 <div class="mb-8">
 	<h2 class="text-2xl font-bold text-text-main mb-1 dark:text-text-main-dark">Dashboard</h2>
-	<p class="text-text-secondary text-sm dark:text-text-secondary-dark">Overview of your receipt forwarding activity.</p>
+	<p class="text-text-secondary text-sm dark:text-text-secondary-dark">
+		Overview of your receipt forwarding activity.
+	</p>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

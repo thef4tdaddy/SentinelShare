@@ -159,7 +159,9 @@
 								{rule.email_pattern || 'Any Sender'}
 							</div>
 							{#if rule.subject_pattern}
-								<div class="text-xs text-text-secondary dark:text-text-secondary-dark">Subject: {rule.subject_pattern}</div>
+								<div class="text-xs text-text-secondary dark:text-text-secondary-dark">
+									Subject: {rule.subject_pattern}
+								</div>
 							{/if}
 							<div class="text-[10px] text-gray-400 mt-1 italic">
 								{rule.purpose || 'No description'}

@@ -32,7 +32,9 @@
 <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
 	{#each $toasts as toast (toast.id)}
 		<div
-			class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-xl min-w-[300px] max-w-sm {getToastTheme(toast.type).container}"
+			class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg border backdrop-blur-xl min-w-[300px] max-w-sm {getToastTheme(
+				toast.type
+			).container}"
 			in:fly={{ y: 20, duration: 300 }}
 			out:fly={{ x: 20, duration: 200 }}
 			animate:flip
