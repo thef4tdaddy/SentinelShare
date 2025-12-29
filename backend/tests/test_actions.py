@@ -761,7 +761,7 @@ class TestGetPreferencesForSendee:
 
         assert result["success"] is True
         assert result["email"] == "Admin"
-        assert "test.com" in result["blocked"]
+        assert result["blocked"] == ["test.com"]
 
     def test_get_preferences_without_auth(self, session):
         """Test getting preferences without authentication"""
