@@ -1,5 +1,6 @@
 Bri
 CBTd
+DOCKERHUB
 Hashtag
 Lego
 MDi
@@ -11,6 +12,7 @@ Ollama
 PII
 PYTHONUNBUFFERED
 Procfile
+Quickstart
 Roboto
 SEO
 Segoe
@@ -83,6 +85,7 @@ bfa
 bfbdd
 bffe
 buildpack
+buildx
 caa
 caea
 caplog
@@ -228,6 +231,7 @@ ffdbe
 ffe
 ffffff
 gcc
+gha
 globalsettings
 gmail
 gmailpass
