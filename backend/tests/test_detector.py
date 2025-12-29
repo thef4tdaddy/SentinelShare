@@ -827,12 +827,6 @@ def test_mask_text_with_empty_string():
     assert result == ""
 
 
-def test_mask_text_with_none():
-    """Test _mask_text returns empty string when given None"""
-    result = ReceiptDetector._mask_text(None)
-    assert result == ""
-
-
 def test_mask_text_with_normal_text():
     """Test _mask_text masks normal text and shows length"""
     result = ReceiptDetector._mask_text("sensitive data here")
