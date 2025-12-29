@@ -726,8 +726,8 @@ class TestGetPreferencesForSendee:
 
         assert result["success"] is True
         assert result["email"] == email
-        assert "amazon.com" in result["blocked"]
-        assert "uber.com" in result["allowed"]
+        assert result["blocked"] == ["amazon.com"]
+        assert result["allowed"] == ["uber.com"]
 
     def test_get_preferences_with_invalid_token(self, session):
         """Test getting preferences with an invalid token"""
