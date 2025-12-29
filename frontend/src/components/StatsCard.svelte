@@ -18,7 +18,11 @@
 <div class="card flex flex-col justify-between h-full group">
 	<div class="flex items-start justify-between mb-4">
 		<div>
-			<p class="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1 dark:text-text-secondary-dark">{title}</p>
+			<p
+				class="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-1 dark:text-text-secondary-dark"
+			>
+				{title}
+			</p>
 			<h3
 				class="text-3xl font-bold text-text-main tracking-tight group-hover:text-primary transition-colors dark:text-text-main-dark dark:group-hover:text-primary-dark"
 			>

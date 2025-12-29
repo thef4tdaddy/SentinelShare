@@ -172,7 +172,7 @@ describe('Login Component', () => {
 
 	it('clears error message on subsequent login attempt', async () => {
 		const onLoginSuccess = vi.fn();
-		
+
 		// First attempt - failure
 		vi.mocked(fetch).mockResolvedValueOnce({
 			ok: false
@@ -236,7 +236,7 @@ describe('Login Component', () => {
 		// Check for Lock icon SVG element within the blue circle container
 		const lockIconContainer = container.querySelector('.bg-blue-50');
 		expect(lockIconContainer).toBeTruthy();
-		
+
 		// Verify SVG icon is present (lucide-svelte renders as SVG)
 		const svgIcon = lockIconContainer?.querySelector('svg');
 		expect(svgIcon).toBeTruthy();
@@ -249,7 +249,7 @@ describe('Login Component', () => {
 
 		const button = screen.getByText('Access Dashboard');
 		expect(button).toBeTruthy();
-		
+
 		// Verify LogIn icon SVG is present in button (not loading state)
 		const svgIcon = button.querySelector('svg');
 		expect(svgIcon).toBeTruthy();
