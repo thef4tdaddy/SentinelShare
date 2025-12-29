@@ -1,8 +1,0 @@
-# Exclude node_modules content (though name checking is on, content should be skipped)
-node_modules/
-
-# Exclude all lockfiles content
-.*lock\.json$
-package-lock\.json
-pnpm-lock\.yaml
-yarn\.lock
