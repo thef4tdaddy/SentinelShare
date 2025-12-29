@@ -252,6 +252,7 @@ idx
 inbox
 inboxes
 instacart
+installable
 isready
 itsdangerous
 itunes
