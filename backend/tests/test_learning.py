@@ -166,10 +166,8 @@ def test_scan_history_api(session: Session, client: TestClient, monkeypatch):
     assert data["days"] == 7
 
 
-def test_run_scan_wrapper_success(monkeypatch, caplog):
+def test_run_scan_wrapper_success(caplog):
     """Test run_scan_wrapper with successful scan (covers lines 17-20)"""
-    monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
-
     # Mock LearningService.scan_history to return a count
     with patch("backend.routers.learning.LearningService.scan_history") as mock_scan:
         mock_scan.return_value = 5
@@ -183,10 +181,8 @@ def test_run_scan_wrapper_success(monkeypatch, caplog):
         mock_scan.assert_called_once()
 
 
-def test_run_scan_wrapper_error(monkeypatch, caplog):
+def test_run_scan_wrapper_error(caplog):
     """Test run_scan_wrapper with exception (covers lines 21-22)"""
-    monkeypatch.setenv("DASHBOARD_PASSWORD", "testpass")
-
     # Mock LearningService.scan_history to raise an exception
     with patch("backend.routers.learning.LearningService.scan_history") as mock_scan:
         mock_scan.side_effect = Exception("Test error")
