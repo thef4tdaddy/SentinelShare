@@ -5,11 +5,6 @@ import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-from sqlmodel import Session, col, select
-
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
@@ -17,6 +12,10 @@ from backend.security import generate_hmac_signature, verify_dashboard_token
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from sqlmodel import Session, col, select
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 

@@ -1,12 +1,11 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from sqlmodel import Session, desc, select
-
 from backend.database import engine, get_session
 from backend.models import LearningCandidate, ManualRule
 from backend.services.learning_service import LearningService
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlmodel import Session, desc, select
 
 router = APIRouter(prefix="/api/learning", tags=["learning"])
 

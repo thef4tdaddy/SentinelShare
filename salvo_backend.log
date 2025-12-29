@@ -1,0 +1,35 @@
+INFO:     Started server process [42894]
+INFO:     Waiting for application startup.
+Startup: Checking database migration status...
+Applying pending migrations...
+INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
+INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade e4ae98558c29 -> dcf10852d24e, add_email_account_table
+Error running migrations: (sqlite3.OperationalError) table emailaccount already exists
+[SQL: 
+CREATE TABLE emailaccount (
+	id INTEGER NOT NULL, 
+	email VARCHAR NOT NULL, 
+	host VARCHAR NOT NULL, 
+	port INTEGER NOT NULL, 
+	username VARCHAR NOT NULL, 
+	encrypted_password VARCHAR NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	updated_at DATETIME NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+Startup: Database checks complete.
+⏰ Scheduler started. Polling every 60 minutes.
+DEBUG MIDDLEWARE: Token received: invalid-ga...
+DEBUG MIDDLEWARE: Token Invalid
+DEBUG MIDDLEWARE: Token received: playwright...
+DEBUG MIDDLEWARE: Token Valid
+⚙️ Preference already exists: Blocked Sender -> spam.com
+DEBUG MIDDLEWARE: No Token Check
+DEBUG MIDDLEWARE: No Token Check
+🛑 Scheduler stopped.
+Shutdown: App stopping.

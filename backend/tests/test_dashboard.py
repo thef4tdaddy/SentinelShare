@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 
 import pytest
+from backend.main import app
+from backend.models import ProcessedEmail
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
-
-from backend.main import app
-from backend.models import ProcessedEmail
 
 client = TestClient(app)
 

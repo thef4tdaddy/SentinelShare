@@ -126,10 +126,7 @@ describe('API Module', () => {
 		await fetchJson('/test');
 
 		expect(window.localStorage.setItem).toHaveBeenCalledWith('dashboard_token', 'test-token-123');
-		expect(globalThis.fetch).toHaveBeenCalledWith(
-			'/api/test?token=test-token-123',
-			{}
-		);
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test?token=test-token-123', {});
 	});
 
 	it('appends token to URL with existing query params', async () => {
@@ -144,10 +141,7 @@ describe('API Module', () => {
 
 		await fetchJson('/test?foo=bar');
 
-		expect(globalThis.fetch).toHaveBeenCalledWith(
-			'/api/test?foo=bar&token=stored-token',
-			{}
-		);
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test?foo=bar&token=stored-token', {});
 	});
 
 	it('appends token to URL without existing query params', async () => {
@@ -162,10 +156,7 @@ describe('API Module', () => {
 
 		await fetchJson('/test');
 
-		expect(globalThis.fetch).toHaveBeenCalledWith(
-			'/api/test?token=stored-token',
-			{}
-		);
+		expect(globalThis.fetch).toHaveBeenCalledWith('/api/test?token=stored-token', {});
 	});
 });
 

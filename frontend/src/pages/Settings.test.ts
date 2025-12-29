@@ -18,17 +18,23 @@ vi.mock('../lib/stores/toast', () => ({
 }));
 
 describe('Settings Component', () => {
-	// Helper function to mock all API calls that happen on component mount
-	const mockSettingsMountApis = () => {
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([]); // checkConnections
+	// Default mock implementation to handle all initial data fetches
+	const setupDefaultMocks = () => {
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			if (url.includes('trigger-poll')) return { message: 'Poll triggered' };
+			if (url === '/api/settings/email-template') return { template: '' };
+			return [];
+		});
 	};
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		setupDefaultMocks();
 	});
 
 	afterEach(() => {
@@ -51,8 +57,6 @@ describe('Settings Component', () => {
 	});
 
 	it('renders PreferenceList components', async () => {
-		vi.mocked(api.fetchJson).mockResolvedValue([]);
-
 		render(Settings);
 
 		await waitFor(() => {
@@ -62,9 +66,6 @@ describe('Settings Component', () => {
 	});
 
 	it('triggers poll when Run Now is clicked and confirmed', async () => {
-		const mockResponse = { message: 'Poll triggered successfully' };
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
@@ -82,8 +83,20 @@ describe('Settings Component', () => {
 		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
 		const confirmButton = buttons[1]; // The modal button is the second one
 
-		// Mock the trigger-poll response
-		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResponse);
+		// Override default mock for specific return expectation if needed,
+		// strictly speaking setupDefaultMocks handles it but let's be explicit if checking return value
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/trigger-poll') return { message: 'Poll triggered successfully' };
+			// Fallback to defaults
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			if (url === '/api/settings/email-template') return { template: '' };
+			if (url.includes('trigger-poll')) return { message: 'Poll triggered' };
+			return {};
+		});
 
 		await fireEvent.click(confirmButton);
 
@@ -96,8 +109,6 @@ describe('Settings Component', () => {
 	});
 
 	it('does not trigger poll if user cancels confirmation', async () => {
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {
@@ -106,6 +117,8 @@ describe('Settings Component', () => {
 
 		// Clear the calls from mount
 		vi.clearAllMocks();
+		// Restore defaults just in case clearAllMocks wipes implementations (it doesn't wipe implementations usually, but clearAllMocks clears call history)
+		setupDefaultMocks();
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
@@ -124,24 +137,28 @@ describe('Settings Component', () => {
 	});
 
 	it('shows default message if API response has no message', async () => {
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
 
-		// Modal should open
 		await waitFor(() => {
 			expect(screen.getByText('Run Email Check')).toBeTruthy();
 		});
 
-		// Click confirm button in modal (the second "Run Now" button)
 		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
-		const confirmButton = buttons[1]; // The modal button is the second one
+		const confirmButton = buttons[1];
 
-		// Mock the trigger-poll response with no message
-		vi.mocked(api.fetchJson).mockResolvedValueOnce({});
+		// Mock empty response
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/trigger-poll') return {};
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			return {};
+		});
 
 		await fireEvent.click(confirmButton);
 
@@ -151,24 +168,28 @@ describe('Settings Component', () => {
 	});
 
 	it('handles trigger poll error gracefully', async () => {
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		const runNowButton = screen.getByText('Run Now');
 		await fireEvent.click(runNowButton);
 
-		// Modal should open
 		await waitFor(() => {
 			expect(screen.getByText('Run Email Check')).toBeTruthy();
 		});
 
-		// Click confirm button in modal (the second "Run Now" button)
 		const buttons = screen.getAllByRole('button', { name: 'Run Now' });
-		const confirmButton = buttons[1]; // The modal button is the second one
+		const confirmButton = buttons[1];
 
-		// Mock the trigger-poll API error - use mockRejectedValue to ensure it catches even if prior calls exhausted the chain
-		vi.mocked(api.fetchJson).mockRejectedValue(new Error('API Error'));
+		// Mock the trigger-poll API error
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/trigger-poll') throw new Error('API Error');
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			return {};
+		});
 
 		await fireEvent.click(confirmButton);
 
@@ -179,24 +200,19 @@ describe('Settings Component', () => {
 
 	it('reprocessAllIgnored cancels when user declines confirmation', async () => {
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {
 			expect(screen.getByText('Reprocess Ignored')).toBeTruthy();
 		});
 
-		// Clear the calls from mount
 		vi.clearAllMocks();
+		setupDefaultMocks();
 
 		const reprocessButton = screen.getByText('Reprocess Ignored');
 		await fireEvent.click(reprocessButton);
 
-		// Confirm was called
 		expect(confirmSpy).toHaveBeenCalledWith('Reprocess all ignored emails from last 24h?');
-
-		// API should not be called since user declined
 		expect(api.fetchJson).not.toHaveBeenCalled();
 
 		confirmSpy.mockRestore();
@@ -204,8 +220,6 @@ describe('Settings Component', () => {
 
 	it('reprocessAllIgnored successfully reprocesses emails', async () => {
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {
@@ -214,9 +228,16 @@ describe('Settings Component', () => {
 
 		const reprocessButton = screen.getByText('Reprocess Ignored');
 
-		// Mock the reprocess response
-		const mockResponse = { message: 'Successfully reprocessed 5 emails' };
-		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResponse);
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/api/history/reprocess-all-ignored')
+				return { message: 'Successfully reprocessed 5 emails' };
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			return {};
+		});
 
 		await fireEvent.click(reprocessButton);
 
@@ -232,8 +253,6 @@ describe('Settings Component', () => {
 
 	it('reprocessAllIgnored handles error gracefully', async () => {
 		const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {
@@ -242,8 +261,15 @@ describe('Settings Component', () => {
 
 		const reprocessButton = screen.getByText('Reprocess Ignored');
 
-		// Mock API error
-		vi.mocked(api.fetchJson).mockRejectedValue(new Error('API Error'));
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/api/history/reprocess-all-ignored') throw new Error('API Error');
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			if (url === '/settings/test-connections') return [];
+			return {};
+		});
 
 		await fireEvent.click(reprocessButton);
 
@@ -257,13 +283,15 @@ describe('Settings Component', () => {
 	it('checkConnections handles error and logs to console', async () => {
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		// Mock initial checkConnections to fail
 		const error = new Error('Connection failed');
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockRejectedValueOnce(error); // checkConnections fails
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/test-connections') throw error;
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			return [];
+		});
 
 		render(Settings);
 
@@ -275,26 +303,28 @@ describe('Settings Component', () => {
 	});
 
 	it('renders Test Connections button and triggers check on click', async () => {
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {
 			expect(screen.getByText('Test Connections')).toBeTruthy();
 		});
 
-		// Clear the calls from mount
 		vi.clearAllMocks();
-
-		const testButton = screen.getByText('Test Connections');
-
-		// Mock the response for manual test
+		// Setup mock for manual click
 		const mockResults = [
 			{ account: 'test@example.com', success: true },
 			{ account: 'test2@example.com', success: false, error: 'Auth failed' }
 		];
-		vi.mocked(api.fetchJson).mockResolvedValueOnce(mockResults);
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/test-connections') return mockResults;
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			return [];
+		});
 
+		const testButton = screen.getByText('Test Connections');
 		await fireEvent.click(testButton);
 
 		await waitFor(() => {
@@ -305,11 +335,15 @@ describe('Settings Component', () => {
 	});
 
 	it('displays successful connection with green indicator', async () => {
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([{ account: 'test@example.com', success: true }]); // checkConnections
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/test-connections')
+				return [{ account: 'test@example.com', success: true }];
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			return [];
+		});
 
 		render(Settings);
 
@@ -318,19 +352,20 @@ describe('Settings Component', () => {
 			expect(screen.getByText('Connected')).toBeTruthy();
 		});
 
-		// Check for green styling classes
 		const accountCard = screen.getByText('test@example.com').closest('div.card');
 		expect(accountCard?.classList.contains('border-l-green-500')).toBe(true);
 	});
 
 	it('displays failed connection with red indicator and error tooltip', async () => {
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([
-				{ account: 'test2@example.com', success: false, error: 'Authentication failed' }
-			]); // checkConnections
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/test-connections')
+				return [{ account: 'test2@example.com', success: false, error: 'Authentication failed' }];
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			return [];
+		});
 
 		render(Settings);
 
@@ -340,21 +375,24 @@ describe('Settings Component', () => {
 			expect(screen.getByText('Authentication failed')).toBeTruthy();
 		});
 
-		// Check for red styling classes
 		const accountCard = screen.getByText('test2@example.com').closest('div.card');
 		expect(accountCard?.classList.contains('border-l-red-500')).toBe(true);
 	});
 
 	it('displays multiple connection results with mixed success/failure states', async () => {
-		vi.mocked(api.fetchJson)
-			.mockResolvedValueOnce([]) // PreferenceList preferences
-			.mockResolvedValueOnce([]) // PreferenceList rules
-			.mockResolvedValueOnce({ template: '' }) // EmailTemplateEditor
-			.mockResolvedValueOnce([
-				{ account: 'success@example.com', success: true },
-				{ account: 'failed@example.com', success: false, error: 'Timeout' },
-				{ account: 'another@example.com', success: true }
-			]); // checkConnections
+		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
+			if (url === '/settings/test-connections')
+				return [
+					{ account: 'success@example.com', success: true },
+					{ account: 'failed@example.com', success: false, error: 'Timeout' },
+					{ account: 'another@example.com', success: true }
+				];
+			if (url === '/settings/accounts') return [];
+			if (url === '/api/settings/preferences') return [];
+			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/email-template') return { template: '' };
+			return [];
+		});
 
 		render(Settings);
 
@@ -364,15 +402,12 @@ describe('Settings Component', () => {
 			expect(screen.getByText('another@example.com')).toBeTruthy();
 		});
 
-		// Check that both "Connected" and "Connection Failed" appear
 		expect(screen.getAllByText('Connected').length).toBe(2);
 		expect(screen.getByText('Connection Failed')).toBeTruthy();
 		expect(screen.getByText('Timeout')).toBeTruthy();
 	});
 
 	it('displays default message when no connection results exist', async () => {
-		mockSettingsMountApis();
-
 		render(Settings);
 
 		await waitFor(() => {

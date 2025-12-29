@@ -23,19 +23,17 @@ describe('Modal Component', () => {
 		});
 
 		// Wait for modal to be rendered
-		return new Promise<{ container: HTMLElement; onClose: ReturnType<typeof vi.fn> }>(
-			(resolve) => {
-				setTimeout(() => {
-					// Add a second button to the modal content
-					const modalContent = getModalContent(container);
-					const secondButton = document.createElement('button');
-					secondButton.textContent = 'Second Button';
-					secondButton.setAttribute('data-testid', 'second-button');
-					modalContent?.appendChild(secondButton);
-					resolve({ container, onClose });
-				}, 10);
-			}
-		);
+		return new Promise<{ container: HTMLElement; onClose: ReturnType<typeof vi.fn> }>((resolve) => {
+			setTimeout(() => {
+				// Add a second button to the modal content
+				const modalContent = getModalContent(container);
+				const secondButton = document.createElement('button');
+				secondButton.textContent = 'Second Button';
+				secondButton.setAttribute('data-testid', 'second-button');
+				modalContent?.appendChild(secondButton);
+				resolve({ container, onClose });
+			}, 10);
+		});
 	};
 
 	// Helper function to render modal with non-focusable content
@@ -48,18 +46,16 @@ describe('Modal Component', () => {
 		});
 
 		// Wait for modal to be rendered
-		return new Promise<{ container: HTMLElement; onClose: ReturnType<typeof vi.fn> }>(
-			(resolve) => {
-				setTimeout(() => {
-					// Add non-focusable content to the modal
-					const modalContent = getModalContent(container);
-					const div = document.createElement('div');
-					div.textContent = 'Just text content';
-					modalContent?.appendChild(div);
-					resolve({ container, onClose });
-				}, 10);
-			}
-		);
+		return new Promise<{ container: HTMLElement; onClose: ReturnType<typeof vi.fn> }>((resolve) => {
+			setTimeout(() => {
+				// Add non-focusable content to the modal
+				const modalContent = getModalContent(container);
+				const div = document.createElement('div');
+				div.textContent = 'Just text content';
+				modalContent?.appendChild(div);
+				resolve({ container, onClose });
+			}, 10);
+		});
 	};
 
 	it('renders modal when isOpen is true', () => {
@@ -299,14 +295,14 @@ describe('Modal Component', () => {
 
 	it('restores focus to previously focused element when modal closes', async () => {
 		const onClose = vi.fn();
-		
+
 		// Create a button outside the modal to focus initially
 		const externalButton = document.createElement('button');
 		externalButton.textContent = 'External Button';
 		externalButton.setAttribute('data-testid', 'external-button');
 		document.body.appendChild(externalButton);
 		externalButton.focus();
-		
+
 		expect(document.activeElement).toBe(externalButton);
 
 		// Render modal with isOpen=true
