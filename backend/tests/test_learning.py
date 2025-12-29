@@ -100,15 +100,20 @@ def test_get_candidates_api(session: Session, client: TestClient, monkeypatch):
         confidence=0.8,
         type="Receipt",
     )
+    session.add(candidate1)
+    session.commit()
+    session.refresh(candidate1)
+
+    # Create second candidate slightly later to ensure different created_at
     candidate2 = LearningCandidate(
         sender="store2@example.com",
         subject_pattern="*Invoice*",
         confidence=0.9,
         type="Receipt",
     )
-    session.add(candidate1)
     session.add(candidate2)
     session.commit()
+    session.refresh(candidate2)
 
     # Authenticate via login
     client.post("/api/auth/login", json={"password": "testpass"})
@@ -120,8 +125,9 @@ def test_get_candidates_api(session: Session, client: TestClient, monkeypatch):
     candidates = response.json()
     assert len(candidates) == 2
     # Verify they are ordered by created_at desc (most recent first)
-    assert candidates[0]["sender"] in ["store1@example.com", "store2@example.com"]
-    assert candidates[1]["sender"] in ["store1@example.com", "store2@example.com"]
+    # candidate2 was created after candidate1, so it should be first
+    assert candidates[0]["sender"] == "store2@example.com"
+    assert candidates[1]["sender"] == "store1@example.com"
 
 
 def test_approve_candidate_not_found(session: Session, client: TestClient, monkeypatch):
@@ -157,13 +163,22 @@ def test_scan_history_api(session: Session, client: TestClient, monkeypatch):
     # Authenticate via login
     client.post("/api/auth/login", json={"password": "testpass"})
 
-    # Call scan endpoint
-    response = client.post("/api/learning/scan?days=7")
-    assert response.status_code == 200
+    # Mock the background_tasks.add_task to verify it's called
+    with patch("fastapi.BackgroundTasks.add_task") as mock_add_task:
+        # Call scan endpoint
+        response = client.post("/api/learning/scan?days=7")
+        assert response.status_code == 200
 
-    data = response.json()
-    assert data["message"] == "Scan started in background"
-    assert data["days"] == 7
+        data = response.json()
+        assert data["message"] == "Scan started in background"
+        assert data["days"] == 7
+
+        # Verify the background task was added with correct parameters
+        mock_add_task.assert_called_once()
+        # Check that run_scan_wrapper was passed as the task
+        call_args = mock_add_task.call_args
+        assert call_args[0][0].__name__ == "run_scan_wrapper"
+        assert call_args[0][1] == 7  # days parameter
 
 
 def test_run_scan_wrapper_success(caplog):
