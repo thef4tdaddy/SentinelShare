@@ -31,7 +31,7 @@ describe('dateUtils', () => {
 		});
 
 		it('handles date string with + timezone', () => {
-			const dateWithPlus = '2024-01-15T10:30:00+05:00';
+			const dateWithPlus = '2024-01-15T20:30:00+05:00';
 			const result = formatDate(dateWithPlus);
 			// Should contain date components
 			expect(result).toMatch(/Jan/);
@@ -62,7 +62,7 @@ describe('dateUtils', () => {
 		});
 
 		it('handles time string with + timezone', () => {
-			const timeWithPlus = '2024-01-15T10:30:00+05:00';
+			const timeWithPlus = '2024-01-15T20:30:00+05:00';
 			const result = formatTime(timeWithPlus);
 			// Should contain time components (may differ due to timezone conversion)
 			expect(result).toMatch(/\d{1,2}/);
@@ -91,7 +91,7 @@ describe('dateUtils', () => {
 		});
 
 		it('handles short date string with + timezone', () => {
-			const dateWithPlus = '2024-01-15T10:30:00+05:00';
+			const dateWithPlus = '2024-01-15T20:30:00+05:00';
 			const result = formatShortDate(dateWithPlus);
 			// Should contain month and day
 			expect(result).toMatch(/Jan/);
