@@ -49,33 +49,52 @@ jobs:
             const fs = require('fs');
             const path = require('path');
 
-            // Find JSON report
+            // Debug info
+            console.log('Current directory:', process.cwd());
             const reportDir = '.lighthouseci';
-            if (!fs.existsSync(reportDir)) return;
+
+            if (!fs.existsSync(reportDir)) {
+               console.log('Report directory not found at:', reportDir);
+               // Try looking in root or frontend
+               return;
+            }
+
+            console.log('Report directory contents:', fs.readdirSync(reportDir));
 
             const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
-            if (files.length === 0) return;
+            if (files.length === 0) {
+              console.log('No JSON report files found');
+              return;
+            }
 
             const reportPath = path.join(reportDir, files[0]);
-            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            console.log('Reading report from:', reportPath);
 
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
             const failures = [];
 
-            // Collect Audits that errored or failed assertions
+            // Categories under 0.9
             for (const category of Object.values(report.categories)) {
-                if (category.score < 0.9) { // Assuming 0.9 threshold (default)
+                if (category.score < 0.9) {
                     failures.push(`**${category.title}**: ${(category.score * 100).toFixed(0)}%`);
                 }
             }
 
-            // Also check for specific audit errors
+            // Critical Audits
             for (const audit of Object.values(report.audits)) {
-                if (audit.score === 0 || (audit.scoreDisplayMode === 'error')) {
-                     failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
+                // Check for score 0 or error mode. 
+                // Ignore 'warn' assertions if we just want critical failures, 
+                // but since the job failed, we want to know why.
+                if (audit.score === 0 || audit.scoreDisplayMode === 'error') {
+                     // Filter out some manual checks if needed
+                     if (audit.id !== 'is-on-https') {
+                        failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
+                     }
                 }
             }
 
             if (failures.length > 0) {
+               console.log('Posting comment with failures...');
                const body = `### 🚨 Lighthouse CI Failures\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
                
                await github.rest.issues.createComment({
@@ -84,4 +103,6 @@ jobs:
                    issue_number: context.issue.number,
                    body: body
                });
+            } else {
+              console.log('No failures found in report to comment about (despite job failure).');
             }

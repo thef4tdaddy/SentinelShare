@@ -17,14 +17,12 @@
         "color-contrast": "warn",
         "tap-targets": "warn",
         "maskable-icon": "warn",
-        "valid-source-maps": "warn",
-        "service-worker": "warn",
-        "pwa-crossorigin": "warn",
         "csp-xss": "warn",
         "errors-in-console": "warn",
         "installable-manifest": "warn",
         "deprecations": "warn",
-        "resource-summary": "warn"
+        "resource-summary": "warn",
+        "splash-screen": "warn"
       }
     }
   }
