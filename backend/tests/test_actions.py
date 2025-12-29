@@ -663,3 +663,263 @@ class TestQuickAction:
 
         response = actions.quick_action(cmd, arg, ts, sig)
         assert "Unknown Command" in response
+
+
+class TestVerifyDashboard:
+    """Tests for the verify-dashboard endpoint"""
+
+    def test_verify_dashboard_valid_token(self, monkeypatch):
+        """Test verifying a valid dashboard token"""
+        from backend.security import generate_dashboard_token
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Call the endpoint
+        result = actions.verify_dashboard(token)
+
+        assert result["success"] is True
+        assert result["email"] == email
+
+    def test_verify_dashboard_invalid_token(self):
+        """Test verifying an invalid dashboard token"""
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc:
+            actions.verify_dashboard("invalid-token")
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+
+class TestGetPreferencesForSendee:
+    """Tests for the get-preferences-for-sendee endpoint"""
+
+    def test_get_preferences_with_valid_token(self, session, monkeypatch):
+        """Test getting preferences with a valid token"""
+        from backend.models import Preference
+        from backend.security import generate_dashboard_token
+        from unittest.mock import Mock
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Add some preferences
+        session.add(Preference(item="amazon.com", type="Blocked Sender"))
+        session.add(Preference(item="uber.com", type="Always Forward"))
+        session.commit()
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request = Mock()
+        request.session = {}
+
+        # Call the endpoint
+        result = actions.get_preferences_for_sendee(request, token, session)
+
+        assert result["success"] is True
+        assert result["email"] == email
+        assert "amazon.com" in result["blocked"]
+        assert "uber.com" in result["allowed"]
+
+    def test_get_preferences_with_invalid_token(self, session):
+        """Test getting preferences with an invalid token"""
+        from fastapi import HTTPException
+        from unittest.mock import Mock
+
+        request = Mock()
+        request.session = {}
+
+        with pytest.raises(HTTPException) as exc:
+            actions.get_preferences_for_sendee(request, "invalid-token", session)
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+    def test_get_preferences_with_admin_session(self, session):
+        """Test getting preferences with admin session"""
+        from backend.models import Preference
+        from unittest.mock import Mock
+
+        # Add some preferences
+        session.add(Preference(item="test.com", type="Blocked Sender"))
+        session.commit()
+
+        # Create a mock request with authenticated session
+        request = Mock()
+        request.session = {"authenticated": True}
+
+        # Call the endpoint without token
+        result = actions.get_preferences_for_sendee(request, None, session)
+
+        assert result["success"] is True
+        assert result["email"] == "Admin"
+        assert "test.com" in result["blocked"]
+
+    def test_get_preferences_without_auth(self, session):
+        """Test getting preferences without authentication"""
+        from fastapi import HTTPException
+        from unittest.mock import Mock
+
+        # Create a mock request without authentication
+        request = Mock()
+        request.session = {}
+
+        with pytest.raises(HTTPException) as exc:
+            actions.get_preferences_for_sendee(request, None, session)
+
+        assert exc.value.status_code == 401
+        assert "Unauthorized" in str(exc.value.detail)
+
+
+class TestUpdatePreferences:
+    """Tests for the update-preferences endpoint"""
+
+    def test_update_preferences_with_valid_token(self, session, monkeypatch):
+        """Test updating preferences with a valid token"""
+        from backend.models import Preference
+        from backend.security import generate_dashboard_token
+        from unittest.mock import Mock
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Add existing preferences
+        session.add(Preference(item="old.com", type="Blocked Sender"))
+        session.commit()
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request_mock = Mock()
+        request_mock.session = {}
+
+        # Create update request
+        data = actions.UpdatePreferencesRequest(
+            token=token,
+            blocked_senders=["new-blocked.com"],
+            allowed_senders=["new-allowed.com"],
+        )
+
+        # Call the endpoint
+        result = actions.update_preferences(data, request_mock, session)
+
+        assert result["success"] is True
+        assert "Preferences updated" in result["message"]
+
+        # Verify preferences were updated
+        prefs = session.exec(select(Preference)).all()
+        blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
+        allowed = [p.item for p in prefs if p.type == "Always Forward"]
+
+        assert "new-blocked.com" in blocked
+        assert "new-allowed.com" in allowed
+        assert "old.com" not in blocked  # Old preference should be removed
+
+    def test_update_preferences_with_invalid_token(self, session):
+        """Test updating preferences with an invalid token"""
+        from fastapi import HTTPException
+        from unittest.mock import Mock
+
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token="invalid-token", blocked_senders=[], allowed_senders=[]
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            actions.update_preferences(data, request_mock, session)
+
+        assert exc.value.status_code == 403
+        assert "Invalid or expired token" in str(exc.value.detail)
+
+    def test_update_preferences_with_admin_session(self, session):
+        """Test updating preferences with admin session"""
+        from backend.models import Preference
+        from unittest.mock import Mock
+
+        # Add existing preferences
+        session.add(Preference(item="old.com", type="Blocked Sender"))
+        session.commit()
+
+        # Create a mock request with authenticated session
+        request_mock = Mock()
+        request_mock.session = {"authenticated": True}
+
+        # Create update request without token
+        data = actions.UpdatePreferencesRequest(
+            token=None,
+            blocked_senders=["admin-blocked.com"],
+            allowed_senders=["admin-allowed.com"],
+        )
+
+        # Call the endpoint
+        result = actions.update_preferences(data, request_mock, session)
+
+        assert result["success"] is True
+
+        # Verify preferences were updated
+        prefs = session.exec(select(Preference)).all()
+        blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
+        allowed = [p.item for p in prefs if p.type == "Always Forward"]
+
+        assert "admin-blocked.com" in blocked
+        assert "admin-allowed.com" in allowed
+
+    def test_update_preferences_without_auth(self, session):
+        """Test updating preferences without authentication"""
+        from fastapi import HTTPException
+        from unittest.mock import Mock
+
+        # Create a mock request without authentication
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token=None, blocked_senders=[], allowed_senders=[]
+        )
+
+        with pytest.raises(HTTPException) as exc:
+            actions.update_preferences(data, request_mock, session)
+
+        assert exc.value.status_code == 401
+        assert "Unauthorized" in str(exc.value.detail)
+
+    def test_update_preferences_exception_handling(self, session, monkeypatch):
+        """Test exception handling during preference update"""
+        from backend.security import generate_dashboard_token
+        from fastapi import HTTPException
+        from unittest.mock import Mock, patch
+
+        secret = "test-secret"
+        monkeypatch.setenv("SECRET_KEY", secret)
+
+        # Generate a valid token
+        email = "test@example.com"
+        token = generate_dashboard_token(email)
+
+        # Create a mock request
+        request_mock = Mock()
+        request_mock.session = {}
+
+        data = actions.UpdatePreferencesRequest(
+            token=token, blocked_senders=["test.com"], allowed_senders=[]
+        )
+
+        # Mock session.commit to raise an exception
+        with patch.object(session, "commit", side_effect=Exception("Database error")):
+            with pytest.raises(HTTPException) as exc:
+                actions.update_preferences(data, request_mock, session)
+
+            assert exc.value.status_code == 500
+            assert "Database error" in str(exc.value.detail)
