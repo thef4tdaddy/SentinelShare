@@ -2,11 +2,10 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
-
 from backend.models import ManualRule, Preference
 from backend.services.detector import ReceiptDetector
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
 
 
 # Create in-memory SQLite database for testing

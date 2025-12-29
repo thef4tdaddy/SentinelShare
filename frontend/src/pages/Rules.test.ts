@@ -33,7 +33,9 @@ describe('Rules Component', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Automation Rules')).toBeTruthy();
 			expect(
-				screen.getByText('Manage automated detection rules, adaptive learning, and shadow mode candidates.')
+				screen.getByText(
+					'Manage automated detection rules, adaptive learning, and shadow mode candidates.'
+				)
 			).toBeTruthy();
 		});
 	});
@@ -62,7 +64,9 @@ describe('Rules Component', () => {
 
 		await waitFor(() => {
 			expect(
-				screen.getByText('System is currently monitoring feedback and suggesting new rules in Shadow Mode.')
+				screen.getByText(
+					'System is currently monitoring feedback and suggesting new rules in Shadow Mode.'
+				)
 			).toBeTruthy();
 			expect(screen.getByText('SHADOW MODE ACTIVE')).toBeTruthy();
 		});
@@ -74,7 +78,9 @@ describe('Rules Component', () => {
 
 		await waitFor(() => {
 			expect(
-				screen.getByText('Rules with >90% confidence and 3+ successful shadow matches are auto-promoted.')
+				screen.getByText(
+					'Rules with >90% confidence and 3+ successful shadow matches are auto-promoted.'
+				)
 			).toBeTruthy();
 			expect(screen.getByText('Confidence Threshold: 90%')).toBeTruthy();
 		});
@@ -112,7 +118,7 @@ describe('Rules Component', () => {
 				id: 3,
 				email_pattern: 'active@example.com',
 				priority: 3,
-				confidence: 0.90,
+				confidence: 0.9,
 				is_shadow_mode: false,
 				match_count: 10
 			}
@@ -143,7 +149,7 @@ describe('Rules Component', () => {
 				email_pattern: 'manual@example.com',
 				purpose: 'Manual rule',
 				priority: 2,
-				confidence: 0.90,
+				confidence: 0.9,
 				is_shadow_mode: false,
 				match_count: 5
 			}
@@ -209,7 +215,7 @@ describe('Rules Component', () => {
 				email_pattern: 'notifications@store.com',
 				subject_pattern: 'Order Confirmation*',
 				priority: 1,
-				confidence: 0.90,
+				confidence: 0.9,
 				is_shadow_mode: false,
 				match_count: 15
 			}
@@ -333,7 +339,7 @@ describe('Rules Component', () => {
 				email_pattern: 'test@example.com',
 				purpose: 'Manual rule',
 				priority: 1,
-				confidence: 0.90,
+				confidence: 0.9,
 				is_shadow_mode: false,
 				match_count: 7
 			}
@@ -401,7 +407,7 @@ describe('Rules Component', () => {
 				id: 2,
 				email_pattern: 'second@example.com',
 				priority: 2,
-				confidence: 0.90,
+				confidence: 0.9,
 				is_shadow_mode: true,
 				match_count: 5
 			},

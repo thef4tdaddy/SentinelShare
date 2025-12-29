@@ -1,8 +1,7 @@
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
-
 from backend.models import ManualRule, ProcessedEmail
 from backend.services.learning_service import LearningService
+from sqlmodel import Session, SQLModel, create_engine
 
 
 @pytest.fixture(name="session")

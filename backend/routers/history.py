@@ -3,15 +3,14 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from sqlmodel import Session, and_, func, select
-
 from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail, ProcessingRun
 from backend.security import decrypt_content
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
