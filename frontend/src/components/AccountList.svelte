@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
 	import { Trash2, Plus, CheckCircle, XCircle, Loader2, Mail } from 'lucide-svelte';
@@ -26,7 +27,7 @@
 	let addingAccount = $state(false);
 	let deletingAccountId: number | null = $state(null);
 	let showAddForm = $state(false);
-	let testingAccounts: Set<number> = $state(new Set());
+	let testingAccounts = new SvelteSet<number>();
 
 	// Form fields
 	let formEmail = $state('');
@@ -39,8 +40,7 @@
 		try {
 			loadingAccounts = true;
 			accounts = await fetchJson('/settings/accounts');
-		} catch (e) {
-			console.error('Failed to load accounts', e);
+		} catch {
 			toasts.trigger('Failed to load accounts', 'error');
 		} finally {
 			loadingAccounts = false;
@@ -78,8 +78,8 @@
 
 			// Reload accounts
 			await loadAccounts();
-		} catch (e: any) {
-			const errorMsg = e?.message || 'Failed to add account';
+		} catch (e) {
+			const errorMsg = e instanceof Error ? e.message : 'Failed to add account';
 			toasts.trigger(errorMsg, 'error');
 		} finally {
 			addingAccount = false;
@@ -92,7 +92,7 @@
 			onDeleteRequest(id, email, loadAccounts);
 			return;
 		}
-		
+
 		// Fallback to browser confirm if no callback provided
 		if (!confirm('Are you sure you want to delete this account?')) return;
 
@@ -101,7 +101,7 @@
 			await fetchJson(`/settings/accounts/${id}`, { method: 'DELETE' });
 			toasts.trigger('Account deleted', 'success');
 			await loadAccounts();
-		} catch (e) {
+		} catch {
 			toasts.trigger('Failed to delete account', 'error');
 		} finally {
 			deletingAccountId = null;
@@ -110,7 +110,7 @@
 
 	async function testAccount(id: number) {
 		try {
-			testingAccounts = new Set(testingAccounts).add(id);
+			testingAccounts.add(id);
 			const result = await fetchJson(`/settings/accounts/${id}/test`, { method: 'POST' });
 
 			if (result.success) {
@@ -118,12 +118,10 @@
 			} else {
 				toasts.trigger(`Connection failed: ${result.error}`, 'error');
 			}
-		} catch (e) {
+		} catch {
 			toasts.trigger('Failed to test connection', 'error');
 		} finally {
-			const newSet = new Set(testingAccounts);
-			newSet.delete(id);
-			testingAccounts = newSet;
+			testingAccounts.delete(id);
 		}
 	}
 
