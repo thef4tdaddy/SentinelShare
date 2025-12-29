@@ -732,7 +732,7 @@ class TestGetPreferencesForSendee:
         assert result["success"] is True
         assert result["email"] == email
         assert result["blocked"] == ["amazon.com"]
-        assert "uber.com" in result["allowed"]
+        assert result["allowed"] == ["uber.com"]
 
     def test_get_preferences_with_invalid_token(self, session):
         """Test getting preferences with an invalid token"""
@@ -830,8 +830,8 @@ class TestUpdatePreferences:
         blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
         allowed = [p.item for p in prefs if p.type == "Always Forward"]
 
-        assert "new-blocked.com" in blocked
-        assert "new-allowed.com" in allowed
+        assert blocked == ["new-blocked.com"]
+        assert allowed == ["new-allowed.com"]
         assert "old.com" not in blocked  # Old preference should be removed
 
     def test_update_preferences_with_invalid_token(self, session):
@@ -884,8 +884,8 @@ class TestUpdatePreferences:
         blocked = [p.item for p in prefs if p.type == "Blocked Sender"]
         allowed = [p.item for p in prefs if p.type == "Always Forward"]
 
-        assert "admin-blocked.com" in blocked
-        assert "admin-allowed.com" in allowed
+        assert blocked == ["admin-blocked.com"]
+        assert allowed == ["admin-allowed.com"]
 
     def test_update_preferences_without_auth(self, session):
         """Test updating preferences without authentication"""
