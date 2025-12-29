@@ -40,3 +40,48 @@ jobs:
         with:
           name: lighthouse-results
           path: .lighthouseci/
+
+      - name: Comment on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Find JSON report
+            const reportDir = '.lighthouseci';
+            if (!fs.existsSync(reportDir)) return;
+
+            const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
+            if (files.length === 0) return;
+
+            const reportPath = path.join(reportDir, files[0]);
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+
+            const failures = [];
+
+            // Collect Audits that errored or failed assertions
+            for (const category of Object.values(report.categories)) {
+                if (category.score < 0.9) { // Assuming 0.9 threshold (default)
+                    failures.push(`**${category.title}**: ${(category.score * 100).toFixed(0)}%`);
+                }
+            }
+
+            // Also check for specific audit errors
+            for (const audit of Object.values(report.audits)) {
+                if (audit.score === 0 || (audit.scoreDisplayMode === 'error')) {
+                     failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
+                }
+            }
+
+            if (failures.length > 0) {
+               const body = `### 🚨 Lighthouse CI Failures\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+               
+               await github.rest.issues.createComment({
+                   owner: context.repo.owner,
+                   repo: context.repo.repo,
+                   issue_number: context.issue.number,
+                   body: body
+               });
+            }
