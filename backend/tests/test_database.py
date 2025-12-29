@@ -89,6 +89,4 @@ class TestDatabase:
 
         # The engine's URL should have postgresql:// instead of postgres://
         assert "postgresql://" in str(engine.url)
-        assert "postgres://" not in str(engine.url) or "postgresql://" in str(
-            engine.url
-        )
+        assert "postgres://" not in str(engine.url)
