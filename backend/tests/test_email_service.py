@@ -807,7 +807,7 @@ class TestEmailService:
             # Create a mock part that raises exception on get_payload(decode=True)
             mock_part = Mock()
             mock_part.get_content_type.return_value = "text/plain"
-            mock_part.get.return_value = "None"  # Content-Disposition
+            mock_part.get.return_value = None  # Content-Disposition
             mock_part.get_payload.side_effect = Exception("Payload decode error")
 
             # Make walk return the message itself and our bad part
