@@ -41,74 +41,79 @@ jobs:
           name: lighthouse-results
           path: .lighthouseci/
 
-      - name: Comment on Failure
-        if: failure()
+      - name: Comment on Results
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const path = require('path');
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              
+              // Debug info
+              console.log('Current directory:', process.cwd());
+              const reportDir = '.lighthouseci';
+              
+              if (!fs.existsSync(reportDir)) {
+                 console.log('Report directory not found at:', reportDir);
+                 return;
+              }
+              
+              console.log('Report directory contents:', fs.readdirSync(reportDir));
+              
+              const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
+              if (files.length === 0) {
+                console.log('No JSON report files found');
+                return;
+              }
+              
+              const reportPath = path.join(reportDir, files[0]);
+              console.log('Reading report from:', reportPath);
+              
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+              
+              if (!report.categories || !report.audits) {
+                 console.log('Report is missing categories or audits structure.');
+                 return;
+              }
 
-            // Debug info
-            console.log('Current directory:', process.cwd());
-            const reportDir = '.lighthouseci';
+              const failures = [];
+              
+              // Categories under 0.9
+              for (const category of Object.values(report.categories)) {
+                  if (category.score < 0.9) {
+                      failures.push(`**${category.title}**: ${(category.score * 100).toFixed(0)}%`);
+                  }
+              }
+              
+              // Critical Audits
+              for (const audit of Object.values(report.audits)) {
+                  if (audit.score === 0 || audit.scoreDisplayMode === 'error') {
+                       if (audit.id !== 'is-on-https') {
+                          failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
+                       }
+                  }
+              }
+              
+              if (failures.length > 0) {
+                 if (!context.issue || !context.issue.number) {
+                    console.log('No issue number found (not a PR?), skipping comment.');
+                    console.log('Failures found:', failures);
+                    return;
+                 }
 
-            if (!fs.existsSync(reportDir)) {
-               console.log('Report directory not found at:', reportDir);
-               // Try looking in root or frontend
-               return;
-            }
-
-            console.log('Report directory contents:', fs.readdirSync(reportDir));
-
-            const files = fs.readdirSync(reportDir).filter(f => f.endsWith('.json'));
-            if (files.length === 0) {
-              console.log('No JSON report files found');
-              return;
-            }
-
-            const reportPath = path.join(reportDir, files[0]);
-            console.log('Reading report from:', reportPath);
-
-            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
-
-            if (!report.categories || !report.audits) {
-               console.log('Report is missing categories or audits structure.');
-               return;
-            }
-
-            const failures = [];
-
-            // Categories under 0.9
-            for (const category of Object.values(report.categories)) {
-                if (category.score < 0.9) {
-                    failures.push(`**${category.title}**: ${(category.score * 100).toFixed(0)}%`);
-                }
-            }
-
-            // Critical Audits
-            for (const audit of Object.values(report.audits)) {
-                // Check for score 0 or error mode. 
-                // Ignore 'warn' assertions if we just want critical failures, 
-                // but since the job failed, we want to know why.
-                if (audit.score === 0 || audit.scoreDisplayMode === 'error') {
-                     // Filter out some manual checks if needed
-                     if (audit.id !== 'is-on-https') {
-                        failures.push(`- **${audit.title}**: ${audit.displayValue || ''} _(${audit.id})_`);
-                     }
-                }
-            }
-
-            if (failures.length > 0) {
-               console.log('Posting comment with failures...');
-               const body = `### 🚨 Lighthouse CI Failures\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
-               
-               await github.rest.issues.createComment({
-                   owner: context.repo.owner,
-                   repo: context.repo.repo,
-                   issue_number: context.issue.number,
-                   body: body
-               });
-            } else {
-              console.log('No failures found in report to comment about (despite job failure).');
+                 console.log('Posting comment with suggestions...');
+                 const body = `### 💡 Lighthouse Suggestions\n\n${failures.join('\n')}\n\n[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+                 
+                 await github.rest.issues.createComment({
+                     owner: context.repo.owner,
+                     repo: context.repo.repo,
+                     issue_number: context.issue.number,
+                     body: body
+                 });
+              } else {
+                console.log('No failures found in report to comment about.');
+              }
+            } catch (error) {
+              console.error('Error in comment script:', error);
             }
