@@ -1,10 +1,9 @@
 from unittest.mock import patch
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine, select
-
 from backend.models import LearningCandidate, ManualRule, ProcessedEmail
 from backend.services.learning_service import LearningService
+from sqlmodel import Session, SQLModel, create_engine, select
 
 
 @pytest.fixture(name="session")
@@ -131,7 +130,11 @@ def test_scan_history_with_emails_already_processed(
     """Test scan_history when emails are already in database (lines 202-208)."""
     # Setup email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "test@example.com", "password": "pass123", "imap_server": "imap.gmail.com"}
+        {
+            "email": "test@example.com",
+            "password": "pass123",
+            "imap_server": "imap.gmail.com",
+        }
     ]
 
     # Setup fetched emails
@@ -168,7 +171,11 @@ def test_scan_history_with_receipt_detected_new_candidate(
     """Test scan_history when a receipt is detected and creates new candidate (lines 211-259)."""
     # Setup email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "test@example.com", "password": "pass123", "imap_server": "imap.gmail.com"}
+        {
+            "email": "test@example.com",
+            "password": "pass123",
+            "imap_server": "imap.gmail.com",
+        }
     ]
 
     # Setup fetched emails
@@ -204,7 +211,11 @@ def test_scan_history_with_receipt_detected_existing_candidate(
     """Test scan_history when a receipt matches existing candidate (lines 245-249)."""
     # Setup email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "test@example.com", "password": "pass123", "imap_server": "imap.gmail.com"}
+        {
+            "email": "test@example.com",
+            "password": "pass123",
+            "imap_server": "imap.gmail.com",
+        }
     ]
 
     # Create existing candidate
@@ -249,7 +260,11 @@ def test_scan_history_with_non_receipt_email(
     """Test scan_history when fetched email is not a receipt (lines 217-219)."""
     # Setup email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "test@example.com", "password": "pass123", "imap_server": "imap.gmail.com"}
+        {
+            "email": "test@example.com",
+            "password": "pass123",
+            "imap_server": "imap.gmail.com",
+        }
     ]
 
     # Setup fetched emails
@@ -279,7 +294,11 @@ def test_scan_history_with_exception_handling(mock_email_service, session):
     """Test scan_history exception handling (lines 260-263)."""
     # Setup email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "test@example.com", "password": "pass123", "imap_server": "imap.gmail.com"}
+        {
+            "email": "test@example.com",
+            "password": "pass123",
+            "imap_server": "imap.gmail.com",
+        }
     ]
 
     # Make fetch_recent_emails raise an exception
@@ -294,14 +313,20 @@ def test_scan_history_with_exception_handling(mock_email_service, session):
 
 @patch("backend.services.detector.ReceiptDetector")
 @patch("backend.services.email_service.EmailService")
-def test_scan_history_multiple_accounts(
-    mock_email_service, mock_detector, session
-):
+def test_scan_history_multiple_accounts(mock_email_service, mock_detector, session):
     """Test scan_history with multiple email accounts (lines 154-158)."""
     # Setup multiple email accounts
     mock_email_service.get_all_accounts.return_value = [
-        {"email": "account1@example.com", "password": "pass1", "imap_server": "imap.gmail.com"},
-        {"email": "account2@example.com", "password": "pass2", "imap_server": "imap.outlook.com"},
+        {
+            "email": "account1@example.com",
+            "password": "pass1",
+            "imap_server": "imap.gmail.com",
+        },
+        {
+            "email": "account2@example.com",
+            "password": "pass2",
+            "imap_server": "imap.outlook.com",
+        },
     ]
 
     # Setup fetched emails for each account

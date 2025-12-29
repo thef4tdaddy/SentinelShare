@@ -165,10 +165,12 @@ describe('App Component', () => {
 	it('renders Sendee Dashboard when token is in URL', async () => {
 		// Save original location
 		const originalLocation = window.location;
-		
+
 		try {
 			// Mock URL with token parameter
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			delete (window as any).location;
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			window.location = { search: '?token=test-token-123' } as any;
 
 			// Mock successful preferences load for SendeeDashboard
@@ -200,8 +202,18 @@ describe('App Component', () => {
 		vi.mocked(api.fetchJson)
 			.mockResolvedValueOnce({ total_forwarded: 0, total_blocked: 0, total_processed: 0 })
 			.mockResolvedValueOnce([])
-			.mockResolvedValueOnce({ emails: [], pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 } })
-			.mockResolvedValueOnce({ total: 0, forwarded: 0, blocked: 0, errors: 0, total_amount: 0, status_breakdown: {} })
+			.mockResolvedValueOnce({
+				emails: [],
+				pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+			})
+			.mockResolvedValueOnce({
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			})
 			.mockResolvedValueOnce({ runs: [] });
 
 		render(App);
@@ -216,7 +228,9 @@ describe('App Component', () => {
 
 		await waitFor(
 			() => {
-				expect(screen.getByText('Complete history of email processing and automated runs.')).toBeTruthy();
+				expect(
+					screen.getByText('Complete history of email processing and automated runs.')
+				).toBeTruthy();
 			},
 			{ timeout: 3000 }
 		);
@@ -262,7 +276,9 @@ describe('App Component', () => {
 
 		// Wait for dashboard to load first
 		await waitFor(() =>
-			expect(screen.getAllByRole('button', { name: 'Preferences' }).length).toBeGreaterThanOrEqual(1)
+			expect(screen.getAllByRole('button', { name: 'Preferences' }).length).toBeGreaterThanOrEqual(
+				1
+			)
 		);
 
 		const preferencesButton = screen.getAllByRole('button', { name: 'Preferences' })[0];
@@ -270,7 +286,7 @@ describe('App Component', () => {
 
 		await waitFor(
 			() => {
-				// SendeeDashboard in admin mode should show "Forwarding Preferences" 
+				// SendeeDashboard in admin mode should show "Forwarding Preferences"
 				expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
 				// Navbar should still be visible in admin mode
 				expect(screen.queryByAltText('SentinelShare Logo')).toBeTruthy();

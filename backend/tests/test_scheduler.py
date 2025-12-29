@@ -1074,7 +1074,7 @@ def test_process_emails_scheduler_overlap_detection(mock_engine_patch, engine):
             skipped_runs = [r for r in runs if r.status == "skipped"]
             assert len(skipped_runs) == 1
             skipped_run = skipped_runs[0]
-            
+
             # Verify the skipped run has correct status and message
             assert skipped_run.status == "skipped"
             assert f"Overlap with Run {active_run_id}" in skipped_run.error_message
@@ -1123,7 +1123,7 @@ def test_process_emails_overlap_check_exception_handling(
         def create_mock_session(*args, **kwargs):
             call_count[0] += 1
             mock_session = MagicMock()
-            
+
             # First session: creating the run (should work)
             if call_count[0] == 1:
                 real_session = Session(engine)
@@ -1144,7 +1144,7 @@ def test_process_emails_overlap_check_exception_handling(
                 mock_session.__exit__ = MagicMock(
                     side_effect=lambda *args: real_session.__exit__(*args)
                 )
-            
+
             return mock_session
 
         mock_session_class.side_effect = create_mock_session
