@@ -80,8 +80,6 @@ class TestDatabase:
         monkeypatch.setenv("DATABASE_URL", test_url)
 
         # Reload the module to trigger the initialization code
-        import backend.database
-
         importlib.reload(backend.database)
 
         # Verify that the database_url was converted
