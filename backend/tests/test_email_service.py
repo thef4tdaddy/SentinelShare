@@ -786,9 +786,6 @@ class TestEmailService:
         mock_mail.select.return_value = ("OK", [])
         mock_mail.search.return_value = ("OK", [b"1"])
 
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-
         # Patch message_from_bytes to return a mocked message
         with patch(
             "backend.services.email_service.email.message_from_bytes"
@@ -818,7 +815,7 @@ class TestEmailService:
 
             mock_message_from_bytes.return_value = mock_msg
             mock_mail.fetch.return_value = ("OK", [(b"", b"raw-bytes")])
-            
+
             emails = EmailService.fetch_recent_emails("user@test.com", "pass")
             # Should handle the exception with continue and still return the email
             assert len(emails) == 1
