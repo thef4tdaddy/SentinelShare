@@ -32,12 +32,22 @@
 					>
 						<div class="flex items-center gap-1"><Clock size={12} /> Date</div>
 					</th>
-					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 first:rounded-tl-lg dark:text-text-secondary-dark dark:bg-gray-800/50"
+					<th
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 first:rounded-tl-lg dark:text-text-secondary-dark dark:bg-gray-800/50"
 						>Status</th
 					>
-					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50">Subject</th>
-					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50">Account</th>
-					<th class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50">Category</th>
+					<th
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50"
+						>Subject</th
+					>
+					<th
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50"
+						>Account</th
+					>
+					<th
+						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 dark:text-text-secondary-dark dark:bg-gray-800/50"
+						>Category</th
+					>
 					<th
 						class="py-3 px-4 font-semibold text-text-secondary bg-gray-50/50 w-32 text-right rounded-tr-lg dark:text-text-secondary-dark dark:bg-gray-800/50"
 						>Time</th
@@ -49,7 +59,9 @@
 					<tr
 						class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors group dark:border-gray-800 dark:hover:bg-gray-800/50"
 					>
-						<td class="py-3 px-4 text-text-secondary whitespace-nowrap dark:text-text-secondary-dark">
+						<td
+							class="py-3 px-4 text-text-secondary whitespace-nowrap dark:text-text-secondary-dark"
+						>
 							<div class="flex items-center gap-1.5">
 								<span class="text-sm font-medium">
 									{formatShortDate(item.processed_at)}
@@ -94,7 +106,9 @@
 								{item.category || 'Uncategorized'}
 							</div>
 						</td>
-						<td class="py-3 px-4 text-right text-text-secondary w-32 whitespace-nowrap dark:text-text-secondary-dark">
+						<td
+							class="py-3 px-4 text-right text-text-secondary w-32 whitespace-nowrap dark:text-text-secondary-dark"
+						>
 							<div class="flex items-center justify-end gap-1.5">
 								<Clock size={13} class="text-gray-400 dark:text-gray-500" />
 								{formatTime(item.processed_at)}
@@ -103,7 +117,10 @@
 					</tr>
 				{:else}
 					<tr>
-						<td colspan="6" class="py-12 text-center text-text-secondary dark:text-text-secondary-dark">
+						<td
+							colspan="6"
+							class="py-12 text-center text-text-secondary dark:text-text-secondary-dark"
+						>
 							<div class="flex flex-col items-center justify-center gap-3">
 								<div class="bg-gray-100 p-3 rounded-full dark:bg-gray-800">
 									<FileText size={24} class="text-gray-400 dark:text-gray-500" />
