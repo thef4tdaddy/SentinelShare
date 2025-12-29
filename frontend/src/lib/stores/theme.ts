@@ -6,25 +6,25 @@ const isBrowser = typeof window !== 'undefined';
 
 function getInitialTheme(): Theme {
 	if (!isBrowser) return 'light';
-	
+
 	// Check localStorage first
 	const stored = localStorage.getItem('theme') as Theme | null;
 	if (stored === 'light' || stored === 'dark') {
 		return stored;
 	}
-	
+
 	// Check system preference
 	if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
 		return 'dark';
 	}
-	
+
 	return 'light';
 }
 
 function createThemeStore() {
 	const initialTheme = getInitialTheme();
 	const { subscribe, set, update } = writable<Theme>(initialTheme);
-	
+
 	// Initialize dark class on document
 	if (isBrowser) {
 		if (initialTheme === 'dark') {
@@ -63,11 +63,11 @@ function createThemeStore() {
 			}
 		}
 	}
-	
+
 	return {
 		subscribe,
 		toggle: () => {
-			update(current => {
+			update((current) => {
 				const newTheme = current === 'dark' ? 'light' : 'dark';
 				if (isBrowser) {
 					localStorage.setItem('theme', newTheme);
