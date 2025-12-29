@@ -18,6 +18,7 @@ coverage/
 .pytest_cache/
 htmlcov/
 backend/tests/
+frontend/tests/
 
 # Development files
 .env

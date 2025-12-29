@@ -320,6 +320,7 @@ staticfiles
 suo
 tailwindcss
 tdaddy
+testdb
 testid
 testpass
 testpaths
