@@ -779,7 +779,7 @@ class TestEmailService:
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_multipart_get_payload_exception(self, mock_imap):
-        """Test exception in multipart email get_payload (lines 266-267)"""
+        """Test exception handling when multipart email get_payload raises an error"""
         mock_mail = Mock()
         mock_imap.return_value = mock_mail
         mock_mail.login.return_value = ("OK", [])
