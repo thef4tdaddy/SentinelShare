@@ -8,6 +8,9 @@ from sqlmodel.pool import StaticPool
 from backend.models import ManualRule, ProcessedEmail
 from backend.routers import actions
 
+MOCK_SECRET = "mock-secret-for-testing-only"
+MOCK_PASSWORD = "mock-password-for-testing"
+
 
 @pytest.fixture(name="engine")
 def engine_fixture():
@@ -275,7 +278,7 @@ class TestAccountSelection:
             [
                 {
                     "email": "user1@example.com",
-                    "password": "user1pass",
+                    "password": MOCK_PASSWORD,
                     "imap_server": "imap.test.com",
                 }
             ]
@@ -303,7 +306,7 @@ class TestAccountSelection:
 
                     mock_fetch.assert_called_once_with(
                         "user1@example.com",
-                        "user1pass",
+                        MOCK_PASSWORD,
                         sample_ignored_email.email_id,
                         "imap.test.com",
                     )
@@ -315,8 +318,8 @@ class TestAccountSelection:
 
         accounts_json = json.dumps(
             [
-                {"email": "primary@test.com", "password": "p1"},
-                {"email": "fallback@test.com", "password": "f1"},
+                {"email": "primary@test.com", "password": MOCK_PASSWORD},
+                {"email": "fallback@test.com", "password": MOCK_PASSWORD},
             ]
         )
 
@@ -356,7 +359,7 @@ class TestAccountSelection:
             {
                 "WIFE_EMAIL": "wife@example.com",
                 "ICLOUD_EMAIL": "user1@example.com",
-                "ICLOUD_PASSWORD": "icloudpass",
+                "ICLOUD_PASSWORD": MOCK_PASSWORD,
             },
         ):
             sample_ignored_email.account_email = "user1@example.com"
@@ -377,7 +380,7 @@ class TestAccountSelection:
                     actions.toggle_ignored_email(request, session)
                     mock_fetch.assert_called_once_with(
                         "user1@example.com",
-                        "icloudpass",
+                        MOCK_PASSWORD,
                         sample_ignored_email.email_id,
                         "imap.mail.me.com",
                     )
@@ -392,10 +395,10 @@ class TestAccountSelection:
             [
                 {
                     "email": "sender@test.com",
-                    "password": "p1",
+                    "password": MOCK_PASSWORD,
                     "imap_server": "imap.test.com",
                 },
-                {"email": "fallback@test.com", "password": "f1"},
+                {"email": "fallback@test.com", "password": "mock-f1"},
             ]
         )
 
@@ -405,7 +408,7 @@ class TestAccountSelection:
                 "WIFE_EMAIL": "wife@example.com",
                 "EMAIL_ACCOUNTS": accounts_json,
                 "SENDER_EMAIL": "sender@test.com",
-                "SENDER_PASSWORD": "p1",
+                "SENDER_PASSWORD": MOCK_PASSWORD,
             },
         ):
             # Set sample_ignored_email.account_email to match SENDER_EMAIL
@@ -444,7 +447,7 @@ class TestAccountSelection:
                 "WIFE_EMAIL": "wife@example.com",
                 "EMAIL_ACCOUNTS": "invalid-json{[",
                 "SENDER_EMAIL": "test@test.com",
-                "SENDER_PASSWORD": "pass",
+                "SENDER_PASSWORD": MOCK_PASSWORD,
             },
         ):
             sample_ignored_email.account_email = "test@test.com"
@@ -477,7 +480,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -501,7 +504,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -532,7 +535,7 @@ class TestQuickAction:
         session.add(Preference(item="uber", type="Always Forward"))
         session.commit()
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -555,7 +558,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -586,7 +589,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -607,7 +610,7 @@ class TestQuickAction:
         import hashlib
         import hmac
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -628,7 +631,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -650,7 +653,7 @@ class TestQuickAction:
         import hmac
         import time
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
         from backend.routers import actions
 
@@ -673,7 +676,7 @@ class TestVerifyDashboard:
         """Test verifying a valid dashboard token"""
         from backend.security import generate_dashboard_token
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Generate a valid token
@@ -707,7 +710,7 @@ class TestGetPreferencesForSendee:
         from backend.models import Preference
         from backend.security import generate_dashboard_token
 
-        secret = "test-secret"
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Add some preferences
@@ -789,13 +792,12 @@ class TestUpdatePreferences:
 
     def test_update_preferences_with_valid_token(self, session, monkeypatch):
         """Test updating preferences with a valid token"""
-        import os
         from unittest.mock import Mock
 
         from backend.models import Preference
         from backend.security import generate_dashboard_token
 
-        secret = os.getenv("SECRET_KEY", "test-secret")
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Add existing preferences
@@ -907,14 +909,13 @@ class TestUpdatePreferences:
 
     def test_update_preferences_exception_handling(self, session, monkeypatch):
         """Test exception handling during preference update"""
-        import os
         from unittest.mock import Mock, patch
 
         from fastapi import HTTPException
 
         from backend.security import generate_dashboard_token
 
-        secret = os.getenv("SECRET_KEY", "test-secret")
+        secret = MOCK_SECRET
         monkeypatch.setenv("SECRET_KEY", secret)
 
         # Generate a valid token
