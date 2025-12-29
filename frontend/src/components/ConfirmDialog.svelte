@@ -30,10 +30,10 @@
 		<div class="flex items-start gap-3">
 			{#if danger}
 				<div class="flex-shrink-0 mt-0.5">
-					<AlertCircle class="text-danger" size={24} />
+					<AlertCircle class="text-danger dark:text-red-400" size={24} />
 				</div>
 			{/if}
-			<p class="text-text-main text-base leading-relaxed">{message}</p>
+			<p class="text-text-main text-base leading-relaxed dark:text-text-main-dark">{message}</p>
 		</div>
 
 		<div class="flex gap-3 justify-end pt-2">

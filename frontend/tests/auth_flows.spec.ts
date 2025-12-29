@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,25 +15,33 @@ function mintAuthToken(email: string): string {
   // Let's rely on absolute paths resolved from __dirname.
   
   const projectRoot = path.resolve(__dirname, '../../');
-  const backendPath = path.join(projectRoot, 'backend');
-  const venvActivate = `source ${path.join(projectRoot, 'venv/bin/activate')}`;
   
   // Python script to generate token
   const pythonScript = `
 import sys
 import os
-sys.path.append('${projectRoot}')
+# Use environment variables to avoid shell injection / interpolation risks
+project_root = os.environ.get('APP_PROJECT_ROOT', '.')
+email = os.environ.get('APP_TEST_EMAIL', '')
+
+sys.path.append(project_root)
 
 from backend.security import generate_dashboard_token
-print(generate_dashboard_token('${email}'))
+print(generate_dashboard_token(email))
 `;
 
   try {
-    // Run python command
-    const output = execSync(`${venvActivate} && python3 -c "${pythonScript}"`, {
-      shell: '/bin/bash', 
+    const pythonExecutable = path.join(projectRoot, 'venv/bin/python3');
+    // Use execFileSync to avoid shell injection via interpolated strings
+    const output = execFileSync(pythonExecutable, ['-c', pythonScript], {
       encoding: 'utf-8',
-      env: { ...process.env, PYTHONPATH: backendPath, SECRET_KEY: process.env.SECRET_KEY }
+      env: { 
+        ...process.env, 
+        PYTHONPATH: projectRoot, 
+        SECRET_KEY: process.env.SECRET_KEY,
+        APP_PROJECT_ROOT: projectRoot,
+        APP_TEST_EMAIL: email
+      }
     });
     return output.trim();
   } catch (e) {

@@ -75,13 +75,13 @@
 <div class="card">
 	<div class="p-6">
 		<div class="mb-6">
-			<p class="text-sm text-text-secondary">
+			<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
 				Customize how forwarded emails appear. You can write full HTML here.
 			</p>
 		</div>
 
 		{#if loading}
-			<div class="text-center py-8 text-text-secondary">Loading template...</div>
+			<div class="text-center py-8 text-text-secondary dark:text-text-secondary-dark">Loading template...</div>
 		{:else}
 			<div class="space-y-4">
 				<!-- Template Editor -->

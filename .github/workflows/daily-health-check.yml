@@ -386,6 +386,11 @@ jobs:
                     if (row.length < 4) continue;
                     const filename = row[0];
                     if (!filename.includes('.') || filename === 'File' || filename === 'Name' || filename.includes('---')) continue;
+                    
+                    // Filter out files that don't typically need unit tests
+                    const ignorePatterns = ['__init__.py', 'main.py', 'config.js', 'config.ts', 'vite.config', 'tailwind.config', 'postcss.config', 'playwright.config', 'setup.py'];
+                    if (ignorePatterns.some(p => filename.includes(p))) continue;
+
                     const percentages = row.filter(item => item.match(/^\d+(\.\d+)?%?$/)).map(p => parseFloat(p));
                     const coverage = percentages.find(p => p < 80);
                     if (coverage !== undefined) {
@@ -395,10 +400,18 @@ jobs:
                 lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
                 const candidates = lowCoverageFiles.slice(0, 3);
                 for (const item of candidates) {
-                    const issueTitle = `test(coverage): Improve coverage for ${item.file} (${item.coverage}%)`;
+                    // Extract component/module name for scope (e.g. backend/auth.py -> auth)
+                    const parts = item.file.split('/');
+                    const basename = parts[parts.length - 1].split('.')[0];
+                    
+                    const issueTitle = `test(${basename}): Improve coverage for ${item.file}`;
+                    
+                    // Search for existing issues using a broader query to catch duplicates
+                    // Matches both old "test(coverage): Improve coverage for file" and new format
                     const existing = await github.rest.search.issuesAndPullRequests({
-                        q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "Improve coverage for ${item.file}"`
+                        q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "Improve coverage" "${item.file}"`
                     });
+                    
                     if (existing.data.total_count === 0) {
                         await github.rest.issues.create({
                             owner: context.repo.owner,
