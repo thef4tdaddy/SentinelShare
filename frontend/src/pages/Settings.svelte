@@ -5,6 +5,7 @@
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
+	import { theme as themeStore } from '../lib/stores/theme';
 	import {
 		Play,
 		Settings,
@@ -14,7 +15,9 @@
 		AlertTriangle,
 		Loader2,
 		History as HistoryIcon,
-		User
+		User,
+		Moon,
+		Sun
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
@@ -31,6 +34,13 @@
 	let showConfirmDialog = $state(false);
 	let showDeleteDialog = $state(false);
 	let accountToDelete: { id: number; email: string; onComplete: () => void } | null = $state(null);
+
+	// Reactive theme value using $derived
+	const currentTheme = $derived($themeStore);
+
+	function toggleTheme() {
+		themeStore.toggle();
+	}
 
 	function openConfirmDialog() {
 		showConfirmDialog = true;
@@ -60,14 +70,14 @@
 
 	async function handleConfirmDelete() {
 		if (!accountToDelete) return;
-		
+
 		showDeleteDialog = false;
 		try {
 			await fetchJson(`/settings/accounts/${accountToDelete.id}`, { method: 'DELETE' });
 			toasts.trigger('Account deleted', 'success');
 			// Call the completion callback to reload the accounts list
 			accountToDelete.onComplete();
-		} catch (e) {
+		} catch {
 			toasts.trigger('Failed to delete account', 'error');
 		} finally {
 			accountToDelete = null;
@@ -116,8 +126,10 @@
 
 <div class="mb-8 flex items-center justify-between">
 	<div>
-		<h2 class="text-2xl font-bold text-text-main mb-1">Settings</h2>
-		<p class="text-text-secondary text-sm">Manage detection rules and preferences.</p>
+		<h2 class="text-2xl font-bold text-text-main mb-1 dark:text-text-main-dark">Settings</h2>
+		<p class="text-text-secondary text-sm dark:text-text-secondary-dark">
+			Manage detection rules and preferences.
+		</p>
 	</div>
 
 	<div class="flex gap-2">
@@ -137,30 +149,66 @@
 </div>
 
 <div class="space-y-8">
+	<!-- Theme Toggle Section -->
+	<section>
+		<h3 class="text-lg font-bold text-text-main mb-4 dark:text-text-main-dark">Appearance</h3>
+		<div class="card">
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-medium text-text-main dark:text-text-main-dark">Dark Mode</p>
+					<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
+						Toggle between light and dark theme
+					</p>
+				</div>
+				<button
+					onclick={toggleTheme}
+					class="btn btn-secondary flex items-center gap-2"
+					aria-label="Toggle theme"
+				>
+					{#if currentTheme === 'dark'}
+						<Sun size={18} />
+						Light
+					{:else}
+						<Moon size={18} />
+						Dark
+					{/if}
+				</button>
+			</div>
+		</div>
+	</section>
 	<!-- Connection Status -->
 	<section>
-		<h3 class="text-lg font-bold text-text-main mb-4">Inbox Status</h3>
+		<h3 class="text-lg font-bold text-text-main mb-4 dark:text-text-main-dark">Inbox Status</h3>
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each connectionResults as res (res.account)}
 				<div
 					class="card flex items-center justify-between p-4 {res.success
-						? 'border-l-4 border-l-green-500'
-						: 'border-l-4 border-l-red-500'}"
+						? 'border-l-4 border-l-green-500 dark:border-l-green-400'
+						: 'border-l-4 border-l-red-500 dark:border-l-red-400'}"
 				>
 					<div class="overflow-hidden">
-						<p class="font-medium text-text-main truncate" title={res.account}>{res.account}</p>
-						<p class="text-xs {res.success ? 'text-green-600' : 'text-red-600'}">
+						<p
+							class="font-medium text-text-main truncate dark:text-text-main-dark"
+							title={res.account}
+						>
+							{res.account}
+						</p>
+						<p
+							class="text-xs {res.success
+								? 'text-green-600 dark:text-green-400'
+								: 'text-red-600 dark:text-red-400'}"
+						>
 							{res.success ? 'Connected' : 'Connection Failed'}
 						</p>
 					</div>
 					<div>
 						{#if res.success}
-							<CheckCircle class="text-green-500" size={20} />
+							<CheckCircle class="text-green-500 dark:text-green-400" size={20} />
 						{:else}
 							<div class="group relative">
-								<AlertTriangle class="text-red-500 cursor-help" size={20} />
+								<AlertTriangle class="text-red-500 cursor-help dark:text-red-400" size={20} />
 								<div
-									class="absolute right-0 top-6 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 hidden group-hover:block"
+									class="absolute right-0 top-6 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 hidden group-hover:block dark:bg-gray-700"
 								>
 									{res.error}
 								</div>
@@ -169,7 +217,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="text-text-secondary text-sm italic">
+				<div class="text-text-secondary text-sm italic dark:text-text-secondary-dark">
 					No accounts configured or check pending...
 				</div>
 			{/each}
@@ -188,8 +236,8 @@
 	<!-- Email Template Section -->
 	<section>
 		<div class="flex items-center gap-2 mb-4">
-			<Mail size={20} class="text-text-secondary" />
-			<h3 class="text-lg font-bold text-text-main">Email Template</h3>
+			<Mail size={20} class="text-text-secondary dark:text-text-secondary-dark" />
+			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">Email Template</h3>
 		</div>
 		<EmailTemplateEditor />
 	</section>
@@ -197,8 +245,10 @@
 	<!-- Preferences Section -->
 	<section>
 		<div class="flex items-center gap-2 mb-4">
-			<Sliders size={20} class="text-text-secondary" />
-			<h3 class="text-lg font-bold text-text-main">Detection Preferences</h3>
+			<Sliders size={20} class="text-text-secondary dark:text-text-secondary-dark" />
+			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">
+				Detection Preferences
+			</h3>
 		</div>
 		<PreferenceList type="preferences" />
 	</section>
@@ -206,8 +256,8 @@
 	<!-- Rules Section -->
 	<section>
 		<div class="flex items-center gap-2 mb-4">
-			<Settings size={20} class="text-text-secondary" />
-			<h3 class="text-lg font-bold text-text-main">Manual Rules</h3>
+			<Settings size={20} class="text-text-secondary dark:text-text-secondary-dark" />
+			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">Manual Rules</h3>
 		</div>
 		<PreferenceList type="rules" />
 	</section>
@@ -228,7 +278,9 @@
 	onConfirm={handleConfirmDelete}
 	onCancel={handleCancelDelete}
 	title="Delete Email Account"
-	message={accountToDelete ? `Are you sure you want to delete the account "${accountToDelete.email}"? This action cannot be undone.` : 'Delete this account?'}
+	message={accountToDelete
+		? `Are you sure you want to delete the account "${accountToDelete.email}"? This action cannot be undone.`
+		: 'Delete this account?'}
 	confirmText="Delete"
 	cancelText="Cancel"
 />

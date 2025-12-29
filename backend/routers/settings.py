@@ -189,12 +189,11 @@ def create_email_account(
     account: EmailAccountCreate, session: Session = Depends(get_session)
 ):
     """Create a new email account"""
+    import logging
     from datetime import datetime, timezone
 
     from backend.models import EmailAccount
     from backend.services.encryption_service import EncryptionService
-    
-    import logging
 
     # Normalize email to lowercase for case-insensitive comparison
     normalized_email = str(account.email).lower()
@@ -261,10 +260,10 @@ def delete_email_account(account_id: int, session: Session = Depends(get_session
 @router.post("/accounts/{account_id}/test")
 def test_email_account(account_id: int, session: Session = Depends(get_session)):
     """Test connection for a specific email account"""
+    import logging
+
     from backend.models import EmailAccount
     from backend.services.encryption_service import EncryptionService
-    
-    import logging
 
     account = session.get(EmailAccount, account_id)
     if not account:

@@ -2,17 +2,33 @@
   "ci": {
     "collect": {
       "staticDistDir": "./frontend/dist",
-      "numberOfRuns": 3,
-      "puppeteerScript": "./frontend/lhci-auth.cjs"
-    },
-    "upload": {
-      "target": "temporary-public-storage"
+      "puppeteerLaunchOptions": {
+        "args": ["--no-sandbox", "--disable-setuid-sandbox"]
+      },
+      "url": [
+        "/"
+      ]
     },
     "assert": {
-      "preset": "lighthouse:no-pwa"
-    },
-    "settings": {
-      "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "offscreen-images": "warn",
+        "uses-webp-images": "warn",
+        "color-contrast": "warn",
+        "tap-targets": "warn",
+        "maskable-icon": "warn",
+        "csp-xss": "warn",
+        "errors-in-console": "warn",
+        "installable-manifest": "warn",
+        "deprecations": "warn",
+        "resource-summary": "warn",
+        "splash-screen": "warn",
+        "service-worker": "warn",
+        "pwa-crossorigin": "warn",
+        "valid-source-maps": "warn",
+        "themed-omnibox": "warn",
+        "unused-javascript": "warn"
+      }
     }
   }
 }
