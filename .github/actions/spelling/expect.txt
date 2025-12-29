@@ -261,6 +261,7 @@ lhci
 libpq
 lighthouserc
 linting
+lockfiles
 lookback
 lucide
 lyft
@@ -344,3 +345,4 @@ wrongpass
 wrongpassword
 xbox
 xfinity
+xss
