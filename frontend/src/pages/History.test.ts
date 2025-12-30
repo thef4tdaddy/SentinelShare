@@ -1139,4 +1139,130 @@ describe('History Component', () => {
 			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('max_amount=100'));
 		});
 	});
+	describe('CSV Export', () => {
+		beforeEach(() => {
+			vi.stubGlobal('URL', {
+				createObjectURL: vi.fn(() => 'blob:mock-url'),
+				revokeObjectURL: vi.fn()
+			});
+			vi.stubGlobal('fetch', vi.fn());
+		});
+
+		afterEach(() => {
+			vi.unstubAllGlobals();
+		});
+
+		it('triggers CSV export with current filters', async () => {
+			const mockHistory = {
+				emails: [],
+				pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+			};
+			const mockStats = {
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			};
+			const mockRuns = { runs: [] };
+
+			// Use mockResolvedValue to handle multiple loadHistory calls
+			vi.mocked(api.fetchJson).mockResolvedValue(mockHistory);
+			// We need to be specific for stats and runs if they use different endpoints
+			vi.mocked(api.fetchJson).mockImplementation((url: string) => {
+				if (url.includes('/history/stats')) return Promise.resolve(mockStats);
+				if (url.includes('/history/runs')) return Promise.resolve(mockRuns);
+				return Promise.resolve(mockHistory);
+			});
+
+			vi.mocked(fetch).mockImplementation(
+				() =>
+					new Promise((resolve) =>
+						setTimeout(
+							() =>
+								resolve({
+									ok: true,
+									blob: async () => new Blob(['test,csv,data'], { type: 'text/csv' })
+								} as Response),
+							10
+						)
+					)
+			);
+
+			render(History);
+
+			await waitFor(() => {
+				expect(screen.getByTitle('Export to CSV')).toBeTruthy();
+			});
+
+			// Set some filters
+			const senderInput = screen.getByLabelText('Vendor/Sender') as HTMLInputElement;
+			senderInput.value = 'Amazon';
+			await fireEvent.input(senderInput);
+			await fireEvent.change(senderInput);
+
+			const exportButton = screen.getByTitle('Export to CSV');
+			await fireEvent.click(exportButton);
+
+			await waitFor(() => {
+				expect(screen.getByText('Exporting history...')).toBeTruthy();
+			});
+
+			await waitFor(() => {
+				expect(fetch).toHaveBeenCalledWith(
+					expect.stringContaining('/api/history/export?'),
+					expect.objectContaining({ method: 'GET' })
+				);
+				const callUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+				expect(callUrl).toContain('format=csv');
+				expect(callUrl).toContain('sender=Amazon');
+			});
+
+			await waitFor(() => {
+				expect(screen.getByText('Export successful!')).toBeTruthy();
+			});
+		});
+
+		it('shows error message when export fails', async () => {
+			const mockHistory = {
+				emails: [],
+				pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+			};
+			const mockStats = {
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			};
+			const mockRuns = { runs: [] };
+
+			vi.mocked(api.fetchJson).mockResolvedValue(mockHistory);
+			vi.mocked(api.fetchJson).mockImplementation((url: string) => {
+				if (url.includes('/history/stats')) return Promise.resolve(mockStats);
+				if (url.includes('/history/runs')) return Promise.resolve(mockRuns);
+				return Promise.resolve(mockHistory);
+			});
+
+			vi.mocked(fetch).mockResolvedValue({
+				ok: false,
+				status: 500
+			} as Response);
+
+			render(History);
+
+			await waitFor(() => {
+				expect(screen.getByTitle('Export to CSV')).toBeTruthy();
+			});
+
+			const exportButton = screen.getByTitle('Export to CSV');
+			await fireEvent.click(exportButton);
+
+			await waitFor(() => {
+				expect(screen.getByText('Failed to export history. Please try again.')).toBeTruthy();
+			});
+		});
+	});
 });

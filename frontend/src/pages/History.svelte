@@ -16,7 +16,8 @@
 		X,
 		Search,
 		ThumbsUp,
-		ThumbsDown
+		ThumbsDown,
+		Download
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -273,6 +274,49 @@
 			isProcessing = false;
 		}
 	}
+
+	async function exportToCSV() {
+		// Build URL with current filters
+		const params = new SvelteURLSearchParams({ format: 'csv' });
+		if (filters.status) params.append('status', filters.status);
+		if (filters.date_from) params.append('date_from', filters.date_from);
+		if (filters.date_to) params.append('date_to', filters.date_to);
+		if (filters.sender) params.append('sender', filters.sender);
+		if (filters.min_amount) params.append('min_amount', filters.min_amount);
+		if (filters.max_amount) params.append('max_amount', filters.max_amount);
+
+		const url = `/api/history/export?${params.toString()}`;
+
+		// Fetch CSV first so we can handle errors and provide user feedback
+		errorMessage = '';
+		successMessage = 'Exporting history...';
+		try {
+			const response = await fetch(url, { method: 'GET' });
+			if (!response.ok) {
+				throw new Error(`Export failed with status ${response.status}`);
+			}
+
+			const blob = await response.blob();
+			const downloadUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = downloadUrl;
+			// Generate filename with current date like the backend does
+			const date = new Date().toISOString().split('T')[0];
+			a.download = `expenses_${date}.csv`;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(downloadUrl);
+			successMessage = 'Export successful!';
+			setTimeout(() => {
+				if (successMessage === 'Export successful!') successMessage = '';
+			}, 3000);
+		} catch (e) {
+			console.error('Failed to export history as CSV', e);
+			errorMessage = 'Failed to export history. Please try again.';
+			successMessage = '';
+		}
+	}
 </script>
 
 <div class="mb-8">
@@ -281,6 +325,26 @@
 		Complete history of email processing and automated runs.
 	</p>
 </div>
+
+<!-- Global Alerts -->
+{#if !showModal}
+	{#if successMessage}
+		<div
+			class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<CheckCircle size={24} class="text-emerald-600 shrink-0" />
+			<p class="text-emerald-800 font-medium">{successMessage}</p>
+		</div>
+	{/if}
+	{#if errorMessage}
+		<div
+			class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<AlertCircle size={24} class="text-red-600 shrink-0" />
+			<p class="text-red-800 font-medium">{errorMessage}</p>
+		</div>
+	{/if}
+{/if}
 
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -466,6 +530,11 @@
 				class="btn btn-secondary"
 			>
 				Clear Filters
+			</button>
+
+			<button onclick={exportToCSV} class="btn btn-primary" title="Export to CSV">
+				<Download size={16} />
+				Export
 			</button>
 		</div>
 	</div>

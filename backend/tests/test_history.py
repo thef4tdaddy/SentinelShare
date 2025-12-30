@@ -429,7 +429,7 @@ class TestHistoryAdvancedFiltering:
         )
 
         assert len(result["emails"]) == 1
-        assert "amazon.com" in result["emails"][0].sender.lower()
+        assert result["emails"][0].sender.lower() == "order@amazon.com"
 
     def test_filter_by_sender_partial_match(self, session: Session, sample_emails):
         """Test filtering emails by sender partial match"""
@@ -1089,3 +1089,244 @@ class TestHistoryReprocess:
 
         assert exc_info.value.status_code == 404
         assert "Email not found" in exc_info.value.detail
+
+
+class TestHistoryExport:
+    """Test export functionality using TestClient for proper HTTP testing"""
+
+    def test_export_csv_all_emails(self, session: Session, sample_emails, monkeypatch):
+        """Test exporting all emails to CSV via HTTP"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        # Make the GET request
+        response = client.get("/api/history/export?format=csv")
+
+        # Check response
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/csv; charset=utf-8"
+        assert "attachment" in response.headers["content-disposition"]
+        assert "expenses_" in response.headers["content-disposition"]
+        assert ".csv" in response.headers["content-disposition"]
+
+        # Get CSV content
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Check headers
+        headers = lines[0]
+        assert "Date" in headers
+        assert "Vendor" in headers
+        assert "Amount" in headers
+        assert "Currency" in headers
+        assert "Category" in headers
+        assert "Link to Receipt" in headers
+
+        # Check we have data rows (5 emails + 1 header)
+        assert len(lines) == 6
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_date_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with date filter via HTTP"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        now = datetime.now(timezone.utc)
+        date_from = (now - timedelta(minutes=25)).isoformat().replace("+00:00", "Z")
+
+        response = client.get(f"/api/history/export?format=csv&date_from={date_from}")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 2 emails + header
+        assert len(lines) == 3
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_empty_results(self, session: Session, monkeypatch):
+        """Test exporting when no emails match criteria via HTTP"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        # Filter to far future
+        future_date = datetime.now(timezone.utc) + timedelta(days=365)
+        date_from = future_date.isoformat()
+
+        response = client.get(f"/api/history/export?format=csv&date_from={date_from}")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should only have headers
+        assert len(lines) == 1
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_format_validation(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test CSV format and data accuracy via HTTP"""
+        import csv as csv_module
+        from io import StringIO
+
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        response = client.get("/api/history/export?format=csv")
+        content = response.text
+
+        # Parse CSV
+        reader = csv_module.reader(StringIO(content))
+        rows = list(reader)
+
+        # Check headers
+        assert rows[0] == [
+            "Date",
+            "Vendor",
+            "Amount",
+            "Currency",
+            "Category",
+            "Link to Receipt",
+        ]
+
+        # Check first data row (should be email1 - most recent)
+        first_row = rows[1]
+        assert "order@amazon.com" in first_row[1]  # Vendor
+        assert "49.99" in first_row[2]  # Amount
+        assert first_row[3] == "USD"  # Currency
+        assert first_row[4] == "shopping"  # Category
+        assert "email1@test.com" in first_row[5]  # Link
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_handles_missing_data(self, session: Session, monkeypatch):
+        """Test export handles emails with missing fields via HTTP"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="minimal@test.com",
+            subject="Minimal Email",
+            sender="test@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+            # No amount, no category
+        )
+        session.add(email)
+        session.commit()
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        response = client.get("/api/history/export?format=csv")
+        content = response.text
+
+        # Should not error and should handle empty fields
+        assert response.status_code == 200
+        assert "test@example.com" in content
+
+        app.dependency_overrides.clear()
+
+    def test_export_filename_includes_date(self, session: Session, monkeypatch):
+        """Test that filename includes current date via HTTP"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        response = client.get("/api/history/export?format=csv")
+
+        filename = response.headers["content-disposition"]
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+        assert f"expenses_{current_date}.csv" in filename
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_injection_protection(self, session: Session, monkeypatch):
+        """Test that CSV export protects against formula injection"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        # Create email with potentially dangerous CSV content
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="injection@test.com",
+            subject="Test",
+            sender="=cmd|'/c calc'!A1",  # Formula injection attempt
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+            category="@dangerous",
+            amount=10.0,
+        )
+        session.add(email)
+        session.commit()
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+
+        response = client.get("/api/history/export?format=csv")
+        content = response.text
+
+        # Check that dangerous characters are sanitized with leading quote
+        # The sanitized version should be present
+        assert "'=cmd|'/c calc'!A1" in content
+        # The unsanitized version should NOT be present at start of field
+        lines = content.split("\n")
+        for line in lines:
+            if "cmd" in line:
+                # Ensure it doesn't start with = without quote
+                assert not line.startswith("Date,Vendor") and ',"=cmd' not in line
+
+        # Check category is also sanitized
+        assert "'@dangerous" in content
+
+        app.dependency_overrides.clear()
