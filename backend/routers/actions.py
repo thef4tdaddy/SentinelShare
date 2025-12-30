@@ -553,7 +553,6 @@ async def upload_receipt(
     # but still run categorization
     mock_email_data = {
         "subject": f"Manual Upload: {file.filename}",
-        "from": "manual_upload",
         "body": f"File: {safe_filename}",
         "sender": "manual_upload",
     }
