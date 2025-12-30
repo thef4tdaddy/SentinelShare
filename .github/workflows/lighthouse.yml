@@ -87,17 +87,18 @@ jobs:
               // We only care about Performance, Accessibility, Best Practices, and SEO for now
               const relevantCategories = ['performance', 'accessibility', 'best-practices', 'seo'];
               
-              for (const category of Object.values(report.categories)) {
-                  const score = (category.score * 100).toFixed(0);
-                  scores.push(`**${category.title}**: ${score}%`);
-                  
-                  if (relevantCategories.includes(category.id)) {
-                      const baseline = category.id === 'accessibility' ? 0.5 : (category.id === 'best-practices' ? 0.8 : 0.9);
-                      if (category.score < baseline) {
-                          failures.push(`**${category.title}** is below baseline: ${score}% (expected ${(baseline * 100)}%)`);
-                      }
-                  }
-              }
+                for (const category of Object.values(report.categories)) {
+                    const rawScore = category.score;
+                    const score = rawScore !== null && rawScore !== undefined ? (rawScore * 100).toFixed(0) : 'N/A';
+                    scores.push(`**${category.title}**: ${score}%`);
+                    
+                    if (relevantCategories.includes(category.id)) {
+                        const baseline = category.id === 'accessibility' ? 0.9 : (category.id === 'best-practices' ? 0.9 : (category.id === 'seo' ? 0.9 : 0.9));
+                        if (rawScore === null || rawScore === undefined || rawScore < baseline) {
+                            failures.push(`**${category.title}** is ${rawScore === null ? 'missing' : 'below baseline'}: ${score}% (expected ${(baseline * 100)}%)`);
+                        }
+                    }
+                }
               
               // Critical Audits - only if they are not in the 'PWA' or 'Best Practices' categories that we are relaxing
               // and only if they are actually scored as 0. 
