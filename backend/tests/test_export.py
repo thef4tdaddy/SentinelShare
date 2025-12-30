@@ -164,5 +164,5 @@ def test_csv_injection_sanitization(client, session: Session):
     rows = list(reader)
 
     # Check that dangerous characters are prefixed with a single quote
-    assert rows[1][1] == "'=dangerous@vender.com"
+    assert rows[1][1] == "'=dangerous@vendor.com"
     assert rows[1][4] == "'+DangerousCategory"

@@ -11,7 +11,7 @@ from sqlmodel import Session, and_, func, select
 
 from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail, ProcessingRun
-from backend.security import decrypt_content
+from backend.security import decrypt_content, sanitize_csv_field
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
@@ -405,21 +405,6 @@ def get_processing_run(run_id: int, session: Session = Depends(get_session)):
             status_code=404, detail=f"Processing run {run_id} not found"
         )
     return run
-
-
-def sanitize_csv_field(field: str) -> str:
-    """Sanitize field to prevent CSV injection attacks.
-
-    Fields starting with =, +, -, @ or tab could be interpreted as formulas.
-    Prefix them with a single quote to treat them as text.
-    """
-    if not field:
-        return field
-
-    dangerous_chars = ("=", "+", "-", "@", "\t", "\r")
-    if field.startswith(dangerous_chars):
-        return "'" + field
-    return field
 
 
 class ExportFormat(str, Enum):
