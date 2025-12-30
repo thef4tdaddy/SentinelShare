@@ -262,18 +262,35 @@
 		}
 	}
 
-	function exportToCSV() {
+	async function exportToCSV() {
 		// Build URL with current filters
 		const params = new URLSearchParams({ format: 'csv' });
 		if (filters.date_from) params.append('date_from', filters.date_from);
 		if (filters.date_to) params.append('date_to', filters.date_to);
 
-		// Trigger download using anchor element to avoid navigation history interference
 		const url = `/api/history/export?${params.toString()}`;
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = '';
-		a.click();
+
+		// Fetch CSV first so we can handle errors and provide user feedback
+		errorMessage = '';
+		try {
+			const response = await fetch(url, { method: 'GET' });
+			if (!response.ok) {
+				throw new Error(`Export failed with status ${response.status}`);
+			}
+
+			const blob = await response.blob();
+			const downloadUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = downloadUrl;
+			a.download = 'history.csv';
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(downloadUrl);
+		} catch (e) {
+			console.error('Failed to export history as CSV', e);
+			errorMessage = 'Failed to export history. Please try again.';
+		}
 	}
 </script>
 
