@@ -101,6 +101,8 @@ class EmailService:
 
                         if acc.auth_method == "oauth2":
                             # OAuth2 account - will need token refresh before use
+                            # NOTE: OAuth2 accounts are not yet fully supported by scheduler
+                            # TODO: Update scheduler to handle OAuth2 token refresh
                             account_dict["provider"] = acc.provider
                             account_dict["password"] = None  # No password for OAuth2
                         else:

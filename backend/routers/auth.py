@@ -133,26 +133,35 @@ async def oauth2_callback(
         import httpx
 
         user_email = None
-        if provider.lower() == "google":
-            # Get user info from Google
-            async with httpx.AsyncClient() as client:
-                userinfo_response = await client.get(
-                    "https://www.googleapis.com/oauth2/v2/userinfo",
-                    headers={"Authorization": f"Bearer {access_token}"},
-                )
-                userinfo_response.raise_for_status()
-                userinfo = userinfo_response.json()
-                user_email = userinfo.get("email")
-        elif provider.lower() == "microsoft":
-            # Get user info from Microsoft
-            async with httpx.AsyncClient() as client:
-                userinfo_response = await client.get(
-                    "https://graph.microsoft.com/v1.0/me",
-                    headers={"Authorization": f"Bearer {access_token}"},
-                )
-                userinfo_response.raise_for_status()
-                userinfo = userinfo_response.json()
-                user_email = userinfo.get("mail") or userinfo.get("userPrincipalName")
+        try:
+            if provider.lower() == "google":
+                # Get user info from Google
+                async with httpx.AsyncClient() as client:
+                    userinfo_response = await client.get(
+                        "https://www.googleapis.com/oauth2/v2/userinfo",
+                        headers={"Authorization": f"Bearer {access_token}"},
+                        timeout=10.0,
+                    )
+                    userinfo_response.raise_for_status()
+                    userinfo = userinfo_response.json()
+                    user_email = userinfo.get("email")
+            elif provider.lower() == "microsoft":
+                # Get user info from Microsoft
+                async with httpx.AsyncClient() as client:
+                    userinfo_response = await client.get(
+                        "https://graph.microsoft.com/v1.0/me",
+                        headers={"Authorization": f"Bearer {access_token}"},
+                        timeout=10.0,
+                    )
+                    userinfo_response.raise_for_status()
+                    userinfo = userinfo_response.json()
+                    user_email = userinfo.get("mail") or userinfo.get("userPrincipalName")
+        except httpx.HTTPError as e:
+            logging.error(f"Failed to fetch user info from {provider}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to retrieve user information from {provider}. Please try again.",
+            )
 
         if not user_email:
             raise HTTPException(
