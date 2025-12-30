@@ -5,6 +5,11 @@ import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
+from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
+from sqlmodel import Session, col, select
+
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
@@ -18,10 +23,6 @@ from backend.services.command_service import CommandService
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-from sqlmodel import Session, col, select
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -515,7 +516,7 @@ async def upload_receipt(
 
     # Generate unique filename with timestamp (including microseconds) and validated extension
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-    
+
     # Map content type to safe file extension
     extension_map = {
         "application/pdf": ".pdf",
@@ -523,7 +524,7 @@ async def upload_receipt(
         "image/jpeg": ".jpg",
     }
     file_extension = extension_map.get(file.content_type, ".pdf")
-    
+
     safe_filename = f"manual_{timestamp}{file_extension}"
     file_path = os.path.join(receipts_dir, safe_filename)
 
@@ -532,9 +533,7 @@ async def upload_receipt(
         with open(file_path, "wb") as f:
             f.write(content)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to save file: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Create a ProcessedEmail record for the manual upload
     # Create a mock email dict for detector
