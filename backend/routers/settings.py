@@ -310,11 +310,12 @@ async def test_email_account(account_id: int, session: Session = Depends(get_ses
         return {
             "account": account.email,
             "success": result["success"],
-            "error": result["error"],
+            # Do not expose low-level exception messages to the client
+            "error": None if result["success"] else "Failed to connect to email server",
         }
     except ValueError as e:
         logging.error(f"Account test failed for {account_id}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Email account test failed")
     except Exception as e:
         logging.exception(f"Unexpected error testing account {account_id}")
-        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Email account test failed")

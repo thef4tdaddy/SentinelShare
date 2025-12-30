@@ -249,9 +249,10 @@ class EmailService:
             return {"success": True, "error": None}
         except Exception as e:
             logging.exception("Error when testing email connection")
+            # Return a generic error message to avoid exposing internal exception details
             return {
                 "success": False,
-                "error": f"Unable to connect to email server: {str(e)}",
+                "error": "Unable to connect to email server",
             }
 
     @staticmethod
