@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import time
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -70,9 +71,13 @@ def test_quick_action_public_access(monkeypatch, client, engine):
     sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
 
     # 3. Patch the engine used by CommandService to use the test engine
-    from unittest.mock import patch
+    # Using monkeypatch for cleaner test setup
+    import backend.services.command_service as cmd_service
 
-    with patch("backend.services.command_service.engine", engine):
+    original_engine = cmd_service.engine
+    cmd_service.engine = engine
+
+    try:
         # 4. Request without Auth
         # No cookies, no 'token' query param
         url = f"/api/actions/quick?cmd={cmd}&arg={arg}&ts={ts}&sig={sig}"
@@ -84,6 +89,9 @@ def test_quick_action_public_access(monkeypatch, client, engine):
             response.status_code == 200
         ), f"Expected 200, got {response.status_code}. Middleware might be blocking."
         assert "Successfully Blocked" in response.text
+    finally:
+        # Restore original engine
+        cmd_service.engine = original_engine
 
 
 def test_preferences_update_public_access(monkeypatch, client):

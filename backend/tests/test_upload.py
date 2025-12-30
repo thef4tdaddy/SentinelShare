@@ -158,7 +158,9 @@ def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
 
     def tracking_open(*args, **kwargs):
         result = original_open(*args, **kwargs)
-        if "wb" in args or kwargs.get("mode") == "wb":
+        # Check if this is a write mode operation
+        mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
+        if "w" in mode:
             created_files.append(args[0])
         return result
 
