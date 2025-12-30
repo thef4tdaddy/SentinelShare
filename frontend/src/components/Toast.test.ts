@@ -29,8 +29,10 @@ beforeAll(() => {
 		currentTime: 0,
 		timeline: null,
 		effect: null
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	})) as any;
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	Element.prototype.getAnimations = vi.fn(() => []) as any;
 });
 
@@ -226,7 +228,7 @@ describe('Toast Component', () => {
 		
 		await tick();
 		
-		const closeButton = await waitFor(() => {
+		await waitFor(() => {
 			return screen.getByLabelText('Close notification');
 		});
 		
