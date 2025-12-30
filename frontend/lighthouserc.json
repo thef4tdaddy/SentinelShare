@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "staticDistDir": "./frontend/dist",
+      "staticDistDir": "./dist",
       "puppeteerLaunchOptions": {
         "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"]
       },
@@ -35,7 +35,8 @@
         "pwa-crossorigin": "off",
         "valid-source-maps": "warn",
         "themed-omnibox": "off",
-        "unused-javascript": "warn"
+        "unused-javascript": "warn",
+        "network-dependency-tree-insight": "warn"
       }
     }
   }
