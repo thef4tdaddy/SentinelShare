@@ -1139,7 +1139,6 @@ describe('History Component', () => {
 			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('max_amount=100'));
 		});
 	});
-
 	describe('CSV Export', () => {
 		beforeEach(() => {
 			vi.stubGlobal('URL', {
