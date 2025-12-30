@@ -74,24 +74,19 @@ def test_quick_action_public_access(monkeypatch, client, engine):
     # Using monkeypatch for cleaner test setup
     import backend.services.command_service as cmd_service
 
-    original_engine = cmd_service.engine
-    cmd_service.engine = engine
+    monkeypatch.setattr(cmd_service, "engine", engine)
 
-    try:
-        # 4. Request without Auth
-        # No cookies, no 'token' query param
-        url = f"/api/actions/quick?cmd={cmd}&arg={arg}&ts={ts}&sig={sig}"
-        response = client.get(url)
+    # 4. Request without Auth
+    # No cookies, no 'token' query param
+    url = f"/api/actions/quick?cmd={cmd}&arg={arg}&ts={ts}&sig={sig}"
+    response = client.get(url)
 
-        # 5. Verify Success (Not 401)
-        # It should return 200 OK because the signature is valid
-        assert (
-            response.status_code == 200
-        ), f"Expected 200, got {response.status_code}. Middleware might be blocking."
-        assert "Successfully Blocked" in response.text
-    finally:
-        # Restore original engine
-        cmd_service.engine = original_engine
+    # 5. Verify Success (Not 401)
+    # It should return 200 OK because the signature is valid
+    assert (
+        response.status_code == 200
+    ), f"Expected 200, got {response.status_code}. Middleware might be blocking."
+    assert "Successfully Blocked" in response.text
 
 
 def test_preferences_update_public_access(monkeypatch, client):
