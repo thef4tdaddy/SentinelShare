@@ -76,7 +76,10 @@
 	let filters = {
 		status: '',
 		date_from: '',
-		date_to: ''
+		date_to: '',
+		sender: '',
+		min_amount: '',
+		max_amount: ''
 	};
 
 	let loading = true;
@@ -101,6 +104,9 @@
 			if (filters.status) params.append('status', filters.status);
 			if (filters.date_from) params.append('date_from', filters.date_from);
 			if (filters.date_to) params.append('date_to', filters.date_to);
+			if (filters.sender) params.append('sender', filters.sender);
+			if (filters.min_amount) params.append('min_amount', filters.min_amount);
+			if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
 			const [historyRes, statsRes, runsRes] = await Promise.all([
 				fetchJson(`/history/emails?${params}`),
@@ -365,6 +371,20 @@
 			</div>
 
 			<div class="flex-1 min-w-[200px]">
+				<label for="sender-filter" class="block text-sm font-medium text-text-main mb-2">
+					Vendor/Sender
+				</label>
+				<input
+					id="sender-filter"
+					type="text"
+					bind:value={filters.sender}
+					onchange={handleFilterChange}
+					placeholder="Search by sender..."
+					class="input"
+				/>
+			</div>
+
+			<div class="flex-1 min-w-[200px]">
 				<label for="date-from" class="block text-sm font-medium text-text-main mb-2">
 					From Date
 				</label>
@@ -388,9 +408,41 @@
 				/>
 			</div>
 
+			<div class="flex-1 min-w-[150px]">
+				<label for="min-amount" class="block text-sm font-medium text-text-main mb-2">
+					Min Amount
+				</label>
+				<input
+					id="min-amount"
+					type="number"
+					bind:value={filters.min_amount}
+					onchange={handleFilterChange}
+					placeholder="0.00"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
+			<div class="flex-1 min-w-[150px]">
+				<label for="max-amount" class="block text-sm font-medium text-text-main mb-2">
+					Max Amount
+				</label>
+				<input
+					id="max-amount"
+					type="number"
+					bind:value={filters.max_amount}
+					onchange={handleFilterChange}
+					placeholder="999.99"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
 			<button
 				onclick={() => {
-					filters = { status: '', date_from: '', date_to: '' };
+					filters = { status: '', date_from: '', date_to: '', sender: '', min_amount: '', max_amount: '' };
 					handleFilterChange();
 				}}
 				class="btn btn-secondary"

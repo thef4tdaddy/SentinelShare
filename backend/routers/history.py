@@ -56,6 +56,9 @@ def get_email_history(
     status: Optional[EmailStatus] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    sender: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
     session: Session = Depends(get_session),
 ):
     """Get paginated email history with optional filtering"""
@@ -73,6 +76,13 @@ def get_email_history(
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
+    if sender and sender.strip():
+        # Case-insensitive partial match for sender
+        filters.append(ProcessedEmail.sender.ilike(f"%{sender}%"))  # type: ignore
+    if min_amount is not None:
+        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
+    if max_amount is not None:
+        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))

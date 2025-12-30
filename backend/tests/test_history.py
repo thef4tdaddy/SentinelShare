@@ -413,6 +413,139 @@ class TestHistoryDateFiltering:
         assert len(result["emails"]) == 5
 
 
+class TestHistoryAdvancedFiltering:
+    """Test advanced filtering functionality (sender and amount)"""
+
+    def test_filter_by_sender_exact_match(self, session: Session, sample_emails):
+        """Test filtering emails by sender - case insensitive partial match"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="amazon.com", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert "amazon.com" in result["emails"][0].sender.lower()
+
+    def test_filter_by_sender_partial_match(self, session: Session, sample_emails):
+        """Test filtering emails by sender partial match"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="example", session=session
+        )
+
+        # Should match spam@example.com, news@example.com, test@example.com
+        assert len(result["emails"]) >= 3
+        for email in result["emails"]:
+            assert "example" in email.sender.lower()
+
+    def test_filter_by_sender_case_insensitive(self, session: Session, sample_emails):
+        """Test that sender filtering is case insensitive"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="UBER", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert "uber" in result["emails"][0].sender.lower()
+
+    def test_filter_by_min_amount(self, session: Session, sample_emails):
+        """Test filtering emails by minimum amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, min_amount=30.0, session=session
+        )
+
+        # Should only include email1 (49.99), email3 (25.50) is below 30
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].amount >= 30.0
+
+    def test_filter_by_max_amount(self, session: Session, sample_emails):
+        """Test filtering emails by maximum amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, max_amount=30.0, session=session
+        )
+
+        # Should only include email3 (25.50)
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].amount <= 30.0
+
+    def test_filter_by_amount_range(self, session: Session, sample_emails):
+        """Test filtering emails by amount range (min and max)"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, min_amount=20.0, max_amount=50.0, session=session
+        )
+
+        # Should include both email1 (49.99) and email3 (25.50)
+        assert len(result["emails"]) == 2
+        for email in result["emails"]:
+            assert email.amount is not None
+            assert 20.0 <= email.amount <= 50.0
+
+    def test_filter_amount_excludes_none(self, session: Session, sample_emails):
+        """Test that amount filtering excludes emails with no amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, min_amount=0.0, session=session
+        )
+
+        # Should only include emails with amounts (email1 and email3)
+        assert len(result["emails"]) == 2
+        for email in result["emails"]:
+            assert email.amount is not None
+
+    def test_combined_filters_sender_and_amount(self, session: Session, sample_emails):
+        """Test combining sender and amount filters"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="amazon", min_amount=40.0, session=session
+        )
+
+        # Should only include email1 (Amazon, 49.99)
+        assert len(result["emails"]) == 1
+        assert "amazon" in result["emails"][0].sender.lower()
+        assert result["emails"][0].amount >= 40.0
+
+    def test_combined_filters_all_filters(self, session: Session, sample_emails):
+        """Test combining all available filters"""
+        from backend.routers.history import EmailStatus, get_email_history
+
+        now = datetime.now(timezone.utc)
+        date_from = (now - timedelta(minutes=60)).isoformat()
+
+        result = get_email_history(
+            page=1,
+            per_page=50,
+            status=EmailStatus.FORWARDED,
+            date_from=date_from,
+            sender="uber",
+            min_amount=20.0,
+            session=session,
+        )
+
+        # Should only include email3 (Uber Receipt, forwarded, 25.50, within time)
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].email_id == "email3@test.com"
+
+    def test_filter_by_empty_sender(self, session: Session, sample_emails):
+        """Test that empty sender string is ignored"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(page=1, per_page=50, sender="", session=session)
+
+        # Should return all emails when sender is empty
+        assert len(result["emails"]) == 5
+
+
 class TestHistoryStatusValidation:
     """Test status parameter validation"""
 
