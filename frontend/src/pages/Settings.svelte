@@ -2,6 +2,7 @@
 	import PreferenceList from '../components/PreferenceList.svelte';
 	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
 	import AccountList from '../components/AccountList.svelte';
+	import CategoryRulesList from '../components/CategoryRulesList.svelte';
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
@@ -17,7 +18,8 @@
 		History as HistoryIcon,
 		User,
 		Moon,
-		Sun
+		Sun,
+		Tag
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
@@ -251,6 +253,15 @@
 			</h3>
 		</div>
 		<PreferenceList type="preferences" />
+	</section>
+
+	<!-- Category Rules Section -->
+	<section>
+		<div class="flex items-center gap-2 mb-4">
+			<Tag size={20} class="text-text-secondary dark:text-text-secondary-dark" />
+			<h3 class="text-lg font-bold text-text-main dark:text-text-main-dark">Category Rules</h3>
+		</div>
+		<CategoryRulesList />
 	</section>
 
 	<!-- Rules Section -->
