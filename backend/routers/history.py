@@ -240,7 +240,11 @@ def update_email_category(
             if words:
                 pattern = f"*{words[0]}*"
             else:
-                pattern = "*"
+                # No sufficiently significant words found in subject; avoid creating an over-broad rule
+                response[
+                    "message"
+                ] += " (no suitable subject keywords found, rule not created)"
+                return response
 
         # Normalize pattern to lowercase for consistency
         pattern = pattern.lower()
