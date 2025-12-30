@@ -268,9 +268,12 @@
 		if (filters.date_from) params.append('date_from', filters.date_from);
 		if (filters.date_to) params.append('date_to', filters.date_to);
 
-		// Trigger download
+		// Trigger download using anchor element to avoid navigation history interference
 		const url = `/api/history/export?${params.toString()}`;
-		window.location.href = url;
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = '';
+		a.click();
 	}
 </script>
 
