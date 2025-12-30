@@ -47,20 +47,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Prepare Image List
-        id: prep
-        run: |
-          IMAGES="ghcr.io/${{ env.REGISTRY_IMAGE }}"
-          if [ "${{ env.DOCKERHUB_USERNAME }}" != "" ]; then
-            IMAGES="${IMAGES},${{ env.REGISTRY_IMAGE }}"
-          fi
-          echo "images=${IMAGES}" >> $GITHUB_OUTPUT
-
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.prep.outputs.images }}
+          images: |
+            ghcr.io/${{ env.REGISTRY_IMAGE }}
+            ${{ env.DOCKERHUB_USERNAME != '' && env.REGISTRY_IMAGE || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
