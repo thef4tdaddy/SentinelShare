@@ -285,3 +285,10 @@ wrongpass
 wrongpassword
 xbox
 xfinity
+
+ABspecial
+Auser
+fcbfdf
+ilike
+unstub
+Xuser
