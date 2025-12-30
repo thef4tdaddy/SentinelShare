@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from sqlmodel import Session, select
 
-from ..models import CategoryRule, ProcessedEmail
+from ..models import CategoryRule
 
 
 class Categorizer:
