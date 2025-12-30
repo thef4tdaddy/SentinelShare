@@ -74,12 +74,6 @@ def oauth2_authorize(request: Request, provider: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class OAuth2CallbackParams(BaseModel):
-    code: str
-    state: str
-    error: str | None = None
-
-
 @router.get("/{provider}/callback")
 async def oauth2_callback(
     request: Request, provider: str, code: str, state: str, error: str | None = None, session: Session = Depends(get_session)
