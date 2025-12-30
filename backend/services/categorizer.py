@@ -64,7 +64,6 @@ class Categorizer:
                     matches = True
 
             if matches:
-                print(f"✅ Category rule matched: {rule.assigned_category} (pattern: {rule.pattern})")
                 return rule.assigned_category
 
         # No rules matched, return default

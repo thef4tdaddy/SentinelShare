@@ -242,10 +242,13 @@ def update_email_category(
             else:
                 pattern = "*"
 
-        # Check if a similar rule already exists
+        # Normalize pattern to lowercase for consistency
+        pattern = pattern.lower()
+
+        # Check if a similar rule already exists (case-insensitive)
         existing_rule = session.exec(
             select(CategoryRule)
-            .where(CategoryRule.pattern == pattern.lower())
+            .where(func.lower(CategoryRule.pattern) == pattern)
             .where(CategoryRule.match_type == request.match_type)
         ).first()
 
