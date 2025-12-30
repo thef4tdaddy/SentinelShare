@@ -37,8 +37,18 @@
 	}
 
 	async function addRule() {
-		if (!newRule.pattern || !newRule.assigned_category) {
-			toasts.trigger('Please fill in all required fields', 'error');
+		const validMatchTypes = ['sender', 'subject'];
+		const priorityValue = Number(newRule.priority);
+
+		if (
+			!newRule.pattern ||
+			!newRule.assigned_category ||
+			!validMatchTypes.includes(newRule.match_type) ||
+			!Number.isFinite(priorityValue) ||
+			priorityValue < 1 ||
+			priorityValue > 100
+		) {
+			toasts.trigger('Please fill in all required fields with valid values', 'error');
 			return;
 		}
 
