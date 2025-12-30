@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { onMount } from 'svelte';
 	import { formatDate } from '../lib/dateUtils';
 	import {
@@ -15,7 +16,8 @@
 		X,
 		Search,
 		ThumbsUp,
-		ThumbsDown
+		ThumbsDown,
+		Download
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -55,45 +57,47 @@
 		};
 	}
 
-	let emails: Email[] = [];
-	let runs: Run[] = [];
-	let stats = {
+	let emails = $state<Email[]>([]);
+	let runs = $state<Run[]>([]);
+	let stats = $state({
 		total: 0,
 		forwarded: 0,
 		blocked: 0,
 		errors: 0,
 		total_amount: 0,
-		status_breakdown: {}
-	};
+		status_breakdown: {} as Record<string, number>
+	});
 
-	let pagination = {
+	let pagination = $state({
 		page: 1,
 		per_page: 50,
 		total: 0,
 		total_pages: 0
-	};
+	});
 
-	let filters = {
+	let filters = $state({
 		status: '',
 		date_from: '',
-		date_to: ''
-	};
+		date_to: '',
+		sender: '',
+		min_amount: '',
+		max_amount: ''
+	});
 
-	let loading = true;
-	let activeTab: 'emails' | 'runs' = 'emails';
-	let showModal = false;
-	let selectedEmail: Email | null = null;
-	let isProcessing = false;
-	let isAnalyzing = false;
-	let selectedAnalysis: AnalysisOutcome | null = null;
-	let successMessage = '';
-	let errorMessage = '';
+	let loading = $state(true);
+	let activeTab = $state<'emails' | 'runs'>('emails');
+	let showModal = $state(false);
+	let selectedEmail = $state<Email | null>(null);
+	let isProcessing = $state(false);
+	let isAnalyzing = $state(false);
+	let selectedAnalysis = $state<AnalysisOutcome | null>(null);
+	let successMessage = $state('');
+	let errorMessage = $state('');
 
 	async function loadHistory() {
 		loading = true;
 		try {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity
-			const params = new URLSearchParams({
+			const params = new SvelteURLSearchParams({
 				page: pagination.page.toString(),
 				per_page: pagination.per_page.toString()
 			});
@@ -101,6 +105,9 @@
 			if (filters.status) params.append('status', filters.status);
 			if (filters.date_from) params.append('date_from', filters.date_from);
 			if (filters.date_to) params.append('date_to', filters.date_to);
+			if (filters.sender) params.append('sender', filters.sender);
+			if (filters.min_amount) params.append('min_amount', filters.min_amount);
+			if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
 			const [historyRes, statsRes, runsRes] = await Promise.all([
 				fetchJson(`/history/emails?${params}`),
@@ -108,10 +115,17 @@
 				fetchJson('/history/runs')
 			]);
 
-			emails = historyRes.emails;
-			pagination = historyRes.pagination;
-			stats = statsRes;
-			runs = runsRes.runs;
+			emails = historyRes.emails ?? [];
+			pagination = historyRes.pagination ?? { page: 1, per_page: 50, total: 0, total_pages: 0 };
+			stats = statsRes ?? {
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			};
+			runs = runsRes.runs ?? [];
 		} catch (e) {
 			console.error('Failed to load history', e);
 		} finally {
@@ -260,6 +274,49 @@
 			isProcessing = false;
 		}
 	}
+
+	async function exportToCSV() {
+		// Build URL with current filters
+		const params = new SvelteURLSearchParams({ format: 'csv' });
+		if (filters.status) params.append('status', filters.status);
+		if (filters.date_from) params.append('date_from', filters.date_from);
+		if (filters.date_to) params.append('date_to', filters.date_to);
+		if (filters.sender) params.append('sender', filters.sender);
+		if (filters.min_amount) params.append('min_amount', filters.min_amount);
+		if (filters.max_amount) params.append('max_amount', filters.max_amount);
+
+		const url = `/api/history/export?${params.toString()}`;
+
+		// Fetch CSV first so we can handle errors and provide user feedback
+		errorMessage = '';
+		successMessage = 'Exporting history...';
+		try {
+			const response = await fetch(url, { method: 'GET' });
+			if (!response.ok) {
+				throw new Error(`Export failed with status ${response.status}`);
+			}
+
+			const blob = await response.blob();
+			const downloadUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = downloadUrl;
+			// Generate filename with current date like the backend does
+			const date = new Date().toISOString().split('T')[0];
+			a.download = `expenses_${date}.csv`;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(downloadUrl);
+			successMessage = 'Export successful!';
+			setTimeout(() => {
+				if (successMessage === 'Export successful!') successMessage = '';
+			}, 3000);
+		} catch (e) {
+			console.error('Failed to export history as CSV', e);
+			errorMessage = 'Failed to export history. Please try again.';
+			successMessage = '';
+		}
+	}
 </script>
 
 <div class="mb-8">
@@ -268,6 +325,26 @@
 		Complete history of email processing and automated runs.
 	</p>
 </div>
+
+<!-- Global Alerts -->
+{#if !showModal}
+	{#if successMessage}
+		<div
+			class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<CheckCircle size={24} class="text-emerald-600 shrink-0" />
+			<p class="text-emerald-800 font-medium">{successMessage}</p>
+		</div>
+	{/if}
+	{#if errorMessage}
+		<div
+			class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<AlertCircle size={24} class="text-red-600 shrink-0" />
+			<p class="text-red-800 font-medium">{errorMessage}</p>
+		</div>
+	{/if}
+{/if}
 
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -344,7 +421,7 @@
 
 {#if activeTab === 'emails'}
 	<!-- Filters -->
-	<div class="card mb-6">
+	<div class="card mb-6" role="search" aria-label="Email filters">
 		<div class="flex flex-wrap gap-4 items-end">
 			<div class="flex-1 min-w-[200px]">
 				<label for="status-filter" class="block text-sm font-medium text-text-main mb-2">
@@ -362,6 +439,20 @@
 					<option value="ignored">Ignored</option>
 					<option value="error">Error</option>
 				</select>
+			</div>
+
+			<div class="flex-1 min-w-[200px]">
+				<label for="sender-filter" class="block text-sm font-medium text-text-main mb-2">
+					Vendor/Sender
+				</label>
+				<input
+					id="sender-filter"
+					type="text"
+					bind:value={filters.sender}
+					onchange={handleFilterChange}
+					placeholder="Search by sender..."
+					class="input"
+				/>
 			</div>
 
 			<div class="flex-1 min-w-[200px]">
@@ -388,14 +479,62 @@
 				/>
 			</div>
 
+			<div class="flex-1 min-w-[150px]">
+				<label for="min-amount" class="block text-sm font-medium text-text-main mb-2">
+					Min Amount
+				</label>
+				<input
+					id="min-amount"
+					type="number"
+					bind:value={filters.min_amount}
+					onchange={handleFilterChange}
+					placeholder="0.00"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
+			<div class="flex-1 min-w-[150px]">
+				<label for="max-amount" class="block text-sm font-medium text-text-main mb-2">
+					Max Amount
+				</label>
+				<input
+					id="max-amount"
+					type="number"
+					bind:value={filters.max_amount}
+					onchange={handleFilterChange}
+					placeholder="999.99"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
+			<div class="sr-only" aria-live="polite">
+				{loading ? 'Loading emails...' : `${pagination.total} emails found`}
+			</div>
+
 			<button
 				onclick={() => {
-					filters = { status: '', date_from: '', date_to: '' };
+					filters = {
+						status: '',
+						date_from: '',
+						date_to: '',
+						sender: '',
+						min_amount: '',
+						max_amount: ''
+					};
 					handleFilterChange();
 				}}
 				class="btn btn-secondary"
 			>
 				Clear Filters
+			</button>
+
+			<button onclick={exportToCSV} class="btn btn-primary" title="Export to CSV">
+				<Download size={16} />
+				Export
 			</button>
 		</div>
 	</div>
@@ -451,7 +590,7 @@
 								</div>
 							</td>
 						</tr>
-					{:else if emails.length === 0}
+					{:else if emails?.length === 0}
 						<tr>
 							<td
 								colspan="6"
@@ -466,7 +605,8 @@
 							</td>
 						</tr>
 					{:else}
-						{#each emails as email (email.id)}
+						{#each emails ?? [] as email (email.id)}
+							{@const StatusIcon = getStatusIcon(email.status)}
 							<tr
 								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
 							>
@@ -479,7 +619,7 @@
 											)} cursor-pointer hover:opacity-80 transition-opacity"
 											title="Click to forward and create rule"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</button>
 									{:else}
@@ -488,7 +628,7 @@
 												email.status
 											)}"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</span>
 									{/if}
@@ -550,7 +690,8 @@
 				<p>No activity found.</p>
 			</div>
 		{:else}
-			{#each emails as email (email.id)}
+			{#each emails ?? [] as email (email.id)}
+				{@const StatusIcon = getStatusIcon(email.status)}
 				<div
 					class="card border-l-4 {email.status === 'forwarded'
 						? 'border-l-emerald-500'
@@ -566,7 +707,7 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
 								{email.status}
 							</button>
 						{:else}
@@ -575,7 +716,7 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
 								{email.status}
 							</div>
 						{/if}
@@ -670,7 +811,7 @@
 					</div>
 				</div>
 			{:else}
-				{#each runs as run (run.run_time)}
+				{#each runs ?? [] as run (run.run_time)}
 					<div
 						class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors"
 					>
