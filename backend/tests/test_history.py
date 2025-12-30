@@ -545,6 +545,31 @@ class TestHistoryAdvancedFiltering:
         # Should return all emails when sender is empty
         assert len(result["emails"]) == 5
 
+    def test_filter_negative_amount_rejected(self, session: Session, sample_emails):
+        """Test that negative amounts are rejected"""
+        from backend.routers.history import get_email_history
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(page=1, per_page=50, min_amount=-10.0, session=session)
+
+        assert exc_info.value.status_code == 400
+        assert "non-negative" in exc_info.value.detail.lower()
+
+    def test_filter_invalid_amount_range(self, session: Session, sample_emails):
+        """Test that min_amount > max_amount is rejected"""
+        from backend.routers.history import get_email_history
+        from fastapi import HTTPException
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(
+                page=1, per_page=50, min_amount=100.0, max_amount=50.0, session=session
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "min_amount" in exc_info.value.detail.lower()
+        assert "max_amount" in exc_info.value.detail.lower()
+
 
 class TestHistoryStatusValidation:
     """Test status parameter validation"""

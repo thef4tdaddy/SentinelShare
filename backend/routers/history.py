@@ -61,7 +61,36 @@ def get_email_history(
     max_amount: Optional[float] = None,
     session: Session = Depends(get_session),
 ):
-    """Get paginated email history with optional filtering"""
+    """Get paginated email history with optional filtering
+    
+    Args:
+        min_amount: Minimum amount (must be >= 0)
+        max_amount: Maximum amount (must be >= 0)
+    
+    Raises:
+        HTTPException: If amounts are negative or min_amount > max_amount
+    """
+
+    # Validate amount values
+    if min_amount is not None and min_amount < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"min_amount must be non-negative, got {min_amount}",
+        )
+    if max_amount is not None and max_amount < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"max_amount must be non-negative, got {max_amount}",
+        )
+    if (
+        min_amount is not None
+        and max_amount is not None
+        and min_amount > max_amount
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"min_amount ({min_amount}) cannot be greater than max_amount ({max_amount})",
+        )
 
     # Build query
     query = select(ProcessedEmail)
