@@ -495,13 +495,6 @@ async def upload_receipt(
     """
     Upload a receipt file (PDF, PNG, JPG) and process it as a manual upload.
     """
-    # Check authentication
-    if not request.session.get("authenticated"):
-        if not os.environ.get("DASHBOARD_PASSWORD"):
-            pass  # Dev mode - allow access
-        else:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-
     # Validate file type
     allowed_types = ["application/pdf", "image/png", "image/jpeg"]
     if file.content_type not in allowed_types:
