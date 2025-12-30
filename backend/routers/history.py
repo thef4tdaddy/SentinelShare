@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 from datetime import datetime, timedelta
 from enum import Enum
@@ -10,6 +12,7 @@ from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -354,3 +357,68 @@ def get_processing_run(run_id: int, session: Session = Depends(get_session)):
             status_code=404, detail=f"Processing run {run_id} not found"
         )
     return run
+
+
+@router.get("/export")
+def export_history(
+    format: str = Query("csv", pattern="^csv$"),
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    """Export email history as CSV file with optional date filtering"""
+    
+    # Build query with filters
+    query = select(ProcessedEmail)
+    
+    filters = []
+    if date_from and date_from.strip():
+        date_from_obj = parse_iso_date(date_from)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
+    if date_to and date_to.strip():
+        date_to_obj = parse_iso_date(date_to)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
+    
+    if filters:
+        query = query.where(and_(*filters))
+    
+    # Order by processed_at descending
+    query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
+    
+    emails = session.exec(query).all()
+    
+    # Generate CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write headers
+    writer.writerow(["Date", "Vendor", "Amount", "Currency", "Category", "Link to Receipt"])
+    
+    # Write data rows
+    for email in emails:
+        date_str = email.received_at.strftime("%Y-%m-%d %H:%M:%S") if email.received_at else ""
+        vendor = email.sender or ""
+        amount = f"{email.amount:.2f}" if email.amount is not None else ""
+        currency = "USD"  # Default currency
+        category = email.category or ""
+        # Link to receipt - using email_id as reference
+        link = f"Email ID: {email.email_id}" if email.email_id else ""
+        
+        writer.writerow([date_str, vendor, amount, currency, category, link])
+    
+    # Get CSV content
+    csv_content = output.getvalue()
+    output.close()
+    
+    # Generate filename with current date
+    current_date = datetime.now().strftime("%Y-%m-%d")
+    filename = f"expenses_{current_date}.csv"
+    
+    # Return as streaming response
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
