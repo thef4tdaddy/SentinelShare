@@ -33,9 +33,9 @@ jobs:
 
       - name: Install Backend Dependencies
         run: |
-          cd backend
           python -m venv venv
           source venv/bin/activate
+          cd backend
           pip install -r ../requirements.txt
           pip install pytest pytest-cov black ruff mypy
 
@@ -50,7 +50,7 @@ jobs:
         id: backend_lint
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           {
             EXIT_CODE=0
@@ -82,7 +82,7 @@ jobs:
         id: backend_test
         run: |
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
           # Run tests and output coverage report. Fail under 50%.
           {
@@ -140,18 +140,24 @@ jobs:
         run: |
           # Start Backend in Background
           cd backend
-          source venv/bin/activate
+          source ../venv/bin/activate
           set -o pipefail
+
+          # Generate a secure key for testing, ensuring consistency between Backend and Playwright
+          export SECRET_KEY=$(python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 
           # Fix: Include root directory in PYTHONPATH so 'backend' module is found
           export PYTHONPATH=$PYTHONPATH:$(pwd)/..
 
           # Use nohup to keep it running
+          # Explicitly set DASHBOARD_PASSWORD empty to bypass auth for tests
+          export DASHBOARD_PASSWORD=""
           nohup python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 
           # Wait for Backend to be ready
           echo "Waiting for Backend to start..."
-          timeout 30s bash -c 'until curl -s http://0.0.0.0:8000/api/health; do sleep 1; done'
+          # Use curl with retry to avoid hard failure if it takes a sec
+          curl --retry 5 --retry-delay 2 --retry-connrefused -s http://127.0.0.1:8000/api/health || { echo "ERROR: Backend failed to start"; exit 1; }
           echo "Backend started!"
 
           # Run Playwright
