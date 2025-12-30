@@ -228,7 +228,7 @@ def update_email_category(
             # Extract domain from sender email
             sender = email.sender or ""
             if "@" in sender:
-                domain = sender.split("@")[1] if "@" in sender else sender
+                domain = sender.split("@", 1)[1]
                 pattern = f"*@{domain}"
             else:
                 pattern = f"*{sender}*"
