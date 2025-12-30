@@ -513,8 +513,8 @@ async def upload_receipt(
     receipts_dir = os.path.join("data", "receipts")
     os.makedirs(receipts_dir, exist_ok=True)
 
-    # Generate unique filename with timestamp and validated extension
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    # Generate unique filename with timestamp (including microseconds) and validated extension
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
     
     # Map content type to safe file extension
     extension_map = {

@@ -19,6 +19,7 @@
 	let activity: Activity[] = [];
 	let isUploading = $state(false);
 	let uploadMessage = $state<{ type: 'success' | 'error'; text: string } | null>(null);
+	let dropzoneRef = $state<{ clearFile: () => void } | null>(null);
 
 	onMount(async () => {
 		try {
@@ -35,8 +36,9 @@
 	});
 
 	async function handleFileSelected(file: File) {
-		isUploading = true;
+		// Clear previous message at start of new upload
 		uploadMessage = null;
+		isUploading = true;
 
 		try {
 			const formData = new FormData();
@@ -75,6 +77,11 @@
 			isUploading = false;
 		}
 	}
+
+	function handleClearFile() {
+		// Clear message when file is manually cleared
+		uploadMessage = null;
+	}
 </script>
 
 <div class="mb-8">
@@ -112,7 +119,11 @@
 			Manually upload paper receipts or downloaded files.
 		</p>
 		
-		<Dropzone onFileSelected={handleFileSelected} disabled={isUploading} />
+		<Dropzone 
+			onFileSelected={handleFileSelected} 
+			onClearFile={handleClearFile}
+			disabled={isUploading} 
+		/>
 		
 		{#if uploadMessage}
 			<div

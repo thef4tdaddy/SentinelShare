@@ -3,6 +3,7 @@
 
 	interface DropzoneProps {
 		onFileSelected: (file: File) => void;
+		onClearFile?: () => void;
 		accept?: string;
 		maxSizeMB?: number;
 		disabled?: boolean;
@@ -10,6 +11,7 @@
 
 	let {
 		onFileSelected,
+		onClearFile,
 		accept = '.pdf,.png,.jpg,.jpeg',
 		maxSizeMB = 10,
 		disabled = false
@@ -55,6 +57,9 @@
 	}
 
 	function handleFile(file: File) {
+		// Prevent handling new files if disabled (e.g., during upload)
+		if (disabled) return;
+		
 		error = null;
 
 		// Validate file type
@@ -79,6 +84,10 @@
 		error = null;
 		if (fileInputElement) {
 			fileInputElement.value = '';
+		}
+		// Notify parent component if callback is provided
+		if (onClearFile) {
+			onClearFile();
 		}
 	}
 
@@ -107,6 +116,8 @@
 			ondragleave={handleDragLeave}
 			ondrop={handleDrop}
 			disabled={disabled}
+			aria-busy={disabled}
+			aria-describedby="dropzone-help-text"
 			class="w-full border-2 border-dashed rounded-lg p-8 transition-all duration-200 {isDragging
 				? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
 				: 'border-border dark:border-border-dark hover:border-blue-400 dark:hover:border-blue-600'} {disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
@@ -124,7 +135,7 @@
 					<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
 						Drag & drop or click to browse
 					</p>
-					<p class="text-xs text-text-tertiary dark:text-text-tertiary-dark mt-2">
+					<p id="dropzone-help-text" class="text-xs text-text-tertiary dark:text-text-tertiary-dark mt-2">
 						PDF, PNG, JPG (max {maxSizeMB}MB)
 					</p>
 				</div>
