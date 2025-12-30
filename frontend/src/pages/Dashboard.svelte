@@ -44,7 +44,8 @@
 
 			const response = await fetch('/api/actions/upload', {
 				method: 'POST',
-				body: formData
+				body: formData,
+				credentials: 'include'
 			});
 
 			if (!response.ok) {
