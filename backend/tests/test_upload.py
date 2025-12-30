@@ -156,14 +156,25 @@ def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
     created_files = []
     original_open = open
 
-    def tracking_open(*args, **kwargs):
-        result = original_open(*args, **kwargs)
-        # Check if this is a write mode operation
-        mode = args[1] if len(args) > 1 else kwargs.get("mode", "r")
-        if "w" in mode:
-            created_files.append(args[0])
-        return result
+    def tracking_open(file, *args, **kwargs):
+        """
+        Wrapper around open() that redirects write operations into tmp_path
+        and records created file paths for later cleanup checks.
+        """
+        mode = None
+        if args:
+            # open(file, mode, ...)
+            mode = args[0]
+        else:
+            mode = kwargs.get("mode", "r")
 
+        # For write modes, redirect the file into the tmp_path directory
+        if isinstance(file, str) and any(char in mode for char in ("w", "a", "x")):
+            redirected_path = os.path.join(tmp_path, os.path.basename(file))
+            created_files.append(redirected_path)
+            file = redirected_path
+
+        return original_open(file, *args, **kwargs)
     with patch("builtins.open", side_effect=tracking_open):
         # Mock session.commit to raise an error
         with patch.object(session, "commit", side_effect=Exception("Database error")):
