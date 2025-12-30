@@ -113,8 +113,13 @@ def get_email_history(
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
     if sender and sender.strip():
-        # Case-insensitive partial match for sender
-        filters.append(ProcessedEmail.sender.ilike(f"%{sender}%"))  # type: ignore
+        # Case-insensitive partial match for sender; escape SQL wildcard characters
+        sender_escaped = (
+            sender.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        filters.append(
+            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")
+        )  # type: ignore
     if min_amount is not None:
         filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
     if max_amount is not None:
