@@ -161,6 +161,8 @@ class EmailAccountResponse(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+    auth_method: str = "password"  # "password" or "oauth2"
+    provider: str | None = None  # "google", "microsoft", etc.
 
 
 @router.get("/accounts", response_model=List[EmailAccountResponse])
@@ -179,6 +181,8 @@ def get_email_accounts(session: Session = Depends(get_session)):
             is_active=acc.is_active,
             created_at=acc.created_at.isoformat(),
             updated_at=acc.updated_at.isoformat(),
+            auth_method=acc.auth_method,
+            provider=acc.provider,
         )
         for acc in accounts
     ]
@@ -240,6 +244,8 @@ def create_email_account(
         is_active=new_account.is_active,
         created_at=new_account.created_at.isoformat(),
         updated_at=new_account.updated_at.isoformat(),
+        auth_method=new_account.auth_method,
+        provider=new_account.provider,
     )
 
 
