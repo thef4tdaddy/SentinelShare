@@ -4,6 +4,7 @@ Bri
 CBTd
 DOCKERHUB
 Hashtag
+IHDR
 Lego
 MDi
 Minecraft
@@ -37,6 +38,7 @@ andresz
 anypass
 apscheduler
 authed
+autorun
 autopay
 autouse
 awstrack
