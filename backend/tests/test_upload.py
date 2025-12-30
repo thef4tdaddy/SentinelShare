@@ -129,3 +129,49 @@ def test_upload_receipt_requires_auth(client):
     response = client.post("/api/actions/upload", files=files)
 
     assert response.status_code == 401
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_file_write_error(client, session):
+    """Test handling of file write errors during upload"""
+    pdf_content = b"%PDF-1.4\n%test content"
+    files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    # Mock the open() builtin to raise an error during file write
+    with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+        response = client.post("/api/actions/upload", files=files)
+
+        assert response.status_code == 500
+        assert "Failed to save file" in response.json()["detail"]
+        assert "Permission denied" in response.json()["detail"]
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
+    """Test handling of database errors with file cleanup during upload"""
+    pdf_content = b"%PDF-1.4\n%test content"
+    files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    # Track if file was created and then removed
+    created_files = []
+    original_open = open
+
+    def tracking_open(*args, **kwargs):
+        result = original_open(*args, **kwargs)
+        if "wb" in args or kwargs.get("mode") == "wb":
+            created_files.append(args[0])
+        return result
+
+    with patch("builtins.open", side_effect=tracking_open):
+        # Mock session.commit to raise an error
+        with patch.object(session, "commit", side_effect=Exception("Database error")):
+            response = client.post("/api/actions/upload", files=files)
+
+            assert response.status_code == 500
+            assert "Failed to create database record" in response.json()["detail"]
+            assert "Database error" in response.json()["detail"]
+
+            # Verify that file was cleaned up (removed after error)
+            # The file should have been created but then removed due to the error
+            if created_files:
+                assert not os.path.exists(created_files[0])
