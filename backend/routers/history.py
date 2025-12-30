@@ -118,8 +118,8 @@ def get_email_history(
             sender.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         )
         filters.append(
-            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")
-        )  # type: ignore
+            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")  # type: ignore[union-attr]
+        )
     if min_amount is not None:
         filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
     if max_amount is not None:
