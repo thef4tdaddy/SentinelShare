@@ -1,0 +1,132 @@
+import io
+import os
+from datetime import datetime, timezone
+from unittest.mock import patch
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, create_engine, select
+from sqlmodel.pool import StaticPool
+
+from backend.main import app
+from backend.models import ProcessedEmail
+
+MOCK_SECRET = "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4="
+MOCK_PASSWORD = "mock-password-for-testing"
+
+
+@pytest.fixture(name="engine")
+def engine_fixture():
+    """Create an in-memory database engine for testing"""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture(name="session")
+def session_fixture(engine):
+    """Create an in-memory database session for testing"""
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture(name="client")
+def client_fixture(session):
+    """Create a test client with mocked dependencies"""
+
+    def get_session_override():
+        return session
+
+    from backend.database import get_session
+
+    app.dependency_overrides[get_session] = get_session_override
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_pdf(client, session):
+    """Test uploading a PDF receipt"""
+    # Create a mock PDF file
+    pdf_content = b"%PDF-1.4\n%test content"
+    files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    response = client.post("/api/actions/upload", files=files)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "test_receipt.pdf" in data["message"]
+    assert "file_path" in data
+    assert "record_id" in data
+
+    # Verify database record
+    record = session.get(ProcessedEmail, data["record_id"])
+    assert record is not None
+    assert record.status == "manual_upload"
+    assert record.sender == "manual_upload"
+    assert "test_receipt.pdf" in record.subject
+
+    # Cleanup
+    if os.path.exists(data["file_path"]):
+        os.remove(data["file_path"])
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_image(client, session):
+    """Test uploading an image receipt"""
+    # Create a mock PNG file (minimal valid PNG header)
+    png_header = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    files = {"file": ("receipt.png", io.BytesIO(png_header), "image/png")}
+
+    response = client.post("/api/actions/upload", files=files)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+
+    # Cleanup
+    if os.path.exists(data["file_path"]):
+        os.remove(data["file_path"])
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_invalid_type(client):
+    """Test uploading an invalid file type"""
+    files = {"file": ("test.txt", io.BytesIO(b"test content"), "text/plain")}
+
+    response = client.post("/api/actions/upload", files=files)
+
+    assert response.status_code == 400
+    assert "Invalid file type" in response.json()["detail"]
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_too_large(client):
+    """Test uploading a file that's too large"""
+    # Create a file larger than 10MB
+    large_content = b"x" * (11 * 1024 * 1024)  # 11MB
+    files = {"file": ("large.pdf", io.BytesIO(large_content), "application/pdf")}
+
+    response = client.post("/api/actions/upload", files=files)
+
+    assert response.status_code == 400
+    assert "exceeds 10MB limit" in response.json()["detail"]
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": "test123"})
+def test_upload_receipt_requires_auth(client):
+    """Test that upload requires authentication when password is set"""
+    pdf_content = b"%PDF-1.4\n%test"
+    files = {"file": ("test.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    response = client.post("/api/actions/upload", files=files)
+
+    assert response.status_code == 401

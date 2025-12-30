@@ -12,7 +12,7 @@ from backend.security import generate_hmac_signature, verify_dashboard_token
 from backend.services.command_service import CommandService
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
@@ -477,4 +477,108 @@ A manual rule has been created to forward future emails from this sender."""
         "email": email,
         "rule": manual_rule,
         "message": f"Email forwarded and rule created for {email_pattern}",
+    }
+
+
+@router.post("/upload")
+async def upload_receipt(
+    file: UploadFile,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    """
+    Upload a receipt file (PDF, PNG, JPG) and process it as a manual upload.
+    """
+    # Check authentication
+    if not request.session.get("authenticated"):
+        if not os.environ.get("DASHBOARD_PASSWORD"):
+            pass  # Dev mode - allow access
+        else:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Validate file type
+    allowed_types = ["application/pdf", "image/png", "image/jpeg", "image/jpg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}. Allowed: PDF, PNG, JPG",
+        )
+
+    # Validate file size (10MB limit)
+    MAX_SIZE = 10 * 1024 * 1024  # 10MB
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
+
+    # Create receipts directory if it doesn't exist
+    receipts_dir = os.path.join("data", "receipts")
+    os.makedirs(receipts_dir, exist_ok=True)
+
+    # Generate unique filename with timestamp
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    file_extension = os.path.splitext(file.filename or "receipt")[1] or ".pdf"
+    safe_filename = f"manual_{timestamp}{file_extension}"
+    file_path = os.path.join(receipts_dir, safe_filename)
+
+    # Save file to disk
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save file: {type(e).__name__}"
+        )
+
+    # Create a ProcessedEmail record for the manual upload
+    from backend.security import encrypt_content, get_email_content_hash
+    from backend.services.detector import ReceiptDetector
+
+    # Create a mock email dict for detector
+    file_content_hash = get_email_content_hash(
+        {"body": safe_filename, "subject": file.filename or "Manual Upload"}
+    )
+
+    # For manual uploads, we'll mark them as receipts by default
+    # but still run categorization
+    mock_email_data = {
+        "subject": f"Manual Upload: {file.filename}",
+        "from": "manual_upload",
+        "body": f"File: {safe_filename}",
+        "sender": "manual_upload",
+    }
+
+    category = ReceiptDetector.categorize_receipt(mock_email_data)
+
+    processed = ProcessedEmail(
+        email_id=f"manual_{timestamp}",
+        subject=file.filename or "Manual Upload",
+        sender="manual_upload",
+        received_at=datetime.now(timezone.utc),
+        processed_at=datetime.now(timezone.utc),
+        status="manual_upload",
+        account_email="manual",
+        category=category,
+        reason=f"Manual upload: {file_path}",
+        content_hash=file_content_hash,
+        encrypted_body=encrypt_content(f"File path: {file_path}"),
+        encrypted_html=None,
+    )
+
+    try:
+        session.add(processed)
+        session.commit()
+        session.refresh(processed)
+    except Exception as e:
+        # Cleanup file if DB insert fails
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create database record: {str(e)}"
+        )
+
+    return {
+        "success": True,
+        "file_path": file_path,
+        "record_id": processed.id,
+        "message": f"Receipt uploaded successfully: {file.filename}",
     }
