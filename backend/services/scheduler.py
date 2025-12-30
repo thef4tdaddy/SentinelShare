@@ -113,7 +113,9 @@ def process_emails():
                 account_id = acc.get("account_id")
 
                 if user:
-                    print(f"   Scanning account #{i+1} ({auth_method} auth)...")
+                    # Avoid logging potentially tainted auth_method value directly
+                    auth_label = "OAuth2" if auth_method == "oauth2" and account_id else "password"
+                    print(f"   Scanning account #{i+1} ({auth_label} auth)...")
                     try:
                         if auth_method == "oauth2" and account_id:
                             # OAuth2 account - need to refresh token
