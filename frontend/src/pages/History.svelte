@@ -15,7 +15,8 @@
 		X,
 		Search,
 		ThumbsUp,
-		ThumbsDown
+		ThumbsDown,
+		Download
 	} from 'lucide-svelte';
 
 	interface Email {
@@ -260,6 +261,17 @@
 			isProcessing = false;
 		}
 	}
+
+	function exportToCSV() {
+		// Build URL with current filters
+		const params = new URLSearchParams({ format: 'csv' });
+		if (filters.date_from) params.append('date_from', filters.date_from);
+		if (filters.date_to) params.append('date_to', filters.date_to);
+
+		// Trigger download
+		const url = `/api/history/export?${params.toString()}`;
+		window.location.href = url;
+	}
 </script>
 
 <div class="mb-8">
@@ -396,6 +408,11 @@
 				class="btn btn-secondary"
 			>
 				Clear Filters
+			</button>
+
+			<button onclick={exportToCSV} class="btn btn-primary" title="Export to CSV">
+				<Download size={16} />
+				Export
 			</button>
 		</div>
 	</div>
