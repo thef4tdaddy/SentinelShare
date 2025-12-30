@@ -23,3 +23,6 @@
 
 # Exclude changelog
 ^CHANGELOG\.md$
+
+# Exclude zip artifacts
+^\Qartifact.zip\E$
