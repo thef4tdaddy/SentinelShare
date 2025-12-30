@@ -1001,7 +1001,7 @@ class TestHistoryExport:
         response = client.get("/api/history/export?format=csv")
 
         filename = response.headers["content-disposition"]
-        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         assert f"expenses_{current_date}.csv" in filename
         
