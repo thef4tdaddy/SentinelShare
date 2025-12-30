@@ -98,6 +98,7 @@ class EmailAccount(SQLModel, table=True):
     """
     Represents an email account for monitoring receipts.
     Passwords are encrypted at rest using the SECRET_KEY.
+    Supports both password-based and OAuth2 authentication.
     """
 
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -105,7 +106,15 @@ class EmailAccount(SQLModel, table=True):
     host: str = Field(default="imap.gmail.com")  # IMAP server host
     port: int = Field(default=993)  # IMAP server port
     username: str  # Username for IMAP login (usually same as email)
-    encrypted_password: str  # Encrypted password using Fernet
+    encrypted_password: Optional[str] = None  # Encrypted password using Fernet (for password auth)
+    
+    # OAuth2 fields
+    auth_method: str = Field(default="password")  # "password" or "oauth2"
+    provider: Optional[str] = None  # "google", "microsoft", or "custom"
+    encrypted_access_token: Optional[str] = None  # Encrypted OAuth2 access token
+    encrypted_refresh_token: Optional[str] = None  # Encrypted OAuth2 refresh token
+    token_expires_at: Optional[datetime] = None  # When the access token expires (UTC)
+    
     is_active: bool = Field(default=True)  # Whether to monitor this account
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(
