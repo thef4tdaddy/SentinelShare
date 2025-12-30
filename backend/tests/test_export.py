@@ -149,7 +149,7 @@ def test_csv_injection_sanitization(client, session: Session):
     email = ProcessedEmail(
         email_id="1",
         subject="=SUM(A1:B2)",  # Dangerous subject but not exported as is
-        sender="=dangerous@vender.com",
+        sender="=dangerous@vendor.com",
         processed_at=datetime.now(timezone.utc),
         received_at=datetime.now(timezone.utc),
         status=EmailStatus.FORWARDED,
