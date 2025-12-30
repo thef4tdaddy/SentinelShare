@@ -5,6 +5,7 @@ Tests for OAuth2 service
 import base64
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock, patch
+from urllib.parse import urlparse
 
 import pytest
 from sqlmodel import Session, create_engine
@@ -66,7 +67,8 @@ class TestOAuth2Service:
             "google", "http://localhost/callback", "test_state"
         )
 
-        assert "accounts.google.com" in url
+        parsed = urlparse(url)
+        assert parsed.hostname == "accounts.google.com"
         assert "test_client_id" in url
         assert "test_state" in url
         # URL-encoded callback
