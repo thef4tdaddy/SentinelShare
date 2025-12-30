@@ -87,6 +87,25 @@ jobs:
               // We only care about Performance, Accessibility, Best Practices, and SEO for now
               const relevantCategories = ['performance', 'accessibility', 'best-practices', 'seo'];
               
+                let performanceScore = report.categories.performance ? report.categories.performance.score : null;
+                let accessibilityScore = report.categories.accessibility ? report.categories.accessibility.score : null;
+                let bestPracticesScore = report.categories['best-practices'] ? report.categories['best-practices'].score : null;
+                let seoScore = report.categories.seo ? report.categories.seo.score : null;
+                let pwaScore = report.categories.pwa ? report.categories.pwa.score : null;
+
+                const cleanScore = (score) => score === null ? 'N/A' : (score * 100).toFixed(0);
+                const scoreRow = `| ${cleanScore(performanceScore)}% | ${cleanScore(accessibilityScore)}% | ${cleanScore(bestPracticesScore)}% | ${cleanScore(seoScore)}% | ${cleanScore(pwaScore)}% |`;
+
+                let warningMessage = '';
+                if (accessibilityScore === null) {
+                  warningMessage = '\n\n> ⚠️ **Accessibility Score is N/A** - Please verify this metric locally using `npx @lhci/cli autorun --config lighthouserc.json`. This is a known CI-specific issue.';
+                }
+
+                const commentSummary = `📊 **Lighthouse Report Summary**\n\n` +
+                  `| Performance | Accessibility | Best Practices | SEO | PWA |\n` +
+                  `| :-: | :-: | :-: | :-: | :-: |\n` +
+                  scoreRow + warningMessage;
+
                 for (const category of Object.values(report.categories)) {
                     const rawScore = category.score;
                     const score = rawScore !== null && rawScore !== undefined ? (rawScore * 100).toFixed(0) : 'N/A';
