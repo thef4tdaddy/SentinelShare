@@ -258,31 +258,57 @@ def delete_email_account(account_id: int, session: Session = Depends(get_session
 
 
 @router.post("/accounts/{account_id}/test")
-def test_email_account(account_id: int, session: Session = Depends(get_session)):
+async def test_email_account(account_id: int, session: Session = Depends(get_session)):
     """Test connection for a specific email account"""
     import logging
 
     from backend.models import EmailAccount
     from backend.services.encryption_service import EncryptionService
+    from backend.services.oauth2_service import OAuth2Service
 
     account = session.get(EmailAccount, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # Decrypt password
     try:
-        password = EncryptionService.decrypt(account.encrypted_password)
-        if not password:
-            raise HTTPException(status_code=500, detail="Failed to decrypt password")
+        if account.auth_method == "oauth2":
+            # OAuth2 account - get valid access token
+            access_token = await OAuth2Service.ensure_valid_token(session, account)
+            if not access_token:
+                raise HTTPException(
+                    status_code=500, detail="Failed to obtain OAuth2 access token"
+                )
+
+            result = EmailService.test_connection(
+                account.username,
+                None,
+                account.host,
+                auth_method="oauth2",
+                access_token=access_token,
+            )
+        else:
+            # Password-based account
+            if not account.encrypted_password:
+                raise HTTPException(
+                    status_code=500, detail="No password found for account"
+                )
+
+            password = EncryptionService.decrypt(account.encrypted_password)
+            if not password:
+                raise HTTPException(status_code=500, detail="Failed to decrypt password")
+
+            result = EmailService.test_connection(
+                account.username, password, account.host
+            )
+
+        return {
+            "account": account.email,
+            "success": result["success"],
+            "error": result["error"],
+        }
     except ValueError as e:
-        logging.error(f"Password decryption failed for account {account_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to decrypt password")
-
-    # Test connection
-    result = EmailService.test_connection(account.username, password, account.host)
-
-    return {
-        "account": account.email,
-        "success": result["success"],
-        "error": result["error"],
-    }
+        logging.error(f"Account test failed for {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logging.exception(f"Unexpected error testing account {account_id}")
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")

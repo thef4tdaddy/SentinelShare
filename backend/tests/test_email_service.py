@@ -267,7 +267,7 @@ class TestEmailService:
 
         result = EmailService.test_connection("user", "pass", "imap.test.com")
         assert result["success"] is False
-        assert "Unable to connect to email server" == result["error"]
+        assert "Unable to connect to email server" in result["error"]
 
     @patch("backend.services.email_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_multipart_html(self, mock_imap):

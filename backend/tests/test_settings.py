@@ -360,7 +360,8 @@ def test_test_email_account(session: Session, monkeypatch):
     with patch("backend.routers.settings.EmailService.test_connection") as mock_test:
         mock_test.return_value = {"success": True, "error": None}
 
-        result = test_email_account(created.id, session=session)
+        import asyncio
+        result = asyncio.run(test_email_account(created.id, session=session))
 
         assert result["account"] == "test@example.com"
         assert result["success"] is True
@@ -375,8 +376,9 @@ def test_test_email_account_not_found(session: Session):
 
     from backend.routers.settings import test_email_account
 
+    import asyncio
     with pytest.raises(HTTPException) as exc_info:
-        test_email_account(999, session=session)
+        asyncio.run(test_email_account(999, session=session))
 
     assert exc_info.value.status_code == 404
     assert "Account not found" in str(exc_info.value.detail)
