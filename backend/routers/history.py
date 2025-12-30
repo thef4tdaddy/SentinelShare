@@ -4,12 +4,13 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from backend.database import get_session
-from backend.models import ManualRule, ProcessedEmail, ProcessingRun
+from backend.models import CategoryRule, ManualRule, ProcessedEmail, ProcessingRun
 from backend.security import decrypt_content
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -187,6 +188,84 @@ def submit_feedback(
 
     session.commit()
     return {"status": "success", "message": "Feedback recorded and rule suggested"}
+
+
+class UpdateCategoryRequest(BaseModel):
+    category: str
+    create_rule: Optional[bool] = False
+    match_type: Optional[str] = "sender"  # "sender" or "subject"
+
+
+@router.patch("/emails/{email_id}/category")
+def update_email_category(
+    email_id: int,
+    request: UpdateCategoryRequest,
+    session: Session = Depends(get_session),
+):
+    """
+    Update the category of an email and optionally create a rule for future categorization.
+    """
+    email = session.get(ProcessedEmail, email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    # Update the category
+    old_category = email.category
+    email.category = request.category
+    session.add(email)
+    session.commit()
+
+    response = {
+        "status": "success",
+        "message": f"Category updated from '{old_category}' to '{request.category}'",
+        "rule_created": False,
+    }
+
+    # Create a category rule if requested
+    if request.create_rule:
+        # Determine the pattern based on match type
+        if request.match_type == "sender":
+            # Extract domain from sender email
+            sender = email.sender or ""
+            if "@" in sender:
+                domain = sender.split("@")[1] if "@" in sender else sender
+                pattern = f"*@{domain}"
+            else:
+                pattern = f"*{sender}*"
+        else:  # subject
+            # Use a wildcard pattern with key words from subject
+            subject = email.subject or ""
+            # Take first significant word (simplified logic)
+            words = [w for w in subject.lower().split() if len(w) > 3]
+            if words:
+                pattern = f"*{words[0]}*"
+            else:
+                pattern = "*"
+
+        # Check if a similar rule already exists
+        existing_rule = session.exec(
+            select(CategoryRule)
+            .where(CategoryRule.pattern == pattern.lower())
+            .where(CategoryRule.match_type == request.match_type)
+        ).first()
+
+        if not existing_rule:
+            new_rule = CategoryRule(
+                match_type=request.match_type,
+                pattern=pattern,
+                assigned_category=request.category,
+                priority=10,
+            )
+            session.add(new_rule)
+            session.commit()
+            response["rule_created"] = True
+            response[
+                "message"
+            ] += f" and rule created: {request.match_type}='{pattern}' → '{request.category}'"
+        else:
+            response["message"] += " (rule already exists)"
+
+    return response
 
 
 @router.post("/reprocess-all-ignored")
