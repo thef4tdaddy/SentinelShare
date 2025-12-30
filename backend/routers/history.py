@@ -1,7 +1,7 @@
 import csv
 import io
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -359,6 +359,21 @@ def get_processing_run(run_id: int, session: Session = Depends(get_session)):
     return run
 
 
+def sanitize_csv_field(field: str) -> str:
+    """Sanitize field to prevent CSV injection attacks.
+    
+    Fields starting with =, +, -, @ or tab could be interpreted as formulas.
+    Prefix them with a single quote to treat them as text.
+    """
+    if not field:
+        return field
+    
+    dangerous_chars = ('=', '+', '-', '@', '\t', '\r')
+    if field.startswith(dangerous_chars):
+        return "'" + field
+    return field
+
+
 class ExportFormat(str, Enum):
     CSV = "csv"
 
@@ -403,20 +418,20 @@ def export_history(
         # Stream data rows directly from the query
         for email in session.exec(query):
             date_str = email.received_at.strftime("%Y-%m-%d %H:%M:%S") if email.received_at else ""
-            vendor = email.sender or ""
+            vendor = sanitize_csv_field(email.sender or "")
             amount = f"{email.amount:.2f}" if email.amount is not None else ""
             currency = "USD"  # Default currency
-            category = email.category or ""
+            category = sanitize_csv_field(email.category or "")
             # Link to receipt - using email_id as reference
-            link = f"Email ID: {email.email_id}" if email.email_id else ""
+            link = sanitize_csv_field(f"Email ID: {email.email_id}" if email.email_id else "")
 
             writer.writerow([date_str, vendor, amount, currency, category, link])
             yield output.getvalue()
             output.seek(0)
             output.truncate(0)
 
-    # Generate filename with current date
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    # Generate filename with current date (UTC for consistency)
+    current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     filename = f"expenses_{current_date}.csv"
 
     # Return as streaming response

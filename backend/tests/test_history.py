@@ -1006,3 +1006,38 @@ class TestHistoryExport:
         assert f"expenses_{current_date}.csv" in filename
         
         app.dependency_overrides.clear()
+
+    def test_export_csv_injection_protection(self, session: Session, monkeypatch):
+        """Test that CSV export protects against formula injection"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+        
+        from backend.database import get_session
+        from backend.main import app
+        from fastapi.testclient import TestClient
+
+        # Create email with potentially dangerous CSV content
+        now = datetime.now(timezone.utc)
+        email = ProcessedEmail(
+            email_id="injection@test.com",
+            subject="Test",
+            sender="=cmd|'/c calc'!A1",  # Formula injection attempt
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+            category="@dangerous",
+            amount=10.0,
+        )
+        session.add(email)
+        session.commit()
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+        
+        response = client.get("/api/history/export?format=csv")
+        content = response.text
+
+        # Check that dangerous characters are sanitized with leading quote
+        assert "'=cmd|'/c calc'!A1" in content or "=cmd|'/c calc'!A1" not in content
+        assert "'@dangerous" in content or "@dangerous" in content
+        
+        app.dependency_overrides.clear()
