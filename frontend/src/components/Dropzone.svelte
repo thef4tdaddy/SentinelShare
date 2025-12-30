@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Upload, FileText, X } from 'lucide-svelte';
 
 	interface DropzoneProps {
@@ -7,6 +8,7 @@
 		accept?: string;
 		maxSizeMB?: number;
 		disabled?: boolean;
+		registerApi?: (api: { clearFile: () => void }) => void;
 	}
 
 	let {
@@ -14,7 +16,8 @@
 		onClearFile,
 		accept = '.pdf,.png,.jpg,.jpeg',
 		maxSizeMB = 10,
-		disabled = false
+		disabled = false,
+		registerApi
 	}: DropzoneProps = $props();
 
 	let isDragging = $state(false);
@@ -59,7 +62,7 @@
 	function handleFile(file: File) {
 		// Prevent handling new files if disabled (e.g., during upload)
 		if (disabled) return;
-		
+
 		error = null;
 
 		// Validate file type
@@ -95,6 +98,13 @@
 		if (disabled) return;
 		fileInputElement?.click();
 	}
+
+	// Register API once on mount
+	onMount(() => {
+		if (registerApi) {
+			registerApi({ clearFile });
+		}
+	});
 </script>
 
 <div class="w-full">
@@ -115,16 +125,20 @@
 			ondragover={handleDragOver}
 			ondragleave={handleDragLeave}
 			ondrop={handleDrop}
-			disabled={disabled}
+			{disabled}
 			aria-busy={disabled}
 			aria-describedby="dropzone-help-text"
 			class="w-full border-2 border-dashed rounded-lg p-8 transition-all duration-200 {isDragging
 				? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-				: 'border-border dark:border-border-dark hover:border-blue-400 dark:hover:border-blue-600'} {disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}"
+				: 'border-border dark:border-border-dark hover:border-blue-400 dark:hover:border-blue-600'} {disabled
+				? 'opacity-50 cursor-not-allowed'
+				: 'cursor-pointer'}"
 		>
 			<div class="flex flex-col items-center justify-center gap-3 text-center">
 				<div
-					class="p-3 rounded-full {isDragging ? 'bg-blue-500 text-white' : 'bg-gray-100 text-text-secondary dark:bg-gray-800 dark:text-text-secondary-dark'}"
+					class="p-3 rounded-full {isDragging
+						? 'bg-blue-500 text-white'
+						: 'bg-gray-100 text-text-secondary dark:bg-gray-800 dark:text-text-secondary-dark'}"
 				>
 					<Upload size={24} />
 				</div>
@@ -135,7 +149,10 @@
 					<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
 						Drag & drop or click to browse
 					</p>
-					<p id="dropzone-help-text" class="text-xs text-text-tertiary dark:text-text-tertiary-dark mt-2">
+					<p
+						id="dropzone-help-text"
+						class="text-xs text-text-tertiary dark:text-text-tertiary-dark mt-2"
+					>
 						PDF, PNG, JPG (max {maxSizeMB}MB)
 					</p>
 				</div>
@@ -163,7 +180,7 @@
 				<button
 					type="button"
 					onclick={clearFile}
-					disabled={disabled}
+					{disabled}
 					class="p-1 text-text-secondary hover:text-red-600 dark:text-text-secondary-dark dark:hover:text-red-400 transition-colors"
 					aria-label="Remove file"
 				>
@@ -174,6 +191,14 @@
 	{/if}
 
 	{#if error}
-		<p class="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+		<p class="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
 	{/if}
+
+	<div class="sr-only" aria-live="polite">
+		{#if selectedFile}
+			File {selectedFile.name} selected.
+		{:else if error}
+			Error: {error}
+		{/if}
+	</div>
 </div>

@@ -15,11 +15,11 @@
 		category?: string;
 	}
 
-	let stats = { total_forwarded: 0, total_blocked: 0, total_processed: 0 };
-	let activity: Activity[] = [];
+	let stats = $state({ total_forwarded: 0, total_blocked: 0, total_processed: 0 });
+	let activity = $state<Activity[]>([]);
 	let isUploading = $state(false);
 	let uploadMessage = $state<{ type: 'success' | 'error'; text: string } | null>(null);
-	let dropzoneRef = $state<{ clearFile: () => void } | null>(null);
+	let dropzoneApi = $state<{ clearFile: () => void } | null>(null);
 
 	onMount(async () => {
 		try {
@@ -61,6 +61,11 @@
 				text: result.message || 'Receipt uploaded successfully!'
 			};
 
+			// Clear the file from dropzone after successful upload
+			if (dropzoneApi) {
+				dropzoneApi.clearFile();
+			}
+
 			// Refresh activity feed
 			const activityRes = await fetchJson('/dashboard/activity');
 			activity = activityRes;
@@ -81,6 +86,10 @@
 	function handleClearFile() {
 		// Clear message when file is manually cleared
 		uploadMessage = null;
+	}
+
+	function handleRegisterApi(api: { clearFile: () => void }) {
+		dropzoneApi = api;
 	}
 </script>
 
@@ -111,22 +120,27 @@
 
 <!-- Manual Receipt Upload Section -->
 <div class="mb-8">
-	<div class="bg-bg-card dark:bg-bg-card-dark rounded-lg border border-border dark:border-border-dark p-6">
+	<div
+		class="bg-bg-card dark:bg-bg-card-dark rounded-lg border border-border dark:border-border-dark p-6"
+	>
 		<h3 class="text-lg font-semibold text-text-main dark:text-text-main-dark mb-4">
 			Upload Receipt
 		</h3>
 		<p class="text-sm text-text-secondary dark:text-text-secondary-dark mb-4">
 			Manually upload paper receipts or downloaded files.
 		</p>
-		
-		<Dropzone 
-			onFileSelected={handleFileSelected} 
+
+		<Dropzone
+			onFileSelected={handleFileSelected}
 			onClearFile={handleClearFile}
-			disabled={isUploading} 
+			disabled={isUploading}
+			registerApi={handleRegisterApi}
 		/>
-		
+
 		{#if uploadMessage}
 			<div
+				role="status"
+				aria-live="polite"
 				class="mt-4 p-3 rounded-lg {uploadMessage.type === 'success'
 					? 'bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400'
 					: 'bg-red-50 text-red-800 dark:bg-red-900/20 dark:text-red-400'}"
@@ -134,11 +148,17 @@
 				{uploadMessage.text}
 			</div>
 		{/if}
-		
+
 		{#if isUploading}
-			<div class="mt-4 flex items-center gap-2 text-text-secondary dark:text-text-secondary-dark">
-				<div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-				<span class="text-sm">Uploading...</span>
+			<div
+				role="status"
+				aria-live="polite"
+				class="mt-4 flex items-center gap-2 text-text-secondary dark:text-text-secondary-dark"
+			>
+				<div
+					class="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"
+				></div>
+				<span class="text-sm">Uploading receipt...</span>
 			</div>
 		{/if}
 	</div>
