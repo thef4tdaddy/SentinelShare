@@ -540,7 +540,7 @@ async def upload_receipt(
             f.write(content)
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to save file: {type(e).__name__}"
+            status_code=500, detail=f"Failed to save file: {str(e)}"
         )
 
     # Create a ProcessedEmail record for the manual upload
