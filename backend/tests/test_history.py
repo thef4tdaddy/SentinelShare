@@ -429,7 +429,7 @@ class TestHistoryAdvancedFiltering:
         )
 
         assert len(result["emails"]) == 1
-        assert "amazon.com" in result["emails"][0].sender.lower()
+        assert result["emails"][0].sender.lower() == "amazon.com"
 
     def test_filter_by_sender_partial_match(self, session: Session, sample_emails):
         """Test filtering emails by sender partial match"""
