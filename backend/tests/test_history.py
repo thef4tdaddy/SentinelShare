@@ -545,6 +545,105 @@ class TestHistoryAdvancedFiltering:
         # Should return all emails when sender is empty
         assert len(result["emails"]) == 5
 
+    def test_filter_sender_with_percent_wildcard(self, session: Session):
+        """Test that % character in sender is treated as literal, not SQL wildcard"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test emails with specific sender patterns
+        email_with_percent = ProcessedEmail(
+            email_id="wildcard1@test.com",
+            subject="Test Email",
+            sender="test%user@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_without_percent = ProcessedEmail(
+            email_id="wildcard2@test.com",
+            subject="Test Email",
+            sender="testAuser@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_with_percent)
+        session.add(email_without_percent)
+        session.commit()
+
+        # Search for "test%user" should only match the email with literal %
+        result = get_email_history(page=1, per_page=50, sender="test%user", session=session)
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test%user@example.com"
+
+    def test_filter_sender_with_underscore_wildcard(self, session: Session):
+        """Test that _ character in sender is treated as literal, not SQL wildcard"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test emails with specific sender patterns
+        email_with_underscore = ProcessedEmail(
+            email_id="wildcard3@test.com",
+            subject="Test Email",
+            sender="test_user@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_without_underscore = ProcessedEmail(
+            email_id="wildcard4@test.com",
+            subject="Test Email",
+            sender="testXuser@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_with_underscore)
+        session.add(email_without_underscore)
+        session.commit()
+
+        # Search for "test_user" should only match the email with literal _
+        result = get_email_history(page=1, per_page=50, sender="test_user", session=session)
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test_user@example.com"
+
+    def test_filter_sender_with_multiple_wildcards(self, session: Session):
+        """Test sender filtering with both % and _ characters"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test email with both wildcard characters
+        email_wildcards = ProcessedEmail(
+            email_id="wildcard5@test.com",
+            subject="Test Email",
+            sender="test_%special@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_normal = ProcessedEmail(
+            email_id="wildcard6@test.com",
+            subject="Test Email",
+            sender="testABspecial@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_wildcards)
+        session.add(email_normal)
+        session.commit()
+
+        # Search for "test_%" should only match the email with literal _ and %
+        result = get_email_history(page=1, per_page=50, sender="test_%", session=session)
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test_%special@example.com"
+
     def test_filter_negative_amount_rejected(self, session: Session, sample_emails):
         """Test that negative amounts are rejected"""
         from backend.routers.history import get_email_history
