@@ -183,8 +183,7 @@ describe('API Module', () => {
 	});
 
 	it('handles when window.localStorage is not available', async () => {
-		// Save original localStorage
-		const originalLocalStorage = window.localStorage;
+		// Save original localStorage descriptor
 		const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
 
 		// Remove localStorage to test fallback
@@ -209,12 +208,6 @@ describe('API Module', () => {
 		// Restore localStorage
 		if (descriptor) {
 			Object.defineProperty(window, 'localStorage', descriptor);
-		} else {
-			Object.defineProperty(window, 'localStorage', {
-				value: originalLocalStorage,
-				writable: true,
-				configurable: true
-			});
 		}
 	});
 
