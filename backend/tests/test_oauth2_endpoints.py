@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from urllib.parse import urlparse
 
 from backend.main import app
 
@@ -26,8 +27,10 @@ class TestOAuth2Endpoints:
         response = client.get("/api/auth/google/authorize", follow_redirects=False)
 
         assert response.status_code == 307  # Redirect
-        assert "accounts.google.com" in response.headers["location"]
-        assert "test_client_id" in response.headers["location"]
+        location = response.headers["location"]
+        parsed = urlparse(location)
+        assert parsed.hostname == "accounts.google.com"
+        assert "test_client_id" in location
 
     def test_oauth2_authorize_invalid_provider(self, client: TestClient):
         """Test OAuth2 authorization with invalid provider"""
