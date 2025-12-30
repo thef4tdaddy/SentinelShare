@@ -61,14 +61,21 @@ def get_email_history(
     max_amount: Optional[float] = None,
     session: Session = Depends(get_session),
 ):
-    """Get paginated email history with optional filtering
-    
+    """Get paginated email history with optional filtering.
+
     Args:
-        min_amount: Minimum amount (must be >= 0)
-        max_amount: Maximum amount (must be >= 0)
-    
+        page: Page number for pagination (1-based, must be >= 1).
+        per_page: Number of records per page (must be between 1 and 100).
+        status: Optional email status filter (e.g., forwarded, blocked, ignored, error).
+        date_from: Optional start of date range filter (ISO 8601 string).
+        date_to: Optional end of date range filter (ISO 8601 string).
+        sender: Optional filter for sender email address.
+        min_amount: Minimum amount (must be >= 0).
+        max_amount: Maximum amount (must be >= 0).
+        session: Database session dependency.
+
     Raises:
-        HTTPException: If amounts are negative or min_amount > max_amount
+        HTTPException: If amounts are negative or min_amount > max_amount.
     """
 
     # Validate amount values
