@@ -20,3 +20,6 @@
 
 # Exclude configuration file
 ^\.github/actions/spelling/expect\.txt$
+
+# Exclude changelog
+^CHANGELOG\.md$

@@ -31,7 +31,7 @@ jobs:
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
         with:
-          configPath: "./frontend/lighthouserc.json"
+          configPath: "./lighthouserc.json"
           uploadArtifacts: false
           temporaryPublicStorage: false
 
