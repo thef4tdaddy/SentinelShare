@@ -4,9 +4,7 @@
       "staticDistDir": "./frontend/dist",
       "settings": {
         "preset": "desktop",
-        "chromeFlags": "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu --headless=new --disable-storage-reset",
-        "onlyCategories": ["performance", "accessibility", "best-practices", "seo"],
-        "skipAudits": ["uses-http2", "uses-long-cache-ttl", "datadog-trace-id", "redirects-http"]
+        "chromeFlags": "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage --disable-gpu --headless=new --disable-storage-reset"
       }
     },
     "assert": {
