@@ -388,39 +388,40 @@ def export_history(
     
     # Order by processed_at descending
     query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
-    
-    emails = session.exec(query).all()
-    
-    # Generate CSV in memory
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # Write headers
-    writer.writerow(["Date", "Vendor", "Amount", "Currency", "Category", "Link to Receipt"])
-    
-    # Write data rows
-    for email in emails:
-        date_str = email.received_at.strftime("%Y-%m-%d %H:%M:%S") if email.received_at else ""
-        vendor = email.sender or ""
-        amount = f"{email.amount:.2f}" if email.amount is not None else ""
-        currency = "USD"  # Default currency
-        category = email.category or ""
-        # Link to receipt - using email_id as reference
-        link = f"Email ID: {email.email_id}" if email.email_id else ""
-        
-        writer.writerow([date_str, vendor, amount, currency, category, link])
-    
-    # Get CSV content
-    csv_content = output.getvalue()
-    output.close()
-    
+
+    # Stream CSV content to avoid loading all emails and full CSV into memory
+    def csv_generator():
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write headers
+        writer.writerow(["Date", "Vendor", "Amount", "Currency", "Category", "Link to Receipt"])
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        # Stream data rows directly from the query
+        for email in session.exec(query):
+            date_str = email.received_at.strftime("%Y-%m-%d %H:%M:%S") if email.received_at else ""
+            vendor = email.sender or ""
+            amount = f"{email.amount:.2f}" if email.amount is not None else ""
+            currency = "USD"  # Default currency
+            category = email.category or ""
+            # Link to receipt - using email_id as reference
+            link = f"Email ID: {email.email_id}" if email.email_id else ""
+
+            writer.writerow([date_str, vendor, amount, currency, category, link])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
     # Generate filename with current date
     current_date = datetime.now().strftime("%Y-%m-%d")
     filename = f"expenses_{current_date}.csv"
-    
+
     # Return as streaming response
     return StreamingResponse(
-        iter([csv_content]),
+        csv_generator(),
         media_type="text/csv",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"'
