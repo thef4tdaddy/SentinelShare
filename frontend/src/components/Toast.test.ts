@@ -22,7 +22,6 @@ beforeAll(() => {
 		playbackRate: 1,
 		playState: 'finished',
 		ready: Promise.resolve(),
-		replaceState: 'active',
 		pending: false,
 		id: '',
 		startTime: 0,
