@@ -109,7 +109,10 @@ class TestOAuth2Endpoints:
         assert "authorization_endpoint" in config
         assert "token_endpoint" in config
         assert "scopes" in config
-        assert "https://mail.google.com/" in config["scopes"]
+        scopes = config["scopes"]
+        if isinstance(scopes, str):
+            scopes = [scopes]
+        assert "https://mail.google.com/" in scopes
 
     def test_oauth2_config_microsoft(self):
         """Test OAuth2 configuration for Microsoft"""
