@@ -145,15 +145,15 @@ def process_emails():
                                                 email_data["account_email"] = user
                                             all_emails.extend(fetched)
                                         else:
-                                            print(f"❌ Failed to get OAuth2 token for {user}")
+                                            print(f"❌ Failed to get OAuth2 token for account #{i+1}")
                                             error_occurred = True
                                             error_msg = f"Error scanning account #{i+1}: OAuth2 token refresh failed"
                                     except Exception as oauth_err:
-                                        print(f"❌ OAuth2 error for {user}: {type(oauth_err).__name__}")
+                                        print(f"❌ OAuth2 error for account #{i+1}: {type(oauth_err).__name__}")
                                         error_occurred = True
                                         error_msg = f"Error scanning account #{i+1}: OAuth2 error ({type(oauth_err).__name__})"
                                 else:
-                                    print(f"❌ OAuth2 account not found in database for {user}")
+                                    print(f"❌ OAuth2 account not found in database for account #{i+1}")
                         elif pwd:
                             # Password-based account
                             fetched = EmailService.fetch_recent_emails(
