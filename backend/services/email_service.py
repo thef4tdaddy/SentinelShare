@@ -60,7 +60,7 @@ class EmailService:
             from backend.services.oauth2_service import OAuth2Service
 
             auth_string = OAuth2Service.generate_xoauth2_string(username, access_token)
-            mail.authenticate("XOAUTH2", lambda x: auth_string)
+            mail.authenticate("XOAUTH2", lambda x: auth_string.encode())  # type: ignore[arg-type]
         elif auth_method == "password":
             # Standard password authentication
             if not password:
@@ -149,16 +149,19 @@ class EmailService:
 
                 if isinstance(accounts, list):
                     for acc in accounts:
-                        if acc.get("email") and acc.get("password"):
+                        email_val = acc.get("email")
+                        pass_val = acc.get("password")
+                        if email_val and pass_val:
                             # Check if already added from DB
+                            email_str = str(email_val).lower() if email_val else ""
                             if not any(
-                                a["email"].lower() == acc.get("email").lower()
+                                str(a.get("email", "")).lower() == email_str  # type: ignore[arg-type]
                                 for a in all_accounts
                             ):
                                 all_accounts.append(
                                     {
-                                        "email": acc.get("email"),
-                                        "password": acc.get("password"),
+                                        "email": email_val,
+                                        "password": pass_val,
                                         "imap_server": acc.get(
                                             "imap_server", "imap.gmail.com"
                                         ),
@@ -177,7 +180,8 @@ class EmailService:
 
         if legacy_user and legacy_pass:
             # Check if already added
-            if not any(a["email"].lower() == legacy_user.lower() for a in all_accounts):
+            legacy_user_lower = str(legacy_user).lower()
+            if not any(str(a.get("email", "")).lower() == legacy_user_lower for a in all_accounts):  # type: ignore[arg-type]
                 all_accounts.append(
                     {
                         "email": legacy_user,
@@ -190,7 +194,8 @@ class EmailService:
         icloud_user = os.environ.get("ICLOUD_EMAIL")
         icloud_pass = os.environ.get("ICLOUD_PASSWORD")
         if icloud_user and icloud_pass:
-            if not any(a["email"].lower() == icloud_user.lower() for a in all_accounts):
+            icloud_user_lower = str(icloud_user).lower()
+            if not any(str(a.get("email", "")).lower() == icloud_user_lower for a in all_accounts):  # type: ignore[arg-type]
                 all_accounts.append(
                     {
                         "email": icloud_user,

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 
 from sqlalchemy import Column, DateTime
@@ -8,6 +9,12 @@ from sqlmodel import Field, SQLModel
 # Helper for aware UTC default
 def utc_now():
     return datetime.now(timezone.utc)
+
+
+class AuthMethod(str, Enum):
+    """Authentication method for email accounts"""
+    PASSWORD = "password"
+    OAUTH2 = "oauth2"
 
 
 class ProcessedEmail(SQLModel, table=True):
@@ -109,7 +116,7 @@ class EmailAccount(SQLModel, table=True):
     encrypted_password: Optional[str] = None  # Encrypted password using Fernet (for password auth)
     
     # OAuth2 fields
-    auth_method: str = Field(default="password")  # "password" or "oauth2"
+    auth_method: str = Field(default="password", sa_column_kwargs={"server_default": "password"})  # Use AuthMethod enum values
     provider: Optional[str] = None  # "google", "microsoft", or "custom"
     encrypted_access_token: Optional[str] = None  # Encrypted OAuth2 access token
     encrypted_refresh_token: Optional[str] = None  # Encrypted OAuth2 refresh token

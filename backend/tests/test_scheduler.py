@@ -258,7 +258,9 @@ def test_multi_account_email_tagging(
         ]
 
         # Mock fetch_recent_emails to return different emails for different accounts
-        def fetch_side_effect(user, pwd, server):
+        def fetch_side_effect(*args, **kwargs):
+            # Handle both positional and keyword arguments
+            user = args[0] if args else kwargs.get('username')
             if user == "acc1@example.com":
                 return emails_acc1.copy()  # Return copy to avoid mutations
             elif user == "acc2@example.com":

@@ -130,7 +130,7 @@ class OAuth2Service:
             "grant_type": "authorization_code",
         }
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(config["token_endpoint"], data=data)
             response.raise_for_status()
             return response.json()

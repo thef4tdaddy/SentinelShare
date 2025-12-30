@@ -1,5 +1,7 @@
+import logging
 import os
 import secrets
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -9,6 +11,7 @@ from starlette.responses import JSONResponse, RedirectResponse
 from backend.database import get_session
 from backend.services.oauth2_service import OAuth2Service
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
@@ -175,15 +178,13 @@ async def oauth2_callback(
         # Redirect to frontend settings page with success message
         frontend_url = os.environ.get("FRONTEND_URL", base_url)
         return RedirectResponse(
-            url=f"{frontend_url}/settings?oauth_success=true&email={user_email}"
+            url=f"{frontend_url}/settings?oauth_success=true&email={quote(user_email)}"
         )
 
     except Exception as e:
-        import logging
-
-        logging.exception("OAuth2 callback error")
+        logger.exception("OAuth2 callback error")
         # Redirect to frontend with error
         frontend_url = os.environ.get("FRONTEND_URL", str(request.base_url).rstrip("/"))
         return RedirectResponse(
-            url=f"{frontend_url}/settings?oauth_error=true&message={str(e)}"
+            url=f"{frontend_url}/settings?oauth_error=true&message={quote(str(e))}"
         )
