@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from backend.models import ProcessedEmail, ProcessingRun
-from backend.routers import history
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import ProcessedEmail, ProcessingRun
+from backend.routers import history
 
 # Test constants
 MOCK_IMAP_CREDENTIALS = {
@@ -340,8 +341,9 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_from_format(self, session: Session, sample_emails):
         """Test that invalid date_from format returns 400 error"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -353,8 +355,9 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_to_format(self, session: Session, sample_emails):
         """Test that invalid date_to format returns 400 error"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -392,8 +395,9 @@ class TestHistoryDateFiltering:
 
     def test_stats_with_invalid_date(self, session: Session, sample_emails):
         """Test that stats endpoint returns 400 for invalid dates"""
-        from backend.routers.history import get_history_stats
         from fastapi import HTTPException
+
+        from backend.routers.history import get_history_stats
 
         with pytest.raises(HTTPException) as exc_info:
             get_history_stats(date_from="bad-date", session=session)
@@ -444,9 +448,7 @@ class TestHistoryAdvancedFiltering:
         """Test that sender filtering is case insensitive"""
         from backend.routers.history import get_email_history
 
-        result = get_email_history(
-            page=1, per_page=50, sender="UBER", session=session
-        )
+        result = get_email_history(page=1, per_page=50, sender="UBER", session=session)
 
         assert len(result["emails"]) == 1
         assert "uber" in result["emails"][0].sender.lower()
@@ -493,9 +495,7 @@ class TestHistoryAdvancedFiltering:
         """Test that amount filtering excludes emails with no amount"""
         from backend.routers.history import get_email_history
 
-        result = get_email_history(
-            page=1, per_page=50, min_amount=0.0, session=session
-        )
+        result = get_email_history(page=1, per_page=50, min_amount=0.0, session=session)
 
         # Should only include emails with amounts (email1 and email3)
         assert len(result["emails"]) == 2
@@ -573,7 +573,9 @@ class TestHistoryAdvancedFiltering:
         session.commit()
 
         # Search for "test%user" should only match the email with literal %
-        result = get_email_history(page=1, per_page=50, sender="test%user", session=session)
+        result = get_email_history(
+            page=1, per_page=50, sender="test%user", session=session
+        )
 
         assert len(result["emails"]) == 1
         assert result["emails"][0].sender == "test%user@example.com"
@@ -606,7 +608,9 @@ class TestHistoryAdvancedFiltering:
         session.commit()
 
         # Search for "test_user" should only match the email with literal _
-        result = get_email_history(page=1, per_page=50, sender="test_user", session=session)
+        result = get_email_history(
+            page=1, per_page=50, sender="test_user", session=session
+        )
 
         assert len(result["emails"]) == 1
         assert result["emails"][0].sender == "test_user@example.com"
@@ -639,15 +643,18 @@ class TestHistoryAdvancedFiltering:
         session.commit()
 
         # Search for "test_%" should only match the email with literal _ and %
-        result = get_email_history(page=1, per_page=50, sender="test_%", session=session)
+        result = get_email_history(
+            page=1, per_page=50, sender="test_%", session=session
+        )
 
         assert len(result["emails"]) == 1
         assert result["emails"][0].sender == "test_%special@example.com"
 
     def test_filter_negative_amount_rejected(self, session: Session, sample_emails):
         """Test that negative amounts are rejected"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(page=1, per_page=50, min_amount=-10.0, session=session)
@@ -657,8 +664,9 @@ class TestHistoryAdvancedFiltering:
 
     def test_filter_invalid_amount_range(self, session: Session, sample_emails):
         """Test that min_amount > max_amount is rejected"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -959,8 +967,9 @@ class TestHistoryReprocess:
 
     def test_reprocess_email_not_found(self, session: Session):
         """Test reprocessing a non-existent email"""
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         with pytest.raises(HTTPException) as exc_info:
             reprocess_email(email_id=99999, session=session)
@@ -983,8 +992,9 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         assert email.id is not None
         with patch(
@@ -1012,8 +1022,9 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         assert email.id is not None
         with patch(
@@ -1069,8 +1080,9 @@ class TestHistoryReprocess:
 
     def test_submit_feedback_email_not_found(self, session: Session):
         """Test submitting feedback for a non-existent email"""
-        from backend.routers.history import submit_feedback
         from fastapi import HTTPException
+
+        from backend.routers.history import submit_feedback
 
         with pytest.raises(HTTPException) as exc_info:
             submit_feedback(email_id=99999, is_receipt=True, session=session)

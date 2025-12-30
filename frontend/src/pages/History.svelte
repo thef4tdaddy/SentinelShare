@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { onMount } from 'svelte';
 	import { formatDate } from '../lib/dateUtils';
 	import {
@@ -55,48 +56,47 @@
 		};
 	}
 
-	let emails: Email[] = [];
-	let runs: Run[] = [];
-	let stats = {
+	let emails = $state<Email[]>([]);
+	let runs = $state<Run[]>([]);
+	let stats = $state({
 		total: 0,
 		forwarded: 0,
 		blocked: 0,
 		errors: 0,
 		total_amount: 0,
-		status_breakdown: {}
-	};
+		status_breakdown: {} as Record<string, number>
+	});
 
-	let pagination = {
+	let pagination = $state({
 		page: 1,
 		per_page: 50,
 		total: 0,
 		total_pages: 0
-	};
+	});
 
-	let filters = {
+	let filters = $state({
 		status: '',
 		date_from: '',
 		date_to: '',
 		sender: '',
 		min_amount: '',
 		max_amount: ''
-	};
+	});
 
-	let loading = true;
-	let activeTab: 'emails' | 'runs' = 'emails';
-	let showModal = false;
-	let selectedEmail: Email | null = null;
-	let isProcessing = false;
-	let isAnalyzing = false;
-	let selectedAnalysis: AnalysisOutcome | null = null;
-	let successMessage = '';
-	let errorMessage = '';
+	let loading = $state(true);
+	let activeTab = $state<'emails' | 'runs'>('emails');
+	let showModal = $state(false);
+	let selectedEmail = $state<Email | null>(null);
+	let isProcessing = $state(false);
+	let isAnalyzing = $state(false);
+	let selectedAnalysis = $state<AnalysisOutcome | null>(null);
+	let successMessage = $state('');
+	let errorMessage = $state('');
 
 	async function loadHistory() {
 		loading = true;
 		try {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity
-			const params = new URLSearchParams({
+			const params = new SvelteURLSearchParams({
 				page: pagination.page.toString(),
 				per_page: pagination.per_page.toString()
 			});
@@ -114,10 +114,17 @@
 				fetchJson('/history/runs')
 			]);
 
-			emails = historyRes.emails;
-			pagination = historyRes.pagination;
-			stats = statsRes;
-			runs = runsRes.runs;
+			emails = historyRes.emails ?? [];
+			pagination = historyRes.pagination ?? { page: 1, per_page: 50, total: 0, total_pages: 0 };
+			stats = statsRes ?? {
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			};
+			runs = runsRes.runs ?? [];
 		} catch (e) {
 			console.error('Failed to load history', e);
 		} finally {
@@ -350,7 +357,7 @@
 
 {#if activeTab === 'emails'}
 	<!-- Filters -->
-	<div class="card mb-6">
+	<div class="card mb-6" role="search" aria-label="Email filters">
 		<div class="flex flex-wrap gap-4 items-end">
 			<div class="flex-1 min-w-[200px]">
 				<label for="status-filter" class="block text-sm font-medium text-text-main mb-2">
@@ -440,9 +447,20 @@
 				/>
 			</div>
 
+			<div class="sr-only" aria-live="polite">
+				{loading ? 'Loading emails...' : `${pagination.total} emails found`}
+			</div>
+
 			<button
 				onclick={() => {
-					filters = { status: '', date_from: '', date_to: '', sender: '', min_amount: '', max_amount: '' };
+					filters = {
+						status: '',
+						date_from: '',
+						date_to: '',
+						sender: '',
+						min_amount: '',
+						max_amount: ''
+					};
 					handleFilterChange();
 				}}
 				class="btn btn-secondary"
@@ -503,7 +521,7 @@
 								</div>
 							</td>
 						</tr>
-					{:else if emails.length === 0}
+					{:else if emails?.length === 0}
 						<tr>
 							<td
 								colspan="6"
@@ -518,7 +536,8 @@
 							</td>
 						</tr>
 					{:else}
-						{#each emails as email (email.id)}
+						{#each emails ?? [] as email (email.id)}
+							{@const StatusIcon = getStatusIcon(email.status)}
 							<tr
 								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
 							>
@@ -531,7 +550,7 @@
 											)} cursor-pointer hover:opacity-80 transition-opacity"
 											title="Click to forward and create rule"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</button>
 									{:else}
@@ -540,7 +559,7 @@
 												email.status
 											)}"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</span>
 									{/if}
@@ -602,7 +621,8 @@
 				<p>No activity found.</p>
 			</div>
 		{:else}
-			{#each emails as email (email.id)}
+			{#each emails ?? [] as email (email.id)}
+				{@const StatusIcon = getStatusIcon(email.status)}
 				<div
 					class="card border-l-4 {email.status === 'forwarded'
 						? 'border-l-emerald-500'
@@ -618,7 +638,7 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
 								{email.status}
 							</button>
 						{:else}
@@ -627,7 +647,7 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
 								{email.status}
 							</div>
 						{/if}
@@ -722,7 +742,7 @@
 					</div>
 				</div>
 			{:else}
-				{#each runs as run (run.run_time)}
+				{#each runs ?? [] as run (run.run_time)}
 					<div
 						class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors"
 					>

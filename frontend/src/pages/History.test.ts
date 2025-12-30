@@ -1049,4 +1049,94 @@ describe('History Component', () => {
 			expect(amounts.length).toBeGreaterThanOrEqual(1);
 		});
 	});
+
+	it('calls API with sender filter when provided', async () => {
+		const mockHistory = {
+			emails: [],
+			pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+		};
+		const mockStats = {
+			total: 0,
+			forwarded: 0,
+			blocked: 0,
+			errors: 0,
+			total_amount: 0,
+			status_breakdown: {}
+		};
+		const mockRuns = { runs: [] };
+
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns);
+
+		render(History);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('Vendor/Sender')).toBeTruthy();
+		});
+
+		vi.clearAllMocks();
+
+		const senderInput = screen.getByLabelText('Vendor/Sender') as HTMLInputElement;
+		senderInput.value = 'Amazon';
+		await fireEvent.input(senderInput);
+		await fireEvent.change(senderInput);
+
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('sender=Amazon'));
+		});
+	});
+
+	it('calls API with amount filters when provided', async () => {
+		const mockHistory = {
+			emails: [],
+			pagination: { page: 1, per_page: 50, total: 0, total_pages: 0 }
+		};
+		const mockStats = {
+			total: 0,
+			forwarded: 0,
+			blocked: 0,
+			errors: 0,
+			total_amount: 0,
+			status_breakdown: {}
+		};
+		const mockRuns = { runs: [] };
+
+		vi.mocked(api.fetchJson)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns)
+			.mockResolvedValueOnce(mockHistory)
+			.mockResolvedValueOnce(mockStats)
+			.mockResolvedValueOnce(mockRuns);
+
+		render(History);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('Min Amount')).toBeTruthy();
+			expect(screen.getByLabelText('Max Amount')).toBeTruthy();
+		});
+
+		vi.clearAllMocks();
+
+		const minInput = screen.getByLabelText('Min Amount') as HTMLInputElement;
+		const maxInput = screen.getByLabelText('Max Amount') as HTMLInputElement;
+
+		minInput.value = '10';
+		await fireEvent.input(minInput);
+		await fireEvent.change(minInput);
+
+		maxInput.value = '100';
+		await fireEvent.input(maxInput);
+		await fireEvent.change(maxInput);
+
+		await waitFor(() => {
+			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('min_amount=10'));
+			expect(api.fetchJson).toHaveBeenCalledWith(expect.stringContaining('max_amount=100'));
+		});
+	});
 });
