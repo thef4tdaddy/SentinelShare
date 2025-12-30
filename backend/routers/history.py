@@ -5,15 +5,16 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, List, Optional
 
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlmodel import Session, and_, func, select
+
 from backend.database import get_session
 from backend.models import ManualRule, ProcessedEmail, ProcessingRun
 from backend.security import decrypt_content
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
-from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
 
@@ -59,9 +60,44 @@ def get_email_history(
     status: Optional[EmailStatus] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    sender: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
     session: Session = Depends(get_session),
 ):
-    """Get paginated email history with optional filtering"""
+    """Get paginated email history with optional filtering.
+
+    Args:
+        page: Page number for pagination (1-based, must be >= 1).
+        per_page: Number of records per page (must be between 1 and 100).
+        status: Optional email status filter (e.g., forwarded, blocked, ignored, error).
+        date_from: Optional start of date range filter (ISO 8601 string).
+        date_to: Optional end of date range filter (ISO 8601 string).
+        sender: Optional filter for sender email address.
+        min_amount: Minimum amount (must be >= 0).
+        max_amount: Maximum amount (must be >= 0).
+        session: Database session dependency.
+
+    Raises:
+        HTTPException: If amounts are negative or min_amount > max_amount.
+    """
+
+    # Validate amount values
+    if min_amount is not None and min_amount < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"min_amount must be non-negative, got {min_amount}",
+        )
+    if max_amount is not None and max_amount < 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"max_amount must be non-negative, got {max_amount}",
+        )
+    if min_amount is not None and max_amount is not None and min_amount > max_amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"min_amount ({min_amount}) cannot be greater than max_amount ({max_amount})",
+        )
 
     # Build query
     query = select(ProcessedEmail)
@@ -76,6 +112,18 @@ def get_email_history(
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
+    if sender and sender.strip():
+        # Case-insensitive partial match for sender; escape SQL wildcard characters
+        sender_escaped = (
+            sender.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        filters.append(
+            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")  # type: ignore[union-attr]
+        )
+    if min_amount is not None:
+        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
+    if max_amount is not None:
+        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
 
     if filters:
         query = query.where(and_(*filters))
@@ -361,14 +409,14 @@ def get_processing_run(run_id: int, session: Session = Depends(get_session)):
 
 def sanitize_csv_field(field: str) -> str:
     """Sanitize field to prevent CSV injection attacks.
-    
+
     Fields starting with =, +, -, @ or tab could be interpreted as formulas.
     Prefix them with a single quote to treat them as text.
     """
     if not field:
         return field
-    
-    dangerous_chars = ('=', '+', '-', '@', '\t', '\r')
+
+    dangerous_chars = ("=", "+", "-", "@", "\t", "\r")
     if field.startswith(dangerous_chars):
         return "'" + field
     return field
@@ -381,26 +429,38 @@ class ExportFormat(str, Enum):
 @router.get("/export")
 def export_history(
     format: ExportFormat = Query(ExportFormat.CSV),
+    status: Optional[EmailStatus] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    sender: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
     session: Session = Depends(get_session),
 ):
-    """Export email history as CSV file with optional date filtering"""
-    
+    """Export email history as CSV file with optional filtering"""
+
     # Build query with filters
     query = select(ProcessedEmail)
-    
+
     filters = []
+    if status:
+        filters.append(ProcessedEmail.status == status.value)
     if date_from and date_from.strip():
         date_from_obj = parse_iso_date(date_from)
         filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
     if date_to and date_to.strip():
         date_to_obj = parse_iso_date(date_to)
         filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
-    
+    if sender and sender.strip():
+        filters.append(ProcessedEmail.sender.ilike(f"%{sender.strip()}%"))  # type: ignore
+    if min_amount is not None:
+        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
+    if max_amount is not None:
+        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
+
     if filters:
         query = query.where(and_(*filters))
-    
+
     # Order by processed_at descending
     query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
 
@@ -410,20 +470,28 @@ def export_history(
         writer = csv.writer(output)
 
         # Write headers
-        writer.writerow(["Date", "Vendor", "Amount", "Currency", "Category", "Link to Receipt"])
+        writer.writerow(
+            ["Date", "Vendor", "Amount", "Currency", "Category", "Link to Receipt"]
+        )
         yield output.getvalue()
         output.seek(0)
         output.truncate(0)
 
         # Stream data rows directly from the query
         for email in session.exec(query):
-            date_str = email.received_at.strftime("%Y-%m-%d %H:%M:%S") if email.received_at else ""
+            date_str = (
+                email.received_at.strftime("%Y-%m-%d %H:%M:%S")
+                if email.received_at
+                else ""
+            )
             vendor = sanitize_csv_field(email.sender or "")
             amount = f"{email.amount:.2f}" if email.amount is not None else ""
             currency = "USD"  # Default currency
             category = sanitize_csv_field(email.category or "")
             # Link to receipt - using email_id as reference
-            link = sanitize_csv_field(f"Email ID: {email.email_id}" if email.email_id else "")
+            link = sanitize_csv_field(
+                f"Email ID: {email.email_id}" if email.email_id else ""
+            )
 
             writer.writerow([date_str, vendor, amount, currency, category, link])
             yield output.getvalue()
@@ -438,7 +506,5 @@ def export_history(
     return StreamingResponse(
         csv_generator(),
         media_type="text/csv",
-        headers={
-            "Content-Disposition": f'attachment; filename="{filename}"'
-        }
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

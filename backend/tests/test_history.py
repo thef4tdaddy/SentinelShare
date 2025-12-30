@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
-from backend.models import ProcessedEmail, ProcessingRun
-from backend.routers import history
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
+
+from backend.models import ProcessedEmail, ProcessingRun
+from backend.routers import history
 
 # Test constants
 MOCK_IMAP_CREDENTIALS = {
@@ -340,8 +341,9 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_from_format(self, session: Session, sample_emails):
         """Test that invalid date_from format returns 400 error"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -353,8 +355,9 @@ class TestHistoryDateFiltering:
 
     def test_invalid_date_to_format(self, session: Session, sample_emails):
         """Test that invalid date_to format returns 400 error"""
-        from backend.routers.history import get_email_history
         from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
 
         with pytest.raises(HTTPException) as exc_info:
             get_email_history(
@@ -392,8 +395,9 @@ class TestHistoryDateFiltering:
 
     def test_stats_with_invalid_date(self, session: Session, sample_emails):
         """Test that stats endpoint returns 400 for invalid dates"""
-        from backend.routers.history import get_history_stats
         from fastapi import HTTPException
+
+        from backend.routers.history import get_history_stats
 
         with pytest.raises(HTTPException) as exc_info:
             get_history_stats(date_from="bad-date", session=session)
@@ -411,6 +415,267 @@ class TestHistoryDateFiltering:
 
         # Should return all emails when dates are empty
         assert len(result["emails"]) == 5
+
+
+class TestHistoryAdvancedFiltering:
+    """Test advanced filtering functionality (sender and amount)"""
+
+    def test_filter_by_sender_exact_match(self, session: Session, sample_emails):
+        """Test filtering emails by sender - case insensitive partial match"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="amazon.com", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert "amazon.com" in result["emails"][0].sender.lower()
+
+    def test_filter_by_sender_partial_match(self, session: Session, sample_emails):
+        """Test filtering emails by sender partial match"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="example", session=session
+        )
+
+        # Should match spam@example.com, news@example.com, test@example.com
+        assert len(result["emails"]) >= 3
+        for email in result["emails"]:
+            assert "example" in email.sender.lower()
+
+    def test_filter_by_sender_case_insensitive(self, session: Session, sample_emails):
+        """Test that sender filtering is case insensitive"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(page=1, per_page=50, sender="UBER", session=session)
+
+        assert len(result["emails"]) == 1
+        assert "uber" in result["emails"][0].sender.lower()
+
+    def test_filter_by_min_amount(self, session: Session, sample_emails):
+        """Test filtering emails by minimum amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, min_amount=30.0, session=session
+        )
+
+        # Should only include email1 (49.99), email3 (25.50) is below 30
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].amount >= 30.0
+
+    def test_filter_by_max_amount(self, session: Session, sample_emails):
+        """Test filtering emails by maximum amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, max_amount=30.0, session=session
+        )
+
+        # Should only include email3 (25.50)
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].amount <= 30.0
+
+    def test_filter_by_amount_range(self, session: Session, sample_emails):
+        """Test filtering emails by amount range (min and max)"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, min_amount=20.0, max_amount=50.0, session=session
+        )
+
+        # Should include both email1 (49.99) and email3 (25.50)
+        assert len(result["emails"]) == 2
+        for email in result["emails"]:
+            assert email.amount is not None
+            assert 20.0 <= email.amount <= 50.0
+
+    def test_filter_amount_excludes_none(self, session: Session, sample_emails):
+        """Test that amount filtering excludes emails with no amount"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(page=1, per_page=50, min_amount=0.0, session=session)
+
+        # Should only include emails with amounts (email1 and email3)
+        assert len(result["emails"]) == 2
+        for email in result["emails"]:
+            assert email.amount is not None
+
+    def test_combined_filters_sender_and_amount(self, session: Session, sample_emails):
+        """Test combining sender and amount filters"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(
+            page=1, per_page=50, sender="amazon", min_amount=40.0, session=session
+        )
+
+        # Should only include email1 (Amazon, 49.99)
+        assert len(result["emails"]) == 1
+        assert "amazon" in result["emails"][0].sender.lower()
+        assert result["emails"][0].amount >= 40.0
+
+    def test_combined_filters_all_filters(self, session: Session, sample_emails):
+        """Test combining all available filters"""
+        from backend.routers.history import EmailStatus, get_email_history
+
+        now = datetime.now(timezone.utc)
+        date_from = (now - timedelta(minutes=60)).isoformat()
+
+        result = get_email_history(
+            page=1,
+            per_page=50,
+            status=EmailStatus.FORWARDED,
+            date_from=date_from,
+            sender="uber",
+            min_amount=20.0,
+            session=session,
+        )
+
+        # Should only include email3 (Uber Receipt, forwarded, 25.50, within time)
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].email_id == "email3@test.com"
+
+    def test_filter_by_empty_sender(self, session: Session, sample_emails):
+        """Test that empty sender string is ignored"""
+        from backend.routers.history import get_email_history
+
+        result = get_email_history(page=1, per_page=50, sender="", session=session)
+
+        # Should return all emails when sender is empty
+        assert len(result["emails"]) == 5
+
+    def test_filter_sender_with_percent_wildcard(self, session: Session):
+        """Test that % character in sender is treated as literal, not SQL wildcard"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test emails with specific sender patterns
+        email_with_percent = ProcessedEmail(
+            email_id="wildcard1@test.com",
+            subject="Test Email",
+            sender="test%user@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_without_percent = ProcessedEmail(
+            email_id="wildcard2@test.com",
+            subject="Test Email",
+            sender="testAuser@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_with_percent)
+        session.add(email_without_percent)
+        session.commit()
+
+        # Search for "test%user" should only match the email with literal %
+        result = get_email_history(
+            page=1, per_page=50, sender="test%user", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test%user@example.com"
+
+    def test_filter_sender_with_underscore_wildcard(self, session: Session):
+        """Test that _ character in sender is treated as literal, not SQL wildcard"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test emails with specific sender patterns
+        email_with_underscore = ProcessedEmail(
+            email_id="wildcard3@test.com",
+            subject="Test Email",
+            sender="test_user@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_without_underscore = ProcessedEmail(
+            email_id="wildcard4@test.com",
+            subject="Test Email",
+            sender="testXuser@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_with_underscore)
+        session.add(email_without_underscore)
+        session.commit()
+
+        # Search for "test_user" should only match the email with literal _
+        result = get_email_history(
+            page=1, per_page=50, sender="test_user", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test_user@example.com"
+
+    def test_filter_sender_with_multiple_wildcards(self, session: Session):
+        """Test sender filtering with both % and _ characters"""
+        from backend.routers.history import get_email_history
+
+        now = datetime.now(timezone.utc)
+
+        # Create test email with both wildcard characters
+        email_wildcards = ProcessedEmail(
+            email_id="wildcard5@test.com",
+            subject="Test Email",
+            sender="test_%special@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        email_normal = ProcessedEmail(
+            email_id="wildcard6@test.com",
+            subject="Test Email",
+            sender="testABspecial@example.com",
+            received_at=now,
+            processed_at=now,
+            status="forwarded",
+        )
+        session.add(email_wildcards)
+        session.add(email_normal)
+        session.commit()
+
+        # Search for "test_%" should only match the email with literal _ and %
+        result = get_email_history(
+            page=1, per_page=50, sender="test_%", session=session
+        )
+
+        assert len(result["emails"]) == 1
+        assert result["emails"][0].sender == "test_%special@example.com"
+
+    def test_filter_negative_amount_rejected(self, session: Session, sample_emails):
+        """Test that negative amounts are rejected"""
+        from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(page=1, per_page=50, min_amount=-10.0, session=session)
+
+        assert exc_info.value.status_code == 400
+        assert "non-negative" in exc_info.value.detail.lower()
+
+    def test_filter_invalid_amount_range(self, session: Session, sample_emails):
+        """Test that min_amount > max_amount is rejected"""
+        from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(
+                page=1, per_page=50, min_amount=100.0, max_amount=50.0, session=session
+            )
+
+        assert exc_info.value.status_code == 400
+        assert "min_amount" in exc_info.value.detail.lower()
+        assert "max_amount" in exc_info.value.detail.lower()
 
 
 class TestHistoryStatusValidation:
@@ -702,8 +967,9 @@ class TestHistoryReprocess:
 
     def test_reprocess_email_not_found(self, session: Session):
         """Test reprocessing a non-existent email"""
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         with pytest.raises(HTTPException) as exc_info:
             reprocess_email(email_id=99999, session=session)
@@ -726,8 +992,9 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         assert email.id is not None
         with patch(
@@ -755,8 +1022,9 @@ class TestHistoryReprocess:
         session.add(email)
         session.commit()
 
-        from backend.routers.history import reprocess_email
         from fastapi import HTTPException
+
+        from backend.routers.history import reprocess_email
 
         assert email.id is not None
         with patch(
@@ -812,8 +1080,9 @@ class TestHistoryReprocess:
 
     def test_submit_feedback_email_not_found(self, session: Session):
         """Test submitting feedback for a non-existent email"""
-        from backend.routers.history import submit_feedback
         from fastapi import HTTPException
+
+        from backend.routers.history import submit_feedback
 
         with pytest.raises(HTTPException) as exc_info:
             submit_feedback(email_id=99999, is_receipt=True, session=session)
@@ -828,14 +1097,15 @@ class TestHistoryExport:
     def test_export_csv_all_emails(self, session: Session, sample_emails, monkeypatch):
         """Test exporting all emails to CSV via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
-        
+
         # Make the GET request
         response = client.get("/api/history/export?format=csv")
 
@@ -861,16 +1131,19 @@ class TestHistoryExport:
 
         # Check we have data rows (5 emails + 1 header)
         assert len(lines) == 6
-        
+
         app.dependency_overrides.clear()
 
-    def test_export_csv_with_date_filter(self, session: Session, sample_emails, monkeypatch):
+    def test_export_csv_with_date_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
         """Test exporting emails with date filter via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
@@ -885,16 +1158,17 @@ class TestHistoryExport:
 
         # Should have 2 emails + header
         assert len(lines) == 3
-        
+
         app.dependency_overrides.clear()
 
     def test_export_csv_empty_results(self, session: Session, monkeypatch):
         """Test exporting when no emails match criteria via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
@@ -910,23 +1184,26 @@ class TestHistoryExport:
 
         # Should only have headers
         assert len(lines) == 1
-        
+
         app.dependency_overrides.clear()
 
-    def test_export_csv_format_validation(self, session: Session, sample_emails, monkeypatch):
+    def test_export_csv_format_validation(
+        self, session: Session, sample_emails, monkeypatch
+    ):
         """Test CSV format and data accuracy via HTTP"""
         import csv as csv_module
         from io import StringIO
 
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
-        
+
         response = client.get("/api/history/export?format=csv")
         content = response.text
 
@@ -951,16 +1228,17 @@ class TestHistoryExport:
         assert first_row[3] == "USD"  # Currency
         assert first_row[4] == "shopping"  # Category
         assert "email1@test.com" in first_row[5]  # Link
-        
+
         app.dependency_overrides.clear()
 
     def test_export_csv_handles_missing_data(self, session: Session, monkeypatch):
         """Test export handles emails with missing fields via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         now = datetime.now(timezone.utc)
         email = ProcessedEmail(
@@ -977,43 +1255,45 @@ class TestHistoryExport:
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
-        
+
         response = client.get("/api/history/export?format=csv")
         content = response.text
 
         # Should not error and should handle empty fields
         assert response.status_code == 200
         assert "test@example.com" in content
-        
+
         app.dependency_overrides.clear()
 
     def test_export_filename_includes_date(self, session: Session, monkeypatch):
         """Test that filename includes current date via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
-        
+
         response = client.get("/api/history/export?format=csv")
 
         filename = response.headers["content-disposition"]
         current_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         assert f"expenses_{current_date}.csv" in filename
-        
+
         app.dependency_overrides.clear()
 
     def test_export_csv_injection_protection(self, session: Session, monkeypatch):
         """Test that CSV export protects against formula injection"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-        
+
+        from fastapi.testclient import TestClient
+
         from backend.database import get_session
         from backend.main import app
-        from fastapi.testclient import TestClient
 
         # Create email with potentially dangerous CSV content
         now = datetime.now(timezone.utc)
@@ -1032,7 +1312,7 @@ class TestHistoryExport:
 
         app.dependency_overrides[get_session] = lambda: session
         client = TestClient(app)
-        
+
         response = client.get("/api/history/export?format=csv")
         content = response.text
 
@@ -1040,13 +1320,13 @@ class TestHistoryExport:
         # The sanitized version should be present
         assert "'=cmd|'/c calc'!A1" in content
         # The unsanitized version should NOT be present at start of field
-        lines = content.split('\n')
+        lines = content.split("\n")
         for line in lines:
-            if 'cmd' in line:
+            if "cmd" in line:
                 # Ensure it doesn't start with = without quote
-                assert not line.startswith('Date,Vendor') and ',"=cmd' not in line
-        
+                assert not line.startswith("Date,Vendor") and ',"=cmd' not in line
+
         # Check category is also sanitized
         assert "'@dangerous" in content
-        
+
         app.dependency_overrides.clear()
