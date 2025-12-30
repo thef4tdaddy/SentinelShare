@@ -359,9 +359,13 @@ def get_processing_run(run_id: int, session: Session = Depends(get_session)):
     return run
 
 
+class ExportFormat(str, Enum):
+    CSV = "csv"
+
+
 @router.get("/export")
 def export_history(
-    format: str = Query("csv", pattern="^csv$"),
+    format: ExportFormat = Query(ExportFormat.CSV),
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     session: Session = Depends(get_session),
