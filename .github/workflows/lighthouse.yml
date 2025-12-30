@@ -119,28 +119,30 @@ jobs:
                     }
                 }
               
-              // Critical Audits - only if they are not in the 'PWA' or 'Best Practices' categories that we are relaxing
-              // and only if they are actually scored as 0. 
-              const ignoredAudits = ['service-worker', 'installable-manifest', 'splash-screen', 'themed-omnibox', 'maskable-icon', 'is-on-https', 'color-contrast', 'errors-in-console'];
-              
-              for (const audit of Object.values(report.audits)) {
-                  if (audit.score === 0 && !ignoredAudits.includes(audit.id)) {
-                      failures.push(`- ❌ **${audit.title}**: ${audit.displayValue || 'Failed Audit'} _(${audit.id})_`);
-                  }
-              }
-              
-              if (!context.issue || !context.issue.number) {
-                 console.log('No issue number found, skipping comment.');
-                 return;
-              }
+                // Critical Audits - only if they are not in the 'PWA' or 'Best Practices' categories that we are relaxing
+                const ignoredAudits = ['service-worker', 'installable-manifest', 'splash-screen', 'themed-omnibox', 'maskable-icon', 'is-on-https', 'color-contrast', 'errors-in-console'];
+                
+                for (const audit of Object.values(report.audits)) {
+                    if (audit.score === 0 && !ignoredAudits.includes(audit.id)) {
+                        failures.push(`- ❌ **${audit.title}**: ${audit.displayValue || 'Failed Audit'} _(${audit.id})_`);
+                    }
+                }
+                
+                if (!context.issue || !context.issue.number) {
+                   console.log('No issue number found, skipping comment.');
+                   return;
+                }
 
-              let body = `### 📊 Lighthouse Report Summary\n\n${scores.join(' | ')}\n\n`;
-              
-              if (failures.length > 0) {
-                 body += `#### ⚠️ Issues Found\n${failures.join('\n')}\n\n`;
-              } else {
-                 body += `✅ **All critical performance baselines met!**\n\n`;
-              }
+                let body = `### 📊 Lighthouse Report Summary\n\n` +
+                  `| Performance | Accessibility | Best Practices | SEO | PWA |\n` +
+                  `| :-: | :-: | :-: | :-: | :-: |\n` +
+                  scoreRow + `\n${warningMessage}\n\n`;
+                
+                if (failures.length > 0) {
+                   body += `#### ⚠️ Issues Found\n${failures.join('\n')}\n\n`;
+                } else {
+                   body += `✅ **All critical performance baselines met!**\n\n`;
+                }
               
               body += `[View Full Report](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
               
