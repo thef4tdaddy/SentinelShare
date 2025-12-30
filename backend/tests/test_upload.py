@@ -147,7 +147,7 @@ def test_upload_receipt_file_write_error(client, session):
 
 
 @patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
-def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
+def test_upload_receipt_database_error_with_cleanup(client, session):
     """Test handling of database errors with file cleanup during upload"""
     pdf_content = b"%PDF-1.4\n%test content"
     files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
