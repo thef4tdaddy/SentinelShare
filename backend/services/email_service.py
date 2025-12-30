@@ -61,9 +61,13 @@ class EmailService:
 
             auth_string = OAuth2Service.generate_xoauth2_string(username, access_token)
             mail.authenticate("XOAUTH2", lambda x: auth_string)
-        else:
+        elif auth_method == "password":
             # Standard password authentication
+            if not password:
+                raise ValueError("Password is required for password auth_method")
             mail.login(username, password)
+        else:
+            raise ValueError(f"Unsupported auth_method: {auth_method}")
 
     @staticmethod
     def get_all_accounts() -> list:
