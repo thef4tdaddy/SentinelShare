@@ -299,7 +299,12 @@ class OAuth2Service:
         now = datetime.now(timezone.utc)
         buffer = timedelta(minutes=5)
 
-        if account.token_expires_at and account.token_expires_at > (now + buffer):
+        # Make token_expires_at timezone-aware if it isn't
+        token_expiry = account.token_expires_at
+        if token_expiry and token_expiry.tzinfo is None:
+            token_expiry = token_expiry.replace(tzinfo=timezone.utc)
+
+        if token_expiry and token_expiry > (now + buffer):
             # Token is still valid
             if account.encrypted_access_token:
                 return EncryptionService.decrypt(account.encrypted_access_token)
