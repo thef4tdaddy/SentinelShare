@@ -1037,7 +1037,16 @@ class TestHistoryExport:
         content = response.text
 
         # Check that dangerous characters are sanitized with leading quote
-        assert "'=cmd|'/c calc'!A1" in content or "=cmd|'/c calc'!A1" not in content
-        assert "'@dangerous" in content or "@dangerous" in content
+        # The sanitized version should be present
+        assert "'=cmd|'/c calc'!A1" in content
+        # The unsanitized version should NOT be present at start of field
+        lines = content.split('\n')
+        for line in lines:
+            if 'cmd' in line:
+                # Ensure it doesn't start with = without quote
+                assert not line.startswith('Date,Vendor') and ',"=cmd' not in line
+        
+        # Check category is also sanitized
+        assert "'@dangerous" in content
         
         app.dependency_overrides.clear()
