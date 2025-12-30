@@ -1106,6 +1106,19 @@ class TestHistoryReprocess:
 class TestHistoryExport:
     """Test export functionality using TestClient for proper HTTP testing"""
 
+    def _setup_export_client(self, session: Session, monkeypatch):
+        """Helper method to setup TestClient for export endpoint tests"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+        return client, app
+
     def test_export_csv_all_emails(self, session: Session, sample_emails, monkeypatch):
         """Test exporting all emails to CSV via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
@@ -1347,15 +1360,7 @@ class TestHistoryExport:
         self, session: Session, sample_emails, monkeypatch
     ):
         """Test exporting emails with status filter via HTTP"""
-        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-
-        from fastapi.testclient import TestClient
-
-        from backend.database import get_session
-        from backend.main import app
-
-        app.dependency_overrides[get_session] = lambda: session
-        client = TestClient(app)
+        client, app = self._setup_export_client(session, monkeypatch)
 
         response = client.get("/api/history/export?format=csv&status=forwarded")
 
@@ -1371,15 +1376,7 @@ class TestHistoryExport:
         self, session: Session, sample_emails, monkeypatch
     ):
         """Test exporting emails with date_to filter via HTTP"""
-        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-
-        from fastapi.testclient import TestClient
-
-        from backend.database import get_session
-        from backend.main import app
-
-        app.dependency_overrides[get_session] = lambda: session
-        client = TestClient(app)
+        client, app = self._setup_export_client(session, monkeypatch)
 
         now = datetime.now(timezone.utc)
         date_to = (now - timedelta(minutes=35)).isoformat().replace("+00:00", "Z")
@@ -1398,15 +1395,7 @@ class TestHistoryExport:
         self, session: Session, sample_emails, monkeypatch
     ):
         """Test exporting emails with sender filter via HTTP"""
-        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-
-        from fastapi.testclient import TestClient
-
-        from backend.database import get_session
-        from backend.main import app
-
-        app.dependency_overrides[get_session] = lambda: session
-        client = TestClient(app)
+        client, app = self._setup_export_client(session, monkeypatch)
 
         response = client.get("/api/history/export?format=csv&sender=amazon")
 
@@ -1423,15 +1412,7 @@ class TestHistoryExport:
         self, session: Session, sample_emails, monkeypatch
     ):
         """Test exporting emails with min_amount filter via HTTP"""
-        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-
-        from fastapi.testclient import TestClient
-
-        from backend.database import get_session
-        from backend.main import app
-
-        app.dependency_overrides[get_session] = lambda: session
-        client = TestClient(app)
+        client, app = self._setup_export_client(session, monkeypatch)
 
         response = client.get("/api/history/export?format=csv&min_amount=30")
 
@@ -1448,15 +1429,7 @@ class TestHistoryExport:
         self, session: Session, sample_emails, monkeypatch
     ):
         """Test exporting emails with max_amount filter via HTTP"""
-        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
-
-        from fastapi.testclient import TestClient
-
-        from backend.database import get_session
-        from backend.main import app
-
-        app.dependency_overrides[get_session] = lambda: session
-        client = TestClient(app)
+        client, app = self._setup_export_client(session, monkeypatch)
 
         response = client.get("/api/history/export?format=csv&max_amount=30")
 
