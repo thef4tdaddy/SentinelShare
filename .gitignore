@@ -8,6 +8,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 *.log
+*_log.txt
 .lighthouseci/
 
 # Testing

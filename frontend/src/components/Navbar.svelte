@@ -35,6 +35,7 @@
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('dashboard')}
+				aria-current={currentView === 'dashboard' ? 'page' : undefined}
 			>
 				<LayoutDashboard size={18} />
 				Dashboard
@@ -46,6 +47,7 @@
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('history')}
+				aria-current={currentView === 'history' ? 'page' : undefined}
 			>
 				<History size={18} />
 				History
@@ -57,6 +59,7 @@
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('rules')}
+				aria-current={currentView === 'rules' ? 'page' : undefined}
 			>
 				<ShieldCheck size={18} />
 				Rules
@@ -68,6 +71,7 @@
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('preferences')}
+				aria-current={currentView === 'preferences' ? 'page' : undefined}
 			>
 				<Sliders size={18} />
 				Preferences
@@ -79,6 +83,7 @@
 					? 'bg-white text-primary shadow-sm ring-1 ring-black/5 dark:bg-gray-700 dark:text-primary-dark dark:ring-white/5'
 					: 'text-text-secondary hover:text-primary hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:text-primary-dark dark:hover:bg-gray-700'}"
 				onclick={() => onViewChange('settings')}
+				aria-current={currentView === 'settings' ? 'page' : undefined}
 			>
 				<Settings size={18} />
 				Settings
@@ -98,6 +103,7 @@
 				? 'text-primary dark:text-primary-dark'
 				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('dashboard')}
+			aria-current={currentView === 'dashboard' ? 'page' : undefined}
 		>
 			<LayoutDashboard size={20} class={currentView === 'dashboard' ? 'scale-110' : ''} />
 			<span class="text-[10px] font-medium">Home</span>
@@ -108,6 +114,7 @@
 				? 'text-primary dark:text-primary-dark'
 				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('history')}
+			aria-current={currentView === 'history' ? 'page' : undefined}
 		>
 			<History size={20} class={currentView === 'history' ? 'scale-110' : ''} />
 			<span class="text-[10px] font-medium">History</span>
@@ -118,6 +125,7 @@
 				? 'text-primary dark:text-primary-dark'
 				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('rules')}
+			aria-current={currentView === 'rules' ? 'page' : undefined}
 		>
 			<ShieldCheck size={20} class={currentView === 'rules' ? 'scale-110' : ''} />
 			<span class="text-[10px] font-medium">Rules</span>
@@ -129,6 +137,7 @@
 				? 'text-primary dark:text-primary-dark'
 				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('preferences')}
+			aria-current={currentView === 'preferences' ? 'page' : undefined}
 		>
 			<Sliders size={20} class={currentView === 'preferences' ? 'scale-110' : ''} />
 			<span class="text-[10px] font-medium">Prefs</span>
@@ -139,6 +148,7 @@
 				? 'text-primary dark:text-primary-dark'
 				: 'text-gray-400 dark:text-gray-500'}"
 			onclick={() => onViewChange('settings')}
+			aria-current={currentView === 'settings' ? 'page' : undefined}
 		>
 			<Settings size={20} class={currentView === 'settings' ? 'scale-110' : ''} />
 			<span class="text-[10px] font-medium">Settings</span>
