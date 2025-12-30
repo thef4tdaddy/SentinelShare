@@ -2,7 +2,7 @@ from typing import List
 
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import get_session
-from backend.models import GlobalSettings, ManualRule, Preference
+from backend.models import CategoryRule, GlobalSettings, ManualRule, Preference
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -53,6 +53,57 @@ def delete_rule(rule_id: int, session: Session = Depends(get_session)):
     rule = session.get(ManualRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
+    session.delete(rule)
+    session.commit()
+    return {"ok": True}
+
+
+# Category Rules endpoints
+
+
+@router.get("/category-rules", response_model=List[CategoryRule])
+def get_category_rules(session: Session = Depends(get_session)):
+    """Get all category rules ordered by priority"""
+    return session.exec(
+        select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
+    ).all()
+
+
+@router.post("/category-rules", response_model=CategoryRule)
+def create_category_rule(rule: CategoryRule, session: Session = Depends(get_session)):
+    """Create a new category rule"""
+    session.add(rule)
+    session.commit()
+    session.refresh(rule)
+    return rule
+
+
+@router.put("/category-rules/{rule_id}", response_model=CategoryRule)
+def update_category_rule(
+    rule_id: int, updated_rule: CategoryRule, session: Session = Depends(get_session)
+):
+    """Update an existing category rule"""
+    rule = session.get(CategoryRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Category rule not found")
+    
+    rule.match_type = updated_rule.match_type
+    rule.pattern = updated_rule.pattern
+    rule.assigned_category = updated_rule.assigned_category
+    rule.priority = updated_rule.priority
+    
+    session.add(rule)
+    session.commit()
+    session.refresh(rule)
+    return rule
+
+
+@router.delete("/category-rules/{rule_id}")
+def delete_category_rule(rule_id: int, session: Session = Depends(get_session)):
+    """Delete a category rule"""
+    rule = session.get(CategoryRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Category rule not found")
     session.delete(rule)
     session.commit()
     return {"ok": True}
