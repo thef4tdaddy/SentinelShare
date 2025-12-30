@@ -20,7 +20,7 @@
 	let error = $state<string | null>(null);
 	let fileInputElement: HTMLInputElement;
 
-	const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+	const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg'];
 
 	function handleDragOver(e: DragEvent) {
 		if (disabled) return;

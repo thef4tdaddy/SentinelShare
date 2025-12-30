@@ -8,8 +8,14 @@ from email.utils import parseaddr
 from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
 from backend.models import ManualRule, Preference, ProcessedEmail
-from backend.security import generate_hmac_signature, verify_dashboard_token
+from backend.security import (
+    encrypt_content,
+    generate_hmac_signature,
+    get_email_content_hash,
+    verify_dashboard_token,
+)
 from backend.services.command_service import CommandService
+from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
@@ -497,7 +503,7 @@ async def upload_receipt(
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     # Validate file type
-    allowed_types = ["application/pdf", "image/png", "image/jpeg", "image/jpg"]
+    allowed_types = ["application/pdf", "image/png", "image/jpeg"]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=400,
@@ -514,9 +520,17 @@ async def upload_receipt(
     receipts_dir = os.path.join("data", "receipts")
     os.makedirs(receipts_dir, exist_ok=True)
 
-    # Generate unique filename with timestamp
+    # Generate unique filename with timestamp and validated extension
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    file_extension = os.path.splitext(file.filename or "receipt")[1] or ".pdf"
+    
+    # Map content type to safe file extension
+    extension_map = {
+        "application/pdf": ".pdf",
+        "image/png": ".png",
+        "image/jpeg": ".jpg",
+    }
+    file_extension = extension_map.get(file.content_type, ".pdf")
+    
     safe_filename = f"manual_{timestamp}{file_extension}"
     file_path = os.path.join(receipts_dir, safe_filename)
 
@@ -530,9 +544,6 @@ async def upload_receipt(
         )
 
     # Create a ProcessedEmail record for the manual upload
-    from backend.security import encrypt_content, get_email_content_hash
-    from backend.services.detector import ReceiptDetector
-
     # Create a mock email dict for detector
     file_content_hash = get_email_content_hash(
         {"body": safe_filename, "subject": file.filename or "Manual Upload"}
