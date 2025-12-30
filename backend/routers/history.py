@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from backend.database import get_session
 from backend.models import CategoryRule, ManualRule, ProcessedEmail, ProcessingRun
@@ -10,7 +10,7 @@ from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, and_, func, select
 
 router = APIRouter(prefix="/api/history", tags=["history"])
@@ -191,9 +191,9 @@ def submit_feedback(
 
 
 class UpdateCategoryRequest(BaseModel):
-    category: str
+    category: str = Field(..., min_length=1)
     create_rule: Optional[bool] = False
-    match_type: Optional[str] = "sender"  # "sender" or "subject"
+    match_type: Optional[str] = Field(default="sender", pattern="^(sender|subject)$")
 
 
 @router.patch("/emails/{email_id}/category")
@@ -209,15 +209,27 @@ def update_email_category(
     if not email:
         raise HTTPException(status_code=404, detail="Email not found")
 
+    # Validate and trim category
+    category = request.category.strip()
+    if not category:
+        raise HTTPException(status_code=400, detail="category cannot be empty or whitespace")
+    
+    # Validate match_type
+    if request.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400,
+            detail="match_type must be either 'sender' or 'subject'"
+        )
+
     # Update the category
     old_category = email.category
-    email.category = request.category
+    email.category = category
     session.add(email)
     session.commit()
 
-    response = {
+    response: Dict[str, Any] = {
         "status": "success",
-        "message": f"Category updated from '{old_category}' to '{request.category}'",
+        "message": f"Category updated from '{old_category}' to '{category}'",
         "rule_created": False,
     }
 
@@ -260,7 +272,7 @@ def update_email_category(
             new_rule = CategoryRule(
                 match_type=request.match_type,
                 pattern=pattern,
-                assigned_category=request.category,
+                assigned_category=category,
                 priority=10,
             )
             session.add(new_rule)
@@ -268,7 +280,7 @@ def update_email_category(
             response["rule_created"] = True
             response[
                 "message"
-            ] += f" and rule created: {request.match_type}='{pattern}' → '{request.category}'"
+            ] += f" and rule created: {request.match_type}='{pattern}' → '{category}'"
         else:
             response["message"] += " (rule already exists)"
 

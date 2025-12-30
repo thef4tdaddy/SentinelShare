@@ -39,7 +39,9 @@
 	});
 
 	async function handleSave() {
-		if (!emailId || !newCategory) {
+		const trimmedCategory = newCategory.trim();
+		
+		if (!emailId || !trimmedCategory) {
 			toasts.trigger('Please enter a category', 'error');
 			return;
 		}
@@ -50,7 +52,7 @@
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					category: newCategory,
+					category: trimmedCategory,
 					create_rule: createRule,
 					match_type: matchType
 				})
@@ -59,7 +61,7 @@
 			toasts.trigger(res.message || 'Category updated successfully', 'success');
 			onSuccess();
 			onClose();
-		} catch (error) {
+		} catch {
 			toasts.trigger('Failed to update category', 'error');
 		} finally {
 			loading = false;

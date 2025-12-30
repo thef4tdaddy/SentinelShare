@@ -42,7 +42,9 @@
 
 		if (
 			!newRule.pattern ||
+			!newRule.pattern.trim() ||
 			!newRule.assigned_category ||
+			!newRule.assigned_category.trim() ||
 			!validMatchTypes.includes(newRule.match_type) ||
 			!Number.isFinite(priorityValue) ||
 			priorityValue < 1 ||
@@ -71,6 +73,23 @@
 
 	async function updateRule(rule: CategoryRule) {
 		if (!rule.id) return;
+
+		const validMatchTypes = ['sender', 'subject'];
+		const priorityValue = Number(rule.priority);
+
+		if (
+			!rule.pattern ||
+			!rule.pattern.trim() ||
+			!rule.assigned_category ||
+			!rule.assigned_category.trim() ||
+			!validMatchTypes.includes(rule.match_type) ||
+			!Number.isFinite(priorityValue) ||
+			priorityValue < 1 ||
+			priorityValue > 100
+		) {
+			toasts.trigger('Please fill in all required fields with valid values', 'error');
+			return;
+		}
 
 		try {
 			loading = true;

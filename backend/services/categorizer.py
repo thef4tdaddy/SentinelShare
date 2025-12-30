@@ -85,16 +85,21 @@ class Categorizer:
         Returns:
             Category string based on hardcoded patterns
         """
-        sender = (
-            getattr(email, "sender", None)
-            or getattr(email, "from", None)
-            or email.get("sender", "")
-            or email.get("from", "")
-            or ""
-        ).lower()
-        subject = (
-            getattr(email, "subject", None) or email.get("subject", "") or ""
-        ).lower()
+        # Safely handle both dict-like objects (with .get) and plain objects (with attributes).
+        if hasattr(email, "get"):
+            # Dict-like: prefer keys; fall back to empty string.
+            raw_sender = (
+                email.get("sender", "")  # type: ignore[assignment]
+                or email.get("from", "")  # type: ignore[assignment]
+            )
+            raw_subject = email.get("subject", "")  # type: ignore[assignment]
+        else:
+            # Object-like: use attributes; fall back to empty string.
+            raw_sender = getattr(email, "sender", "") or getattr(email, "from", "")
+            raw_subject = getattr(email, "subject", "")
+
+        sender = (raw_sender or "").lower()
+        subject = (raw_subject or "").lower()
 
         # Transportation
         if "amazon" in sender or "aws" in sender:

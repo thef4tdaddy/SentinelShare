@@ -72,6 +72,27 @@ def get_category_rules(session: Session = Depends(get_session)):
 @router.post("/category-rules", response_model=CategoryRule)
 def create_category_rule(rule: CategoryRule, session: Session = Depends(get_session)):
     """Create a new category rule"""
+    # Validate match_type
+    if rule.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400,
+            detail="match_type must be either 'sender' or 'subject'"
+        )
+    
+    # Validate pattern and category are not empty
+    if not rule.pattern or not rule.pattern.strip():
+        raise HTTPException(status_code=400, detail="pattern cannot be empty")
+    
+    if not rule.assigned_category or not rule.assigned_category.strip():
+        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
+    
+    # Validate priority range
+    if rule.priority < 1 or rule.priority > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="priority must be between 1 and 100"
+        )
+    
     session.add(rule)
     session.commit()
     session.refresh(rule)
@@ -86,6 +107,27 @@ def update_category_rule(
     rule = session.get(CategoryRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Category rule not found")
+    
+    # Validate match_type
+    if updated_rule.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400,
+            detail="match_type must be either 'sender' or 'subject'"
+        )
+    
+    # Validate pattern and category are not empty
+    if not updated_rule.pattern or not updated_rule.pattern.strip():
+        raise HTTPException(status_code=400, detail="pattern cannot be empty")
+    
+    if not updated_rule.assigned_category or not updated_rule.assigned_category.strip():
+        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
+    
+    # Validate priority range
+    if updated_rule.priority < 1 or updated_rule.priority > 100:
+        raise HTTPException(
+            status_code=400,
+            detail="priority must be between 1 and 100"
+        )
     
     rule.match_type = updated_rule.match_type
     rule.pattern = updated_rule.pattern
