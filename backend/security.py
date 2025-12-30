@@ -95,3 +95,18 @@ def verify_dashboard_token(token: str) -> Optional[str]:
         return email
     except Exception:
         return None
+
+
+def sanitize_csv_field(field: str) -> str:
+    """Sanitize field to prevent CSV injection attacks.
+
+    Fields starting with =, +, -, @ or tab could be interpreted as formulas.
+    Prefix them with a single quote to treat them as text.
+    """
+    if not field:
+        return field
+
+    dangerous_chars = ("=", "+", "-", "@", "\t", "\r")
+    if field.startswith(dangerous_chars):
+        return "'" + field
+    return field
