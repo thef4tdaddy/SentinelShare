@@ -30,34 +30,41 @@ fi
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # --- Backend ---
-echo -e "\n${YELLOW}[1/8] Backend: Formatting with Black...${NC}"
+echo -e "\n${YELLOW}[1/10] Backend: Formatting with Black...${NC}"
 ./venv/bin/python3 -m black backend
 
-echo -e "\n${YELLOW}[2/8] Backend: Linting with Ruff...${NC}"
+echo -e "\n${YELLOW}[2/10] Backend: Linting with Ruff...${NC}"
 ./venv/bin/python3 -m ruff check backend --fix
 
-echo -e "\n${YELLOW}[3/8] Backend: Type Checking with Mypy...${NC}"
+echo -e "\n${YELLOW}[3/10] Backend: Type Checking with Mypy...${NC}"
 ./venv/bin/python3 -m mypy backend --ignore-missing-imports
 
-echo -e "\n${YELLOW}[4/8] Backend: Running Tests with Pytest...${NC}"
+echo -e "\n${YELLOW}[4/10] Backend: Running Tests with Pytest...${NC}"
 ./venv/bin/pytest
 
 # --- Frontend ---
-echo -e "\n${YELLOW}[5/8] Frontend: Formatting with Prettier...${NC}"
+echo -e "\n${YELLOW}[5/10] Frontend: Formatting with Prettier...${NC}"
 cd frontend
 # Try to run format script, fallback to npx if not defined
 npm run format 2>/dev/null || npx prettier --write "src/**/*.{ts,js,svelte,css}"
 
-echo -e "\n${YELLOW}[6/8] Frontend: Linting with ESLint...${NC}"
+echo -e "\n${YELLOW}[6/10] Frontend: Linting with ESLint...${NC}"
 npm run lint
 
-echo -e "\n${YELLOW}[7/8] Frontend: Svelte Check (TypeScript & Components)...${NC}"
+echo -e "\n${YELLOW}[7/10] Frontend: Svelte Check (TypeScript & Components)...${NC}"
 npm run check
 
-echo -e "\n${YELLOW}[8/8] Frontend: Running Vitest...${NC}"
+echo -e "\n${YELLOW}[8/10] Frontend: Running Vitest...${NC}"
 npm run test:run
 
-echo -e "\n${YELLOW}[9/9] Frontend: Running Playwright E2E...${NC}"
+echo -e "\n${YELLOW}[9/10] Frontend: Running Lighthouse CI...${NC}"
+npm run build
+cd ..
+./frontend/node_modules/.bin/lhci autorun
+cd frontend
+../venv/bin/python3 ../scripts/print_lighthouse_scores.py
+
+echo -e "\n${YELLOW}[10/10] Frontend: Running Playwright E2E...${NC}"
 
 # Start Backend Server for E2E
 cd .. # Go back to root
