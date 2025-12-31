@@ -295,9 +295,11 @@ describe('toast store', () => {
 				notificationCount++;
 			});
 
-			const initialCount = notificationCount;
+			// Subscription triggers initial notification (count = 1)
+			expect(notificationCount).toBe(1);
+
 			toasts.remove(toastId);
-			expect(notificationCount).toBe(initialCount + 1);
+			expect(notificationCount).toBe(2);
 
 			unsubscribe();
 		});
