@@ -237,6 +237,35 @@
 		}
 	}
 
+	async function confirmToggleToIgnored() {
+		if (!selectedEmail || isProcessing) return;
+
+		isProcessing = true;
+		errorMessage = '';
+		successMessage = '';
+
+		try {
+			const result = await fetchJson('/actions/toggle-to-ignored', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email_id: selectedEmail.id })
+			});
+
+			successMessage = result.message || 'Email status changed to ignored successfully!';
+
+			// Wait a moment to show success message, then close and reload
+			setTimeout(async () => {
+				closeModal();
+				await loadHistory();
+			}, 1500);
+		} catch (e) {
+			console.error('Toggle to ignored failed', e);
+			errorMessage = 'Failed to change email status to ignored.';
+		} finally {
+			isProcessing = false;
+		}
+	}
+
 	async function reprocessEmail(emailId: number) {
 		if (!selectedEmail) return;
 		isAnalyzing = true;
@@ -622,6 +651,17 @@
 											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</button>
+									{:else if email.status === 'forwarded' || email.status === 'blocked'}
+										<button
+											onclick={() => openModal(email)}
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)} cursor-pointer hover:opacity-80 transition-opacity"
+											title="Click to change to ignored"
+										>
+											<StatusIcon size={12} class="mr-1" />
+											{email.status}
+										</button>
 									{:else}
 										<span
 											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
@@ -701,6 +741,16 @@
 				>
 					<div class="flex justify-between items-start mb-2">
 						{#if email.status === 'ignored'}
+							<button
+								onclick={() => openModal(email)}
+								class="badge {getStatusColor(
+									email.status
+								)} flex items-center gap-1 py-1 px-3 shadow-sm"
+							>
+								<StatusIcon size={12} />
+								{email.status}
+							</button>
+						{:else if email.status === 'forwarded' || email.status === 'blocked'}
 							<button
 								onclick={() => openModal(email)}
 								class="badge {getStatusColor(
@@ -887,7 +937,13 @@
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
 				<h3 id="modal-title" class="text-lg font-bold text-text-main dark:text-text-main-dark">
-					Forward Ignored Email
+					{#if selectedEmail.status === 'ignored'}
+						Forward Ignored Email
+					{:else if selectedEmail.status === 'forwarded' || selectedEmail.status === 'blocked'}
+						Change Email Status
+					{:else}
+						Email Details
+					{/if}
 				</h3>
 				<button
 					onclick={closeModal}
@@ -1007,6 +1063,15 @@
 							{:else}
 								<RefreshCw size={16} />
 								Forward & Create Rule
+							{/if}
+						</button>
+					{:else if selectedEmail.status === 'forwarded' || selectedEmail.status === 'blocked'}
+						<button onclick={confirmToggleToIgnored} class="btn btn-primary" disabled={isProcessing}>
+							{#if isProcessing}
+								<RefreshCw size={16} class="animate-spin" />
+							{:else}
+								<RefreshCw size={16} />
+								Change to Ignored
 							{/if}
 						</button>
 					{/if}

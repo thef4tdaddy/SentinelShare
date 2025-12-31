@@ -937,3 +937,127 @@ class TestUpdatePreferences:
 
             assert exc.value.status_code == 500
             assert "Database error" in str(exc.value.detail)
+
+
+class TestToggleToIgnored:
+    """Tests for the toggle-to-ignored endpoint"""
+
+    def test_toggle_forwarded_to_ignored_success(self, session):
+        """Test successfully toggling a forwarded email to ignored"""
+        # Create a forwarded email
+        email = ProcessedEmail(
+            email_id="forwarded@test.com",
+            subject="Forwarded Email",
+            sender="sender@example.com",
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+            status="forwarded",
+            account_email="user1@example.com",
+            category="shopping",
+            reason="Detected as receipt",
+        )
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+
+        # Call the endpoint
+        request = actions.ToggleEmailRequest(email_id=email.id)
+        result = actions.toggle_to_ignored_email(request, session)
+
+        # Check result
+        assert result["success"] is True
+        assert "changed from forwarded to ignored" in result["message"]
+        assert result["email"].status == "ignored"
+        assert "Manually changed from forwarded to ignored" in result["email"].reason
+
+        # Check that email status was updated in DB
+        updated_email = session.get(ProcessedEmail, email.id)
+        assert updated_email.status == "ignored"
+        assert "Manually changed from forwarded to ignored" in updated_email.reason
+
+    def test_toggle_blocked_to_ignored_success(self, session):
+        """Test successfully toggling a blocked email to ignored"""
+        # Create a blocked email
+        email = ProcessedEmail(
+            email_id="blocked@test.com",
+            subject="Blocked Email",
+            sender="spam@example.com",
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+            status="blocked",
+            account_email="user1@example.com",
+            category=None,
+            reason="Not a receipt",
+        )
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+
+        # Call the endpoint
+        request = actions.ToggleEmailRequest(email_id=email.id)
+        result = actions.toggle_to_ignored_email(request, session)
+
+        # Check result
+        assert result["success"] is True
+        assert "changed from blocked to ignored" in result["message"]
+        assert result["email"].status == "ignored"
+
+    def test_toggle_to_ignored_email_not_found(self, session):
+        """Test toggling a non-existent email"""
+        request = actions.ToggleEmailRequest(email_id=9999)
+
+        with pytest.raises(Exception) as exc_info:
+            actions.toggle_to_ignored_email(request, session)
+
+        assert "not found" in str(exc_info.value).lower()
+
+    def test_toggle_ignored_to_ignored_rejected(self, session):
+        """Test that toggling an already ignored email is rejected"""
+        # Create an ignored email
+        email = ProcessedEmail(
+            email_id="ignored@test.com",
+            subject="Ignored Email",
+            sender="news@example.com",
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+            status="ignored",
+            account_email="user1@example.com",
+            category=None,
+            reason="Not a receipt",
+        )
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+
+        request = actions.ToggleEmailRequest(email_id=email.id)
+
+        with pytest.raises(Exception) as exc_info:
+            actions.toggle_to_ignored_email(request, session)
+
+        assert "Only 'forwarded' or 'blocked'" in str(exc_info.value)
+
+    def test_toggle_error_status_to_ignored_rejected(self, session):
+        """Test that toggling an error status email is rejected"""
+        # Create an error status email
+        email = ProcessedEmail(
+            email_id="error@test.com",
+            subject="Error Email",
+            sender="test@example.com",
+            received_at=datetime.now(timezone.utc),
+            processed_at=datetime.now(timezone.utc),
+            status="error",
+            account_email="user1@example.com",
+            category=None,
+            reason="SMTP error",
+        )
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+
+        request = actions.ToggleEmailRequest(email_id=email.id)
+
+        with pytest.raises(Exception) as exc_info:
+            actions.toggle_to_ignored_email(request, session)
+
+        assert "Only 'forwarded' or 'blocked'" in str(exc_info.value)
+
