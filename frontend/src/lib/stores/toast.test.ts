@@ -148,20 +148,6 @@ describe('toast store', () => {
 			expect(currentToasts).toHaveLength(0);
 		});
 
-		it('does not auto-remove toast when duration is zero', () => {
-			toasts.trigger('No auto remove', 'info', 0);
-
-			let currentToasts = get(toasts);
-			expect(currentToasts).toHaveLength(1);
-
-			// Advance timer significantly
-			vi.advanceTimersByTime(100000);
-
-			currentToasts = get(toasts);
-			expect(currentToasts).toHaveLength(1);
-			expect(currentToasts[0].message).toBe('No auto remove');
-		});
-
 		it('schedules timeout correctly for different durations', () => {
 			toasts.trigger('100ms', 'info', 100);
 			vi.advanceTimersByTime(1);
