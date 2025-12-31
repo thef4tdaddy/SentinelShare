@@ -6,6 +6,7 @@ making it easier to test parsing logic independently and swap out parsing librar
 """
 
 import email
+import email.message
 import logging
 from email.header import decode_header
 from typing import Optional

@@ -6,6 +6,7 @@ utilities to identify and skip attachments during email parsing.
 """
 
 import email
+import email.message
 import logging
 from typing import Optional
 
