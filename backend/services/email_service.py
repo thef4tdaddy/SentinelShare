@@ -10,11 +10,78 @@ from typing import Optional
 
 class EmailService:
     @staticmethod
+    async def _get_oauth2_access_token(account_id: int) -> Optional[str]:
+        """
+        Get a valid OAuth2 access token for an account, refreshing if necessary.
+
+        Args:
+            account_id: Database ID of the EmailAccount
+
+        Returns:
+            Valid access token, or None if failed
+        """
+        try:
+            from sqlmodel import Session
+
+            from backend.database import engine
+            from backend.models import EmailAccount
+            from backend.services.oauth2_service import OAuth2Service
+
+            with Session(engine) as session:
+                account = session.get(EmailAccount, account_id)
+                if not account:
+                    logging.error(f"Account {account_id} not found")
+                    return None
+
+                return await OAuth2Service.ensure_valid_token(session, account)
+        except Exception as e:
+            logging.error(f"Failed to get OAuth2 token for account {account_id}: {e}")
+            return None
+
+    @staticmethod
+    def _imap_login(
+        mail: imaplib.IMAP4_SSL,
+        username: str,
+        password: str,
+        auth_method: str = "password",
+        access_token: Optional[str] = None,
+    ) -> None:
+        """
+        Perform IMAP login using either password or OAuth2.
+
+        Args:
+            mail: IMAP connection object
+            username: Username/email for authentication
+            password: Password (for password auth)
+            auth_method: "password" or "oauth2"
+            access_token: OAuth2 access token (for oauth2 auth)
+
+        Raises:
+            Exception: If login fails
+        """
+        if auth_method == "oauth2":
+            if not access_token:
+                raise ValueError("OAuth2 access token required for oauth2 auth_method")
+
+            from backend.services.oauth2_service import OAuth2Service
+
+            auth_string = OAuth2Service.generate_xoauth2_string(username, access_token)
+            mail.authenticate("XOAUTH2", lambda x: auth_string.encode())  # type: ignore[arg-type]
+        elif auth_method == "password":
+            # Standard password authentication
+            if not password:
+                raise ValueError("Password is required for password auth_method")
+            mail.login(username, password)
+        else:
+            raise ValueError(f"Unsupported auth_method: {auth_method}")
+
+    @staticmethod
     def get_all_accounts() -> list:
         """
         Retrieves all configured email accounts from both database and environment variables.
         Database accounts take precedence. Handles both the legacy single-account setup
         and the multi-account EMAIL_ACCOUNTS JSON for backward compatibility.
+        Supports both password-based and OAuth2 authentication.
         """
         all_accounts = []
 
@@ -33,21 +100,43 @@ class EmailService:
 
                 for acc in db_accounts:
                     try:
-                        decrypted_password = EncryptionService.decrypt(
-                            acc.encrypted_password
-                        )
-                        if decrypted_password:
-                            all_accounts.append(
-                                {
-                                    "email": acc.email.lower(),  # Normalize to lowercase
-                                    "password": decrypted_password,
-                                    "imap_server": acc.host,
-                                }
-                            )
+                        account_dict = {
+                            "email": acc.email.lower(),  # Normalize to lowercase
+                            "imap_server": acc.host,
+                            "imap_port": acc.port,
+                            "username": acc.username,
+                            "auth_method": acc.auth_method,
+                            "account_id": acc.id,  # Store DB account ID for token refresh
+                        }
+
+                        if acc.auth_method == "oauth2":
+                            # OAuth2 account - will need token refresh before use
+                            # NOTE: OAuth2 accounts are not yet fully supported by scheduler
+                            # TODO: Update scheduler to handle OAuth2 token refresh
+                            account_dict["provider"] = acc.provider
+                            account_dict["password"] = None  # No password for OAuth2
+                        else:
+                            # Password-based account
+                            if acc.encrypted_password:
+                                decrypted_password = EncryptionService.decrypt(
+                                    acc.encrypted_password
+                                )
+                                if decrypted_password:
+                                    account_dict["password"] = decrypted_password
+                                else:
+                                    logging.warning(
+                                        f"Failed to decrypt password for {acc.email}, skipping"
+                                    )
+                                    continue
+                            else:
+                                logging.warning(
+                                    f"No password found for password-based account {acc.email}, skipping"
+                                )
+                                continue
+
+                        all_accounts.append(account_dict)
                     except Exception as e:
-                        logging.error(
-                            f"Failed to decrypt password for {acc.email}: {e}"
-                        )
+                        logging.error(f"Failed to process account {acc.email}: {e}")
         except Exception as e:
             logging.warning(f"Could not fetch accounts from database: {e}")
 
@@ -64,16 +153,19 @@ class EmailService:
 
                 if isinstance(accounts, list):
                     for acc in accounts:
-                        if acc.get("email") and acc.get("password"):
+                        email_val = acc.get("email")
+                        pass_val = acc.get("password")
+                        if email_val and pass_val:
                             # Check if already added from DB
+                            email_str = str(email_val).lower() if email_val else ""
                             if not any(
-                                a["email"].lower() == acc.get("email").lower()
+                                str(a.get("email", "")).lower() == email_str  # type: ignore[arg-type]
                                 for a in all_accounts
                             ):
                                 all_accounts.append(
                                     {
-                                        "email": acc.get("email"),
-                                        "password": acc.get("password"),
+                                        "email": email_val,
+                                        "password": pass_val,
                                         "imap_server": acc.get(
                                             "imap_server", "imap.gmail.com"
                                         ),
@@ -92,7 +184,8 @@ class EmailService:
 
         if legacy_user and legacy_pass:
             # Check if already added
-            if not any(a["email"].lower() == legacy_user.lower() for a in all_accounts):
+            legacy_user_lower = str(legacy_user).lower()
+            if not any(str(a.get("email", "")).lower() == legacy_user_lower for a in all_accounts):  # type: ignore[arg-type]
                 all_accounts.append(
                     {
                         "email": legacy_user,
@@ -105,7 +198,8 @@ class EmailService:
         icloud_user = os.environ.get("ICLOUD_EMAIL")
         icloud_pass = os.environ.get("ICLOUD_PASSWORD")
         if icloud_user and icloud_pass:
-            if not any(a["email"].lower() == icloud_user.lower() for a in all_accounts):
+            icloud_user_lower = str(icloud_user).lower()
+            if not any(str(a.get("email", "")).lower() == icloud_user_lower for a in all_accounts):  # type: ignore[arg-type]
                 all_accounts.append(
                     {
                         "email": icloud_user,
@@ -132,40 +226,76 @@ class EmailService:
         return None
 
     @staticmethod
-    def test_connection(email_user, email_pass, imap_server="imap.gmail.com"):
-        if not email_user or not email_pass:
-            return {"success": False, "error": "Credentials missing"}
+    def test_connection(
+        email_user,
+        email_pass=None,
+        imap_server="imap.gmail.com",
+        auth_method="password",
+        access_token=None,
+    ):
+        """
+        Test IMAP connection with either password or OAuth2 authentication.
+
+        Args:
+            email_user: Email/username for authentication
+            email_pass: Password (for password auth, optional for OAuth2)
+            imap_server: IMAP server hostname
+            auth_method: "password" or "oauth2"
+            access_token: OAuth2 access token (required for oauth2)
+
+        Returns:
+            Dictionary with success status and error message if any
+        """
+        if auth_method == "password":
+            if not email_user or not email_pass:
+                return {"success": False, "error": "Credentials missing"}
+        elif auth_method == "oauth2":
+            if not email_user or not access_token:
+                return {
+                    "success": False,
+                    "error": "Email and access token required for OAuth2",
+                }
 
         try:
             mail = imaplib.IMAP4_SSL(imap_server)
-            mail.login(email_user, email_pass)
+            EmailService._imap_login(
+                mail, email_user, email_pass, auth_method, access_token
+            )
             mail.logout()
             return {"success": True, "error": None}
         except Exception:
             logging.exception("Error when testing email connection")
-            return {"success": False, "error": "Unable to connect to email server"}
+            # Return a generic error message to avoid exposing internal exception details
+            return {
+                "success": False,
+                "error": "Unable to connect to email server",
+            }
 
     @staticmethod
     def fetch_recent_emails(
         username,
-        password,
+        password=None,
         imap_server="imap.gmail.com",
         imap_port=993,
         search_criterion=None,
         lookback_days=None,
+        auth_method="password",
+        access_token=None,
     ):
         """
         Fetch recent emails from an IMAP server.
 
         Args:
             username: Email address to authenticate with
-            password: Password for authentication
+            password: Password for authentication (required for password auth)
             imap_server: IMAP server hostname (default: "imap.gmail.com")
             imap_port: IMAP server port (default: 993)
             search_criterion: Optional custom IMAP search criterion string.
             lookback_days: Optional integer number of days to look back.
                           If None, defaults to emails from the last N days,
                           where N is set by EMAIL_LOOKBACK_DAYS env var (default: 3)
+            auth_method: "password" or "oauth2"
+            access_token: OAuth2 access token (required for oauth2 auth)
 
         Returns:
             List of email dictionaries containing message_id, subject, body,
@@ -200,14 +330,22 @@ class EmailService:
                 )
                 lookback_days = default_lookback_days
 
-        if not username or not password:
-            print("❌ IMAP Credentials missing")
-            return []
+        # Validate credentials based on auth method
+        if auth_method == "password":
+            if not username or not password:
+                print("❌ IMAP Credentials missing")
+                return []
+        elif auth_method == "oauth2":
+            if not username or not access_token:
+                print("❌ OAuth2 credentials missing")
+                return []
 
         try:
             # Connect to the server
             mail = imaplib.IMAP4_SSL(imap_server, imap_port)
-            mail.login(username, password)
+            EmailService._imap_login(
+                mail, username, password, auth_method, access_token
+            )
             mail.select("inbox")
 
             custom_criterion_provided = search_criterion is not None
@@ -355,17 +493,40 @@ class EmailService:
 
     @staticmethod
     def fetch_email_by_id(
-        email_user, email_pass, message_id, imap_server="imap.gmail.com"
+        email_user,
+        email_pass=None,
+        message_id=None,
+        imap_server="imap.gmail.com",
+        auth_method="password",
+        access_token=None,
     ):
         """
         Fetch a single email by its Message-ID header.
+
+        Args:
+            email_user: Email/username for authentication
+            email_pass: Password (for password auth)
+            message_id: Message-ID header value to search for
+            imap_server: IMAP server hostname
+            auth_method: "password" or "oauth2"
+            access_token: OAuth2 access token (for oauth2 auth)
+
+        Returns:
+            Dictionary with email data, or None if not found
         """
-        if not email_user or not email_pass or not message_id:
+        if not email_user or not message_id:
+            return None
+
+        if auth_method == "password" and not email_pass:
+            return None
+        elif auth_method == "oauth2" and not access_token:
             return None
 
         try:
             mail = imaplib.IMAP4_SSL(imap_server)
-            mail.login(email_user, email_pass)
+            EmailService._imap_login(
+                mail, email_user, email_pass, auth_method, access_token
+            )
             mail.select("inbox")
 
             # Search by Message-ID
