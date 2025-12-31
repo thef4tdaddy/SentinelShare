@@ -1060,4 +1060,3 @@ class TestToggleToIgnored:
             actions.toggle_to_ignored_email(request, session)
 
         assert "Only 'forwarded' or 'blocked'" in str(exc_info.value)
-

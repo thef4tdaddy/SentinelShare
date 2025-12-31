@@ -187,7 +187,6 @@ describe('API Module', () => {
 		const descriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
 
 		// Remove localStorage to test fallback
-		// @ts-expect-error - Testing localStorage unavailable scenario
 		Object.defineProperty(window, 'localStorage', {
 			value: undefined,
 			writable: true,

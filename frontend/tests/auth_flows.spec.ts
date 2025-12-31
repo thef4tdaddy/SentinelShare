@@ -87,7 +87,7 @@ test.describe('Token Authentication System', () => {
 
     // 4. Verify Receiver Access via Sendee heading
     // Note: Navbar is hidden for sendee view for better security/UX
-    await expect(page.getByRole('heading', { name: 'Forwarding Preferences' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Sendee Set Preferences' })).toBeVisible({ timeout: 10000 });
   });
 
   test('should fail with an invalid token', async ({ page }) => {
