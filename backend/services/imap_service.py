@@ -149,7 +149,13 @@ class ImapService:
         try:
             # Convert bytes to string for fetch command
             msg_id_str = message_id.decode('ascii')
-            _, msg_data = mail.fetch(msg_id_str, "(BODY[])")
+            status, msg_data = mail.fetch(msg_id_str, "(BODY[])")
+            
+            # Check if fetch was successful
+            if status != "OK":
+                logging.warning(f"IMAP fetch returned non-OK status: {status}")
+                return None
+                
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     return response_part[1]

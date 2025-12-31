@@ -68,12 +68,12 @@ class EmailParser:
         html_body = ""
 
         for part in msg.walk():
-            content_type = part.get_content_type()
-            content_disposition = str(part.get("Content-Disposition"))
-
-            # Skip attachments
-            if "attachment" in content_disposition:
+            # Skip attachments using AttachmentService for consistent logic
+            from backend.services.attachment_service import AttachmentService
+            if AttachmentService.is_attachment(part):
                 continue
+
+            content_type = part.get_content_type()
 
             try:
                 payload = part.get_payload(decode=True)
