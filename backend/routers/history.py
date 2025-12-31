@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api/history", tags=["history"])
 RUN_GROUPING_WINDOW_SECONDS = (
     300  # 5 minutes - emails within this window are grouped into same run
 )
+DEFAULT_CURRENCY = "USD"
 
 
 # Valid status values
@@ -52,6 +53,44 @@ def parse_iso_date(date_str: str) -> datetime:
             status_code=400,
             detail=f"Invalid date format: {date_str}. Expected ISO 8601 format (e.g., 2025-12-10T10:00:00Z)",
         )
+
+
+def apply_email_filters(
+    query,
+    filters: List[Any],
+    status: Optional[EmailStatus] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    sender: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
+):
+    """Apply standard email filters to a query."""
+    if status:
+        filters.append(ProcessedEmail.status == status.value)
+    if date_from and date_from.strip():
+        date_from_obj = parse_iso_date(date_from)
+        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
+    if date_to and date_to.strip():
+        date_to_obj = parse_iso_date(date_to)
+        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
+    if sender and sender.strip():
+        # Case-insensitive partial match for sender; escape SQL wildcard characters
+        sender_escaped = (
+            sender.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        filters.append(
+            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")  # type: ignore[union-attr]
+        )
+    if min_amount is not None:
+        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
+    if max_amount is not None:
+        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
+
+    if filters:
+        query = query.where(and_(*filters))
+
+    return query
 
 
 @router.get("/emails")
@@ -102,32 +141,19 @@ def get_email_history(
 
     # Build query
     query = select(ProcessedEmail)
+    filters: List[Any] = []
 
-    # Apply filters
-    filters = []
-    if status:
-        filters.append(ProcessedEmail.status == status.value)
-    if date_from and date_from.strip():
-        date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
-    if date_to and date_to.strip():
-        date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
-    if sender and sender.strip():
-        # Case-insensitive partial match for sender; escape SQL wildcard characters
-        sender_escaped = (
-            sender.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        )
-        filters.append(
-            ProcessedEmail.sender.ilike(f"%{sender_escaped}%", escape="\\")  # type: ignore[union-attr]
-        )
-    if min_amount is not None:
-        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
-    if max_amount is not None:
-        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
-
-    if filters:
-        query = query.where(and_(*filters))
+    # Use helper to apply filters
+    query = apply_email_filters(
+        query,
+        filters,
+        status,
+        date_from,
+        date_to,
+        sender,
+        min_amount,
+        max_amount,
+    )
 
     # Order by processed_at descending
     query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
@@ -342,8 +368,6 @@ def update_email_category(
 @router.post("/reprocess-all-ignored")
 def reprocess_all_ignored(session: Session = Depends(get_session)):
     """Reprocess all 'ignored' emails from the last 24 hours (if bodies are available)."""
-    from datetime import timezone
-
     now = datetime.now(timezone.utc)
     day_ago = now - timedelta(hours=24)
 
@@ -402,18 +426,15 @@ def get_history_stats(
 
     # Build base query
     query = select(ProcessedEmail)
+    filters: List[Any] = []
 
-    # Apply date filters
-    filters = []
-    if date_from and date_from.strip():
-        date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
-    if date_to and date_to.strip():
-        date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
-
-    if filters:
-        query = query.where(and_(*filters))
+    # Use helper to apply filters
+    query = apply_email_filters(
+        query,
+        filters,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
     emails = session.exec(query).all()
 
@@ -523,27 +544,20 @@ def export_history(
 ):
     """Export email history as CSV file with optional filtering"""
 
-    # Build query with filters
+    # Build query with filtering via shared helper
     query = select(ProcessedEmail)
+    filters: List[Any] = []
 
-    filters = []
-    if status:
-        filters.append(ProcessedEmail.status == status.value)
-    if date_from and date_from.strip():
-        date_from_obj = parse_iso_date(date_from)
-        filters.append(ProcessedEmail.processed_at >= date_from_obj)  # type: ignore
-    if date_to and date_to.strip():
-        date_to_obj = parse_iso_date(date_to)
-        filters.append(ProcessedEmail.processed_at <= date_to_obj)  # type: ignore
-    if sender and sender.strip():
-        filters.append(ProcessedEmail.sender.ilike(f"%{sender.strip()}%"))  # type: ignore
-    if min_amount is not None:
-        filters.append(ProcessedEmail.amount >= min_amount)  # type: ignore
-    if max_amount is not None:
-        filters.append(ProcessedEmail.amount <= max_amount)  # type: ignore
-
-    if filters:
-        query = query.where(and_(*filters))
+    query = apply_email_filters(
+        query,
+        filters,
+        status,
+        date_from,
+        date_to,
+        sender,
+        min_amount,
+        max_amount,
+    )
 
     # Order by processed_at descending
     query = query.order_by(ProcessedEmail.processed_at.desc())  # type: ignore
@@ -570,7 +584,7 @@ def export_history(
             )
             vendor = sanitize_csv_field(email.sender or "")
             amount = f"{email.amount:.2f}" if email.amount is not None else ""
-            currency = "USD"  # Default currency
+            currency = DEFAULT_CURRENCY
             category = sanitize_csv_field(email.category or "")
             # Link to receipt - using email_id as reference
             link = sanitize_csv_field(

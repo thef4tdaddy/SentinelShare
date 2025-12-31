@@ -14,6 +14,8 @@ from ..models import CategoryRule
 
 
 class Categorizer:
+    _rules_cache = None
+
     @staticmethod
     def predict_category(email: Any, session: Optional[Session] = None) -> str:
         """
@@ -47,10 +49,15 @@ class Categorizer:
 
         subject = (raw_subject or "").lower()
         sender = (raw_sender or "").lower()
+
         # Get all category rules ordered by priority (highest first)
-        rules = session.exec(
-            select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
-        ).all()
+        # Cache rules for the duration of the process to avoid redundant DB hits
+        if Categorizer._rules_cache is None:
+            Categorizer._rules_cache = session.exec(
+                select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
+            ).all()
+
+        rules = Categorizer._rules_cache
 
         # Apply first matching rule
         for rule in rules:

@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 import json
 import glob
 import os
-import sys
 
 def load_thresholds():
     """Load minScore assertions from lighthouserc.json"""
