@@ -3,6 +3,7 @@
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { onMount } from 'svelte';
 	import { formatDate } from '../lib/dateUtils';
+	import CategoryEditModal from '../components/CategoryEditModal.svelte';
 	import {
 		Clock,
 		Mail,
@@ -17,6 +18,7 @@
 		Search,
 		ThumbsUp,
 		ThumbsDown,
+		Edit2,
 		Download
 	} from 'lucide-svelte';
 
@@ -93,6 +95,13 @@
 	let selectedAnalysis = $state<AnalysisOutcome | null>(null);
 	let successMessage = $state('');
 	let errorMessage = $state('');
+	let showCategoryEditModal = $state(false);
+	let categoryEditEmail = $state<{
+		id: number;
+		category: string;
+		sender: string;
+		subject: string;
+	} | null>(null);
 
 	async function loadHistory() {
 		loading = true;
@@ -251,6 +260,25 @@
 		} finally {
 			isAnalyzing = false;
 		}
+	}
+
+	function openCategoryEditModal(email: Email) {
+		categoryEditEmail = {
+			id: email.id,
+			category: email.category || 'other',
+			sender: email.sender,
+			subject: email.subject
+		};
+		showCategoryEditModal = true;
+	}
+
+	function closeCategoryEditModal() {
+		showCategoryEditModal = false;
+		categoryEditEmail = null;
+	}
+
+	function handleCategoryUpdateSuccess() {
+		loadHistory();
 	}
 
 	async function submitFeedback(isReceipt: boolean) {
@@ -661,7 +689,17 @@
 									{/if}
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm">
-									{email.category || '-'}
+									<div class="flex items-center gap-2">
+										<span>{email.category || '-'}</span>
+										<button
+											onclick={() => openCategoryEditModal(email)}
+											class="p-1 text-gray-400 hover:text-primary transition-colors"
+											title="Edit Category"
+											aria-label="Edit category"
+										>
+											<Edit2 size={14} />
+										</button>
+									</div>
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm">
 									{formatAmount(email.amount)}
@@ -741,9 +779,14 @@
 					</div>
 
 					<div class="flex items-center justify-between pt-3 border-t border-gray-50">
-						<div class="text-[10px] text-gray-400">
+						<button
+							onclick={() => openCategoryEditModal(email)}
+							class="text-[10px] text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
+							title="Edit category"
+						>
 							{email.category ? `#${email.category}` : '#unsorted'}
-						</div>
+							<Edit2 size={12} />
+						</button>
 						<button
 							onclick={() => {
 								selectedEmail = email;
@@ -1014,4 +1057,17 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+<!-- Category Edit Modal -->
+{#if categoryEditEmail}
+	<CategoryEditModal
+		bind:isOpen={showCategoryEditModal}
+		emailId={categoryEditEmail.id}
+		currentCategory={categoryEditEmail.category}
+		sender={categoryEditEmail.sender}
+		subject={categoryEditEmail.subject}
+		onClose={closeCategoryEditModal}
+		onSuccess={handleCategoryUpdateSuccess}
+	/>
 {/if}
