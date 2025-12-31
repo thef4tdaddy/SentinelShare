@@ -3,14 +3,15 @@ import io
 import os
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlmodel import Session, and_, func, select
 
 from backend.database import get_session
-from backend.models import ManualRule, ProcessedEmail, ProcessingRun
+from backend.models import CategoryRule, ManualRule, ProcessedEmail, ProcessingRun
 from backend.security import decrypt_content, sanitize_csv_field
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
@@ -238,6 +239,104 @@ def submit_feedback(
 
     session.commit()
     return {"status": "success", "message": "Feedback recorded and rule suggested"}
+
+
+class UpdateCategoryRequest(BaseModel):
+    category: str = Field(..., min_length=1)
+    create_rule: Optional[bool] = False
+    match_type: Optional[str] = Field(default="sender", pattern="^(sender|subject)$")
+
+
+@router.patch("/emails/{email_id}/category")
+def update_email_category(
+    email_id: int,
+    request: UpdateCategoryRequest,
+    session: Session = Depends(get_session),
+):
+    """
+    Update the category of an email and optionally create a rule for future categorization.
+    """
+    email = session.get(ProcessedEmail, email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    # Validate and trim category
+    category = request.category.strip()
+    if not category:
+        raise HTTPException(
+            status_code=400, detail="category cannot be empty or whitespace"
+        )
+
+    # Validate match_type
+    if request.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400, detail="match_type must be either 'sender' or 'subject'"
+        )
+
+    # Update the category
+    old_category = email.category
+    email.category = category
+    session.add(email)
+    session.commit()
+
+    response: Dict[str, Any] = {
+        "status": "success",
+        "message": f"Category updated from '{old_category}' to '{category}'",
+        "rule_created": False,
+    }
+
+    # Create a category rule if requested
+    if request.create_rule:
+        # Determine the pattern based on match type
+        if request.match_type == "sender":
+            # Extract domain from sender email
+            sender = email.sender or ""
+            if "@" in sender:
+                domain = sender.split("@", 1)[1]
+                pattern = f"*@{domain}"
+            else:
+                pattern = f"*{sender}*"
+        else:  # subject
+            # Use a wildcard pattern with key words from subject
+            subject = email.subject or ""
+            # Take first significant word (simplified logic)
+            words = [w for w in subject.lower().split() if len(w) > 3]
+            if words:
+                pattern = f"*{words[0]}*"
+            else:
+                # No sufficiently significant words found in subject; avoid creating an over-broad rule
+                response[
+                    "message"
+                ] += " (no suitable subject keywords found, rule not created)"
+                return response
+
+        # Normalize pattern to lowercase for consistency
+        pattern = pattern.lower()
+
+        # Check if a similar rule already exists (case-insensitive)
+        existing_rule = session.exec(
+            select(CategoryRule)
+            .where(func.lower(CategoryRule.pattern) == pattern)
+            .where(CategoryRule.match_type == request.match_type)
+        ).first()
+
+        if not existing_rule:
+            new_rule = CategoryRule(
+                match_type=request.match_type,
+                pattern=pattern,
+                assigned_category=category,
+                priority=10,
+            )
+            session.add(new_rule)
+            session.commit()
+            response["rule_created"] = True
+            response[
+                "message"
+            ] += f" and rule created: {request.match_type}='{pattern}' → '{category}'"
+        else:
+            response["message"] += " (rule already exists)"
+
+    return response
 
 
 @router.post("/reprocess-all-ignored")
