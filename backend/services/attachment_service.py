@@ -98,8 +98,9 @@ class AttachmentService:
                     payload = part.get_payload(decode=True)
                     if payload and isinstance(payload, bytes):
                         attachment_info["size"] = len(payload)
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Size is optional metadata; log and continue without it.
+                    logging.debug(f"Error calculating attachment size: {e}")
 
                 attachments.append(attachment_info)
 
