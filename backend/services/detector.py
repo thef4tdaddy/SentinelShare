@@ -177,7 +177,7 @@ class ReceiptDetector:
         Check if email is promotional.
         Delegates to PromotionalStrategy for consistency.
         """
-        strategy = PromotionalStrategy()
+        strategy = ReceiptDetector._promotional_strategy
         email = {"subject": subject, "body": body, "sender": sender}
         result = strategy.detect(email)
         return result.is_match
