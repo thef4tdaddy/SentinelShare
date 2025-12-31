@@ -10,19 +10,11 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
 
-from backend.constants import DEFAULT_MANUAL_RULE_PRIORITY
 from backend.database import engine, get_session
-from backend.models import ManualRule, Preference, ProcessedEmail
-from backend.security import (
-    encrypt_content,
-    generate_hmac_signature,
-    get_email_content_hash,
-    verify_dashboard_token,
-)
+from backend.models import Preference
+from backend.security import generate_hmac_signature, verify_dashboard_token
 from backend.services.command_service import CommandService
-from backend.services.detector import ReceiptDetector
-from backend.services.email_service import EmailService
-from backend.services.forwarder import EmailForwarder
+from backend.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
 
@@ -259,31 +251,14 @@ def update_preferences(
         if not request.session.get("authenticated"):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
-    # Transactional Update
+    # Use service to update preferences
     try:
-        # 1. Remove existing Blocked/Allowed preferences
-        # Note: We don't filter by user because Preference is currently global
-        existing = session.exec(
-            select(Preference).where(
-                col(Preference.type).in_(["Blocked Sender", "Always Forward"])
-            )
-        ).all()
-        for p in existing:
-            session.delete(p)
-
-        # 2. Add new Blocked Senders
-        for item in data.blocked_senders:
-            session.add(Preference(item=item, type="Blocked Sender"))
-
-        # 3. Add new Allowed Senders
-        for item in data.allowed_senders:
-            session.add(Preference(item=item, type="Always Forward"))
-
-        session.commit()
-        return {"success": True, "message": "Preferences updated"}
-
-    except Exception as e:
-        session.rollback()
+        return WorkflowService.update_preferences(
+            blocked_senders=data.blocked_senders,
+            allowed_senders=data.allowed_senders,
+            session=session,
+        )
+    except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -304,38 +279,11 @@ def toggle_to_ignored_email(
     """
     Toggle a forwarded or blocked email back to ignored status
     """
-    # Get the email
-    email = session.get(ProcessedEmail, request.email_id)
-    if not email:
-        raise HTTPException(status_code=404, detail="Email not found")
-
-    # Check if email is forwarded or blocked
-    if email.status not in ["forwarded", "blocked"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Email status is '{email.status}'. Only 'forwarded' or 'blocked' emails can be changed to 'ignored'",
-        )
-
-    # Update email status to ignored
-    previous_status = email.status
-    email.status = "ignored"
-    email.reason = f"Manually changed from {previous_status} to ignored"
-
     try:
-        session.add(email)
-        session.commit()
-        session.refresh(email)
-    except Exception as e:
-        session.rollback()
-        raise HTTPException(
-            status_code=500, detail=f"Failed to update email status: {str(e)}"
-        )
-
-    return {
-        "success": True,
-        "email": email,
-        "message": f"Email status changed from {previous_status} to ignored",
-    }
+        return WorkflowService.toggle_to_ignored(request.email_id, session)
+    except ValueError as e:
+        status_code = 404 if "not found" in str(e).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 @router.post("/toggle-ignored")
@@ -345,193 +293,13 @@ def toggle_ignored_email(
     """
     Toggle an ignored email: create a manual rule and forward the email
     """
-    # Get the email
-    email = session.get(ProcessedEmail, request.email_id)
-    if not email:
-        raise HTTPException(status_code=404, detail="Email not found")
-
-    # Check if email is ignored
-    if email.status != "ignored":
-        raise HTTPException(
-            status_code=400, detail=f"Email status is '{email.status}', not 'ignored'"
-        )
-
-    # Create a manual rule based on the email sender
-    # Extract email address from sender using RFC 5322 compliant parser
-    sender = email.sender or ""
-    # parseaddr returns (realname, email_address)
-    _, email_pattern = parseaddr(sender)
-
-    if not email_pattern or "@" not in email_pattern:
-        raise HTTPException(
-            status_code=400, detail="Could not extract email pattern from sender"
-        )
-
-    # Normalize to lowercase for consistency
-    email_pattern = email_pattern.lower().strip()
-
-    # Check if a manual rule with the same email_pattern already exists
-    existing_rule = session.exec(
-        select(ManualRule).where(ManualRule.email_pattern == email_pattern)
-    ).first()
-    if not existing_rule:
-        # Truncate subject intelligently with ellipsis
-        subj = email.subject or ""
-        truncated_subject = subj[:47] + "..." if len(subj) > 50 else subj
-        manual_rule = ManualRule(
-            email_pattern=email_pattern,
-            subject_pattern=None,
-            priority=DEFAULT_MANUAL_RULE_PRIORITY,
-            purpose=f"Auto-created from ignored email: {truncated_subject}",
-        )
-        session.add(manual_rule)
-    else:
-        manual_rule = existing_rule
-
-    # Forward the email now
-    target_email = os.environ.get("WIFE_EMAIL")
-    if not target_email:
-        session.rollback()
-        raise HTTPException(status_code=500, detail="WIFE_EMAIL not configured")
-
-    # Try to fetch the original email content
-
-    # 1. Get credentials for the source account
-    creds = EmailService.get_credentials_for_account(str(email.account_email))
-
-    if not creds:
-        # Fallback to SENDER_EMAIL if specific account not found
-        email_user = os.environ.get("SENDER_EMAIL")
-        email_pass = os.environ.get("SENDER_PASSWORD")
-        imap_server = "imap.gmail.com"
-        print(
-            f"⚠️ Account not found for {email.account_email}, falling back to SENDER_EMAIL"
-        )
-        # NOTE: Do not log sensitive credentials, passwords, or account dicts.
-    else:
-        email_user = creds["email"]
-        email_pass = creds["password"]
-        imap_server = creds["imap_server"]
-
-    first_attempt_user = email_user
-
-    # 2. Fetch content
-    original_content = None
-    if email_user and email_pass:
-        # Do not log credentials, passwords, or account objects. Only log minimal, non-sensitive account identifier.
-        print(f"DEBUG: Fetching email {email.email_id} for [REDACTED_ACCOUNT]")
-        original_content = EmailService.fetch_email_by_id(
-            email_user, email_pass, email.email_id, imap_server
-        )
-
-    # 2b. Universal Fallback: If not found, try all other accounts
-    if not original_content:
-        print("DEBUG: Email not found in initial account, trying all accounts...")
-        try:
-            accounts_json = os.environ.get("EMAIL_ACCOUNTS")
-            if accounts_json:
-                accounts = json.loads(accounts_json)
-                for acc in accounts:
-                    fallback_user = acc.get("email")
-                    fallback_pass = acc.get("password")
-                    fallback_server = acc.get("imap_server", "imap.gmail.com")
-
-                    # Skip if already tried
-                    if fallback_user == first_attempt_user:
-                        continue
-
-                    if fallback_user and fallback_pass:
-                        # Do not log fallback_pass or full account dicts. Only log minimal, non-sensitive identifiers.
-                        print(
-                            f"DEBUG: Fallback attempt for {email.email_id} on account [REDACTED_ACCOUNT]"
-                        )
-                        original_content = EmailService.fetch_email_by_id(
-                            fallback_user,
-                            fallback_pass,
-                            email.email_id,
-                            fallback_server,
-                        )
-                        if original_content:
-                            print(
-                                "DEBUG: Found email in fallback account: [REDACTED_ACCOUNT]"
-                            )
-                            break
-        except Exception as e:
-            print(f"DEBUG: Fallback iteration error: {e}")
-
-    # 3. Construct body
-    if original_content:
-        # Use the fetched content
-        original_content.get("body", "")
-        # If we have HTML but no text, maybe use HTML?
-        # EmailForwarder usually takes 'body' as text/html depending on structure.
-        # But here we pass a single 'body' string.
-        # Let's prepend the system note
-        final_body = f"""<div style="background-color: #f0fdf4; padding: 10px; border: 1px solid #86efac; margin-bottom: 20px; border-radius: 6px;">
-            <p><strong>[SentinelShare Notification]</strong></p>
-            <p>This email was previously marked as <strong>{email.status}</strong> and is now being forwarded per your request.</p>
-            <p><strong>Reason:</strong> {email.reason or 'Not a receipt'}</p>
-            <p><em>A manual rule has been created to forward future emails from this sender.</em></p>
-        </div>
-        <hr>
-        {original_content.get("html_body") or original_content.get("body")}
-        """
-        # If original was plain text, we might want to wrap it in <pre> or just text.
-        # But EmailForwarder.forward_email logic (via SimpleEmailService usually) sends HTML?
-        # Let's see EmailForwarder.forward_email. It uses 'sender_email' credentials to send.
-        # It calls SimpleEmailService.send_email with html_content=body usually?
-        # I'll assume HTML is safe.
-    else:
-        # Fallback to placeholder
-        final_body = f"""[This email was previously marked as ignored and is now being forwarded]
-
-Originally received: {email.received_at.strftime('%Y-%m-%d %H:%M:%S UTC') if email.received_at else 'Unknown'}
-Category: {email.category or 'Unknown'}
-Reason for initial ignore: {email.reason or 'Not a receipt'}
-
-Note: Original email body is not available as it was not stored and could not be fetched from the server.
-A manual rule has been created to forward future emails from this sender."""
-
-    # Prepare email data for forwarding
-    email_data = {
-        "message_id": email.email_id,
-        "subject": email.subject,
-        "from": email.sender,  # We populate 'from' field in the forwarded email template usually
-        "body": final_body,
-        "account_email": email.account_email,
-        "date": email.received_at,  # format_email_date will handle datetime objects
-    }
-
     try:
-        # Try to forward the email
-        success = EmailForwarder.forward_email(email_data, target_email)
-
-        if not success:
-            session.rollback()
-            raise HTTPException(status_code=500, detail="Failed to forward email")
-
-        # Update email status to forwarded
-        email.status = "forwarded"
-        email.reason = "Manually toggled from ignored"
-
-        # Commit changes
-        session.add(email)
-        session.commit()
-        session.refresh(email)
-        session.refresh(manual_rule)
-    except Exception as e:
-        session.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred while forwarding the email and creating the rule: {str(e)}",
-        )
-
-    return {
-        "success": True,
-        "email": email,
-        "rule": manual_rule,
-        "message": f"Email forwarded and rule created for {email_pattern}",
-    }
+        return WorkflowService.toggle_ignored_to_forwarded(request.email_id, session)
+    except ValueError as e:
+        status_code = 404 if "not found" in str(e).lower() else 400
+        if "not configured" in str(e).lower():
+            status_code = 500
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 @router.post("/upload")
@@ -557,77 +325,13 @@ async def upload_receipt(
     if len(content) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-    # Create receipts directory if it doesn't exist
-    receipts_dir = os.path.join("data", "receipts")
-    os.makedirs(receipts_dir, exist_ok=True)
-
-    # Generate unique filename with timestamp (including microseconds) and validated extension
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-
-    # Map content type to safe file extension
-    extension_map = {
-        "application/pdf": ".pdf",
-        "image/png": ".png",
-        "image/jpeg": ".jpg",
-    }
-    file_extension = extension_map.get(file.content_type, ".pdf")
-
-    safe_filename = f"manual_{timestamp}{file_extension}"
-    file_path = os.path.join(receipts_dir, safe_filename)
-
-    # Save file to disk
+    # Use service to handle upload
     try:
-        with open(file_path, "wb") as f:
-            f.write(content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-
-    # Create a ProcessedEmail record for the manual upload
-    # Create a mock email dict for detector
-    file_content_hash = get_email_content_hash(
-        {"body": safe_filename, "subject": file.filename or "Manual Upload"}
-    )
-
-    # For manual uploads, we'll mark them as receipts by default
-    # but still run categorization
-    mock_email_data = {
-        "subject": f"Manual Upload: {file.filename}",
-        "body": f"File: {safe_filename}",
-        "sender": "manual_upload",
-    }
-
-    category = ReceiptDetector.categorize_receipt(mock_email_data)
-
-    processed = ProcessedEmail(
-        email_id=f"manual_{timestamp}",
-        subject=file.filename or "Manual Upload",
-        sender="manual_upload",
-        received_at=datetime.now(timezone.utc),
-        processed_at=datetime.now(timezone.utc),
-        status="manual_upload",
-        account_email="manual",
-        category=category,
-        reason=f"Manual upload: {file_path}",
-        content_hash=file_content_hash,
-        encrypted_body=encrypt_content(f"File path: {file_path}"),
-        encrypted_html=None,
-    )
-
-    try:
-        session.add(processed)
-        session.commit()
-        session.refresh(processed)
-    except Exception as e:
-        # Cleanup file if DB insert fails
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to create database record: {str(e)}"
+        return WorkflowService.upload_receipt(
+            file_content=content,
+            filename=file.filename or "upload",
+            content_type=file.content_type or "application/pdf",
+            session=session,
         )
-
-    return {
-        "success": True,
-        "file_path": file_path,
-        "record_id": processed.id,
-        "message": f"Receipt uploaded successfully: {file.filename}",
-    }
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -4,11 +4,11 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import Session, select
 
-from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import get_session
-from backend.models import CategoryRule, GlobalSettings, ManualRule, Preference
+from backend.models import CategoryRule, ManualRule, Preference
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
+from backend.services.settings_service import SettingsService
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -73,29 +73,16 @@ def get_category_rules(session: Session = Depends(get_session)):
 @router.post("/category-rules", response_model=CategoryRule)
 def create_category_rule(rule: CategoryRule, session: Session = Depends(get_session)):
     """Create a new category rule"""
-    # Validate match_type
-    if rule.match_type not in ["sender", "subject"]:
-        raise HTTPException(
-            status_code=400, detail="match_type must be either 'sender' or 'subject'"
+    try:
+        return SettingsService.create_category_rule(
+            match_type=rule.match_type,
+            pattern=rule.pattern,
+            assigned_category=rule.assigned_category,
+            priority=rule.priority,
+            session=session,
         )
-
-    # Validate pattern and category are not empty
-    if not rule.pattern or not rule.pattern.strip():
-        raise HTTPException(status_code=400, detail="pattern cannot be empty")
-
-    if not rule.assigned_category or not rule.assigned_category.strip():
-        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
-
-    # Validate priority range
-    if rule.priority < 1 or rule.priority > 100:
-        raise HTTPException(
-            status_code=400, detail="priority must be between 1 and 100"
-        )
-
-    session.add(rule)
-    session.commit()
-    session.refresh(rule)
-    return rule
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.put("/category-rules/{rule_id}", response_model=CategoryRule)
@@ -103,38 +90,18 @@ def update_category_rule(
     rule_id: int, updated_rule: CategoryRule, session: Session = Depends(get_session)
 ):
     """Update an existing category rule"""
-    rule = session.get(CategoryRule, rule_id)
-    if not rule:
-        raise HTTPException(status_code=404, detail="Category rule not found")
-
-    # Validate match_type
-    if updated_rule.match_type not in ["sender", "subject"]:
-        raise HTTPException(
-            status_code=400, detail="match_type must be either 'sender' or 'subject'"
+    try:
+        return SettingsService.update_category_rule(
+            rule_id=rule_id,
+            match_type=updated_rule.match_type,
+            pattern=updated_rule.pattern,
+            assigned_category=updated_rule.assigned_category,
+            priority=updated_rule.priority,
+            session=session,
         )
-
-    # Validate pattern and category are not empty
-    if not updated_rule.pattern or not updated_rule.pattern.strip():
-        raise HTTPException(status_code=400, detail="pattern cannot be empty")
-
-    if not updated_rule.assigned_category or not updated_rule.assigned_category.strip():
-        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
-
-    # Validate priority range
-    if updated_rule.priority < 1 or updated_rule.priority > 100:
-        raise HTTPException(
-            status_code=400, detail="priority must be between 1 and 100"
-        )
-
-    rule.match_type = updated_rule.match_type
-    rule.pattern = updated_rule.pattern
-    rule.assigned_category = updated_rule.assigned_category
-    rule.priority = updated_rule.priority
-
-    session.add(rule)
-    session.commit()
-    session.refresh(rule)
-    return rule
+    except ValueError as e:
+        status_code = 404 if "not found" in str(e).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 @router.delete("/category-rules/{rule_id}")
@@ -166,15 +133,7 @@ class EmailTemplateUpdate(BaseModel):
 @router.get("/email-template")
 def get_email_template(session: Session = Depends(get_session)):
     """Get the current email template"""
-    setting = session.exec(
-        select(GlobalSettings).where(GlobalSettings.key == "email_template")
-    ).first()
-
-    if setting:
-        return {"template": setting.value}
-    else:
-        # Return default template if not set
-        return {"template": DEFAULT_EMAIL_TEMPLATE}
+    return {"template": SettingsService.get_email_template(session)}
 
 
 @router.post("/email-template")
@@ -182,31 +141,10 @@ def update_email_template(
     data: EmailTemplateUpdate, session: Session = Depends(get_session)
 ):
     """Update the email template"""
-    # Validate input
-    if not data.template or not data.template.strip():
-        raise HTTPException(status_code=400, detail="Template cannot be empty")
-    if len(data.template) > 10000:
-        raise HTTPException(
-            status_code=400, detail="Template too long (max 10,000 characters)"
-        )
-
-    setting = session.exec(
-        select(GlobalSettings).where(GlobalSettings.key == "email_template")
-    ).first()
-
-    if setting:
-        setting.value = data.template
-    else:
-        setting = GlobalSettings(
-            key="email_template",
-            value=data.template,
-            description="Email template for forwarding receipts",
-        )
-        session.add(setting)
-
-    session.commit()
-    session.refresh(setting)
-    return {"template": setting.value, "message": "Template updated successfully"}
+    try:
+        return SettingsService.update_email_template(data.template, session)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/test-connections")
