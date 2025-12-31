@@ -227,6 +227,13 @@ def process_emails():
                     session.commit()
                 return
 
+            # Pre-fetch category rules for batch optimization
+            from backend.models import CategoryRule
+
+            category_rules = session.exec(
+                select(CategoryRule).order_by(CategoryRule.priority.desc())
+            ).all()
+
             for email_data in emails:
                 try:
                     # Check if already processed (deduplication by Message-ID OR Content Hash)
@@ -301,7 +308,9 @@ def process_emails():
                     is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
 
                     # Use new smart categorization system
-                    category = Categorizer.predict_category(email_data, session=session)
+                    category = Categorizer.predict_category(
+                        email_data, session=session, rules=category_rules
+                    )
                     # Fallback to hardcoded logic if no rules matched
                     if category == "other":
                         category = Categorizer.get_fallback_category(email_data)

@@ -14,22 +14,25 @@ from ..models import CategoryRule
 
 
 class Categorizer:
-    _rules_cache = None
-
     @staticmethod
-    def predict_category(email: Any, session: Optional[Session] = None) -> str:
+    def predict_category(
+        email: Any,
+        session: Optional[Session] = None,
+        rules: Optional[list[CategoryRule]] = None,
+    ) -> str:
         """
         Predict the category for an email based on CategoryRule patterns.
 
         Args:
             email: Email data (can be dict or object with sender/subject attributes)
             session: Database session for querying CategoryRule table
+            rules: Optional pre-fetched list of CategoryRule objects for optimization
 
         Returns:
             Category string (e.g., "Travel", "Food", "Shopping")
             Returns "other" if no rules match
         """
-        if not session:
+        if not session and not rules:
             return "other"
 
         # Extract email attributes (support both dict and object)
@@ -50,14 +53,14 @@ class Categorizer:
         subject = (raw_subject or "").lower()
         sender = (raw_sender or "").lower()
 
-        # Get all category rules ordered by priority (highest first)
-        # Cache rules for the duration of the process to avoid redundant DB hits
-        if Categorizer._rules_cache is None:
-            Categorizer._rules_cache = session.exec(
+        # Get rules if not provided
+        if rules is None and session:
+            rules = session.exec(
                 select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
             ).all()
 
-        rules = Categorizer._rules_cache
+        if not rules:
+            return "other"
 
         # Apply first matching rule
         for rule in rules:
