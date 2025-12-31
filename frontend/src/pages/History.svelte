@@ -125,17 +125,14 @@
 		loadHistory();
 	}
 
-	function openModal(email: Email) {
+	function openModal(email: Email, analyze = false) {
 		selectedEmail = email;
 		showModal = true;
 		successMessage = '';
 		errorMessage = '';
-	}
-
-	function openModalAndAnalyze(email: Email) {
-		selectedEmail = email;
-		showModal = true;
-		reprocessEmail(email.id);
+		if (analyze) {
+			reprocessEmail(email.id);
+		}
 	}
 
 	function closeModal() {
@@ -372,7 +369,7 @@
 		{emails}
 		{loading}
 		onEmailClick={openModal}
-		onAnalyzeClick={openModalAndAnalyze}
+		onAnalyzeClick={(email) => openModal(email, true)}
 		onCategoryEditClick={openCategoryEditModal}
 	/>
 
@@ -381,7 +378,7 @@
 		{emails}
 		{loading}
 		onEmailClick={openModal}
-		onAnalyzeClick={openModalAndAnalyze}
+		onAnalyzeClick={(email) => openModal(email, true)}
 		onCategoryEditClick={openCategoryEditModal}
 	/>
 	<!-- Pagination -->
