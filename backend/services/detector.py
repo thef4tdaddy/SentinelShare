@@ -157,7 +157,7 @@ class ReceiptDetector:
         Check if email is a reply or forward.
         Delegates to TransactionalStrategy for consistency.
         """
-        strategy = TransactionalStrategy()
+        strategy = ReceiptDetector._transactional_strategy
         return strategy._is_reply_or_forward(subject, sender)
 
     @staticmethod
