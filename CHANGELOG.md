@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.5.0...sentinel-share-v1.6.0) (2025-12-31)
+
+
+### Features
+
+* v1.6.0 (OAuth2, Rules Engine, Manual Upload, CSV Export) ([#283](https://github.com/thef4tdaddy/SentinelShare/issues/283)) ([e909823](https://github.com/thef4tdaddy/SentinelShare/commit/e90982313559d55b6a1c49082f6022501bfc66b4))
+
 ## [1.5.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.4.1...sentinel-share-v1.5.0) (2025-12-29)
 
 
