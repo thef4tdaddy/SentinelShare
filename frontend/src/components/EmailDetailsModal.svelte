@@ -7,32 +7,7 @@
 		ThumbsUp,
 		ThumbsDown
 	} from 'lucide-svelte';
-
-	interface Email {
-		id: number;
-		email_id: string;
-		subject: string;
-		sender: string;
-		received_at: string;
-		processed_at: string;
-		status: string;
-		account_email?: string;
-		category?: string;
-		amount?: number;
-		reason?: string;
-	}
-
-	interface AnalysisOutcome {
-		email_id: number;
-		analysis: {
-			steps: Array<{
-				step: string;
-				result: boolean;
-				detail?: string;
-			}>;
-			final_decision: boolean;
-		};
-	}
+	import type { Email, AnalysisOutcome } from '../lib/types';
 
 	interface EmailDetailsModalProps {
 		isOpen: boolean;

@@ -1,21 +1,6 @@
 <script lang="ts">
 	import { Download } from 'lucide-svelte';
-
-	interface Filters {
-		status: string;
-		date_from: string;
-		date_to: string;
-		sender: string;
-		min_amount: string;
-		max_amount: string;
-	}
-
-	interface Pagination {
-		page: number;
-		per_page: number;
-		total: number;
-		total_pages: number;
-	}
+	import type { Filters, Pagination } from '../lib/types';
 
 	interface HistoryFiltersProps {
 		filters: Filters;

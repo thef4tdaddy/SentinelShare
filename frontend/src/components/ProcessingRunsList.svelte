@@ -1,17 +1,7 @@
 <script lang="ts">
 	import { Clock, CheckCircle, XCircle, AlertCircle, History as HistoryIcon } from 'lucide-svelte';
 	import { formatDate } from '../lib/dateUtils';
-
-	interface Run {
-		run_time: string;
-		first_processed: string;
-		last_processed: string;
-		total_emails: number;
-		forwarded: number;
-		blocked: number;
-		errors: number;
-		email_ids: number[];
-	}
+	import type { Run } from '../lib/types';
 
 	interface ProcessingRunsListProps {
 		runs: Run[];

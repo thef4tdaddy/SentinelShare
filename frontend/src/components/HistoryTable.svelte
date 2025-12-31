@@ -1,21 +1,8 @@
 <script lang="ts">
-	import { Clock, Mail, CheckCircle, XCircle, AlertCircle, Search, Edit2 } from 'lucide-svelte';
+	import { Clock, Mail, Search, Edit2 } from 'lucide-svelte';
 	import { formatDate } from '../lib/dateUtils';
-	import type { ComponentType } from 'svelte';
-
-	interface Email {
-		id: number;
-		email_id: string;
-		subject: string;
-		sender: string;
-		received_at: string;
-		processed_at: string;
-		status: string;
-		account_email?: string;
-		category?: string;
-		amount?: number;
-		reason?: string;
-	}
+	import { formatAmount, getStatusIcon, getStatusColor } from '../lib/historyUtils';
+	import type { Email } from '../lib/types';
 
 	interface HistoryTableProps {
 		emails: Email[];
@@ -27,39 +14,6 @@
 
 	let { emails, loading, onEmailClick, onAnalyzeClick, onCategoryEditClick }: HistoryTableProps =
 		$props();
-
-	function formatAmount(amount?: number) {
-		if (amount === undefined || amount === null) return '-';
-		return `$${amount.toFixed(2)}`;
-	}
-
-	function getStatusIcon(status: string): ComponentType {
-		switch (status) {
-			case 'forwarded':
-				return CheckCircle;
-			case 'blocked':
-			case 'ignored':
-				return XCircle;
-			case 'error':
-				return AlertCircle;
-			default:
-				return Mail;
-		}
-	}
-
-	function getStatusColor(status: string) {
-		switch (status) {
-			case 'forwarded':
-				return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-			case 'blocked':
-			case 'ignored':
-				return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
-			case 'error':
-				return 'bg-red-100 text-red-800 border-red-200';
-			default:
-				return 'bg-blue-100 text-blue-600 border-blue-200';
-		}
-	}
 </script>
 
 <div class="hidden md:block card overflow-hidden">

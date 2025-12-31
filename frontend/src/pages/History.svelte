@@ -10,51 +10,15 @@
 	import ProcessingRunsList from '../components/ProcessingRunsList.svelte';
 	import EmailDetailsModal from '../components/EmailDetailsModal.svelte';
 	import { CheckCircle, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import type { Email, Run, AnalysisOutcome, Stats, Filters, Pagination } from '../lib/types';
 
 	// Constants
 	const SUCCESS_MESSAGE_DELAY = 1500; // milliseconds
 	const FEEDBACK_MESSAGE_DELAY = 2000; // milliseconds
 
-	interface Email {
-		id: number;
-		email_id: string;
-		subject: string;
-		sender: string;
-		received_at: string;
-		processed_at: string;
-		status: string;
-		account_email?: string;
-		category?: string;
-		amount?: number;
-		reason?: string;
-	}
-
-	interface Run {
-		run_time: string;
-		first_processed: string;
-		last_processed: string;
-		total_emails: number;
-		forwarded: number;
-		blocked: number;
-		errors: number;
-		email_ids: number[];
-	}
-
-	interface AnalysisOutcome {
-		email_id: number;
-		analysis: {
-			steps: Array<{
-				step: string;
-				result: boolean;
-				detail?: string;
-			}>;
-			final_decision: boolean;
-		};
-	}
-
 	let emails = $state<Email[]>([]);
 	let runs = $state<Run[]>([]);
-	let stats = $state({
+	let stats = $state<Stats>({
 		total: 0,
 		forwarded: 0,
 		blocked: 0,
@@ -63,14 +27,14 @@
 		status_breakdown: {} as Record<string, number>
 	});
 
-	let pagination = $state({
+	let pagination = $state<Pagination>({
 		page: 1,
 		per_page: 50,
 		total: 0,
 		total_pages: 0
 	});
 
-	let filters = $state({
+	let filters = $state<Filters>({
 		status: '',
 		date_from: '',
 		date_to: '',

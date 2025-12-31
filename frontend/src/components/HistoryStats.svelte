@@ -1,14 +1,6 @@
 <script lang="ts">
 	import { Mail, CheckCircle, XCircle, AlertCircle } from 'lucide-svelte';
-
-	interface Stats {
-		total: number;
-		forwarded: number;
-		blocked: number;
-		errors: number;
-		total_amount: number;
-		status_breakdown: Record<string, number>;
-	}
+	import type { Stats } from '../lib/types';
 
 	interface HistoryStatsProps {
 		stats: Stats;
