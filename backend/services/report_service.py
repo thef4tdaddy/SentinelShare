@@ -200,84 +200,93 @@ class ReportService:
         session: Session,
     ) -> Dict[str, Any]:
         """Update the category of an email and optionally create a rule."""
-        email = session.get(ProcessedEmail, email_id)
-        if not email:
-            raise ValueError("Email not found")
+        try:
+            email = session.get(ProcessedEmail, email_id)
+            if not email:
+                raise ValueError("Email not found")
 
-        # Validate and trim category
-        category = category.strip()
-        if not category:
-            raise ValueError("category cannot be empty or whitespace")
+            # Validate and trim category
+            category = category.strip()
+            if not category:
+                raise ValueError("category cannot be empty or whitespace")
 
-        # Validate match_type
-        if match_type not in ["sender", "subject"]:
-            raise ValueError("match_type must be either 'sender' or 'subject'")
+            # Validate match_type
+            if match_type not in ["sender", "subject"]:
+                raise ValueError("match_type must be either 'sender' or 'subject'")
 
-        # Update the category
-        old_category = email.category
-        email.category = category
-        session.add(email)
-        session.commit()
+            # Update the category
+            old_category = email.category
+            email.category = category
+            session.add(email)
 
-        response: Dict[str, Any] = {
-            "status": "success",
-            "message": f"Category updated from '{old_category}' to '{category}'",
-            "rule_created": False,
-        }
+            response: Dict[str, Any] = {
+                "status": "success",
+                "message": f"Category updated from '{old_category}' to '{category}'",
+                "rule_created": False,
+            }
 
-        # Create a category rule if requested
-        if create_rule:
-            # Determine the pattern based on match type
-            if match_type == "sender":
-                # Extract domain from sender email
-                sender = email.sender or ""
-                if "@" in sender:
-                    domain = sender.split("@", 1)[1]
-                    pattern = f"*@{domain}"
-                else:
-                    pattern = f"*{sender}*"
-            else:  # subject
-                # Use a wildcard pattern with key words from subject
-                subject = email.subject or ""
-                # Take first significant word (simplified logic)
-                words = [w for w in subject.lower().split() if len(w) > 3]
-                if words:
-                    pattern = f"*{words[0]}*"
-                else:
-                    # No sufficiently significant words found in subject
-                    response[
-                        "message"
-                    ] += " (no suitable subject keywords found, rule not created)"
-                    return response
+            # Flag to indicate whether rule creation should be skipped
+            skip_rule = False
 
-            # Normalize pattern to lowercase for consistency
-            pattern = pattern.lower()
+            # Create a category rule if requested
+            if create_rule:
+                # Determine the pattern based on match type
+                if match_type == "sender":
+                    # Extract domain from sender email
+                    sender = email.sender or ""
+                    if "@" in sender:
+                        domain = sender.split("@", 1)[1]
+                        pattern = f"*@{domain}"
+                    else:
+                        pattern = f"*{sender}*"
+                else:  # subject
+                    # Use a wildcard pattern with key words from subject
+                    subject = email.subject or ""
+                    # Take first significant word (simplified logic)
+                    words = [w for w in subject.lower().split() if len(w) > 3]
+                    if words:
+                        pattern = f"*{words[0]}*"
+                    else:
+                        # No sufficiently significant words found in subject
+                        response[
+                            "message"
+                        ] += " (no suitable subject keywords found, rule not created)"
+                        skip_rule = True
 
-            # Check if a similar rule already exists (case-insensitive)
-            existing_rule = session.exec(
-                select(CategoryRule)
-                .where(func.lower(CategoryRule.pattern) == pattern)
-                .where(CategoryRule.match_type == match_type)
-            ).first()
+                if create_rule and not skip_rule:
+                    # Normalize pattern to lowercase for consistency
+                    pattern = pattern.lower()
 
-            if not existing_rule:
-                new_rule = CategoryRule(
-                    match_type=match_type,
-                    pattern=pattern,
-                    assigned_category=category,
-                    priority=10,
-                )
-                session.add(new_rule)
-                session.commit()
-                response["rule_created"] = True
-                response[
-                    "message"
-                ] += f" and rule created: {match_type}='{pattern}' → '{category}'"
-            else:
-                response["message"] += " (rule already exists)"
+                    # Check if a similar rule already exists (case-insensitive)
+                    existing_rule = session.exec(
+                        select(CategoryRule)
+                        .where(func.lower(CategoryRule.pattern) == pattern)
+                        .where(CategoryRule.match_type == match_type)
+                    ).first()
 
-        return response
+                    if not existing_rule:
+                        new_rule = CategoryRule(
+                            match_type=match_type,
+                            pattern=pattern,
+                            assigned_category=category,
+                            priority=10,
+                        )
+                        session.add(new_rule)
+                        response["rule_created"] = True
+                        response[
+                            "message"
+                        ] += (
+                            f" and rule created: {match_type}='{pattern}' → '{category}'"
+                        )
+                    else:
+                        response["message"] += " (rule already exists)"
 
+            # Commit all changes (email category update and any new rule) atomically
+            session.commit()
+            return response
+        except Exception:
+            session.rollback()
+            raise
     @staticmethod
     def reprocess_all_ignored(session: Session) -> Dict[str, Any]:
         """Reprocess all 'ignored' emails from the last 24 hours."""
