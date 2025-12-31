@@ -346,7 +346,7 @@
 		if (filters.min_amount) params.append('min_amount', filters.min_amount);
 		if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
-		const url = `/history/export?${params.toString()}`;
+		const url = `/api/history/export?${params.toString()}`;
 
 		// Fetch CSV first so we can handle errors and provide user feedback
 		errorMessage = '';

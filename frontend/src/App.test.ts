@@ -186,7 +186,7 @@ describe('App Component', () => {
 			// Wait for SendeeDashboard to load (should show "Forwarding Preferences" title)
 			await waitFor(
 				() => {
-					expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
+					expect(screen.getByText('Sendee Set Preferences')).toBeTruthy();
 					// SendeeDashboard should be rendered without Navbar
 					expect(screen.queryByAltText('SentinelShare Logo')).toBeNull();
 				},
@@ -288,7 +288,7 @@ describe('App Component', () => {
 		await waitFor(
 			() => {
 				// SendeeDashboard in admin mode should show "Forwarding Preferences"
-				expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
+				expect(screen.getByText('Sendee Set Preferences')).toBeTruthy();
 				// Navbar should still be visible in admin mode
 				expect(screen.queryByAltText('SentinelShare Logo')).toBeTruthy();
 			},

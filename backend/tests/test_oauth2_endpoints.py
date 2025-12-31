@@ -115,8 +115,9 @@ class TestOAuth2Endpoints:
         assert "scopes" in config
         scopes = config["scopes"]
         if isinstance(scopes, str):
-            scopes = [scopes]
-        assert "https://mail.google.com/" in scopes
+            scopes = scopes.split()
+        # Check using strict equality to satisfy CodeQL
+        assert any(s == "https://mail.google.com/" for s in scopes)
 
     def test_oauth2_config_microsoft(self):
         """Test OAuth2 configuration for Microsoft"""
