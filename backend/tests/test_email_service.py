@@ -16,7 +16,7 @@ class TestEmailService:
         mock_mail.search.return_value = ("OK", [search_result])
         return mock_mail
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_recent_emails_success(self, mock_imap):
         """Test successful email fetching"""
         # Setup mock
@@ -62,7 +62,7 @@ class TestEmailService:
         emails = EmailService.fetch_recent_emails(None, "password")
         assert emails == []
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_recent_emails_login_failure(self, mock_imap):
         """Test handling of login failure"""
         mock_mail = Mock()
@@ -75,7 +75,7 @@ class TestEmailService:
 
         assert emails == []
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_recent_emails_search_failure(self, mock_imap):
         """Test handling when search returns non-OK status"""
         mock_mail = Mock()
@@ -90,7 +90,7 @@ class TestEmailService:
 
         assert emails == []
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_recent_emails_with_limit(self, mock_imap):
         """Test that limit parameter works correctly"""
         mock_mail = Mock()
@@ -117,7 +117,7 @@ class TestEmailService:
         assert len(emails) == 100
         assert mock_mail.fetch.call_count == 100
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     @patch("bs4.BeautifulSoup")
     def test_fetch_emails_with_html_content(self, mock_bs, mock_imap):
         """Test parsing emails with HTML content"""
@@ -155,7 +155,7 @@ class TestEmailService:
         assert emails[0]["subject"] == "HTML Email"
         mock_bs.assert_called_once()
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_multipart_mixed(self, mock_imap):
         """Test parsing multipart emails with attachments"""
         mock_mail = Mock()
@@ -191,7 +191,7 @@ class TestEmailService:
         assert len(emails) == 1
         assert emails[0]["body"] == "Plain text content"
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_encoded_subject(self, mock_imap):
         """Test handling of encoded email subjects"""
         mock_mail = Mock()
@@ -217,7 +217,7 @@ class TestEmailService:
         # The subject should be decoded
         assert emails[0]["subject"] == "Test Subject"
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_success(self, mock_imap):
         """Test successful fetching of a single email by ID"""
         mock_mail = Mock()
@@ -247,7 +247,7 @@ class TestEmailService:
         assert EmailService.fetch_email_by_id("user", None, "id") is None
         assert EmailService.fetch_email_by_id("user", "pass", None) is None
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_connection_success(self, mock_imap):
         """Test successful email connection test"""
         mock_mail = Mock()
@@ -258,7 +258,7 @@ class TestEmailService:
         assert result["success"] is True
         assert result["error"] is None
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_connection_failure(self, mock_imap):
         """Test failed email connection test"""
         mock_mail = Mock()
@@ -269,7 +269,7 @@ class TestEmailService:
         assert result["success"] is False
         assert "Unable to connect to email server" in result["error"]
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_multipart_html(self, mock_imap):
         """Test fetching a multipart email with HTML content by ID"""
         mock_mail = Mock()
@@ -372,7 +372,7 @@ class TestEmailService:
         assert result["error"] == "Credentials missing"
 
     @patch.dict(os.environ, {"EMAIL_LOOKBACK_DAYS": "invalid"}, clear=True)
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_invalid_lookback_days(self, mock_imap):
         """Test fetch_recent_emails with invalid EMAIL_LOOKBACK_DAYS"""
         mock_mail = self._setup_mock_imap(mock_imap)
@@ -389,7 +389,7 @@ class TestEmailService:
         assert len(emails) == 1
 
     @patch.dict(os.environ, {"EMAIL_LOOKBACK_DAYS": "-5"}, clear=True)
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_negative_lookback_days(self, mock_imap):
         """Test fetch_recent_emails with negative EMAIL_LOOKBACK_DAYS"""
         mock_mail = self._setup_mock_imap(mock_imap)
@@ -406,7 +406,7 @@ class TestEmailService:
         assert len(emails) == 1
 
     @patch.dict(os.environ, {"EMAIL_BATCH_LIMIT": "invalid"}, clear=True)
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_invalid_batch_limit(self, mock_imap):
         """Test fetch_recent_emails with invalid EMAIL_BATCH_LIMIT"""
         # Create 50 email IDs
@@ -425,7 +425,7 @@ class TestEmailService:
         assert len(emails) == 50
 
     @patch.dict(os.environ, {"EMAIL_BATCH_LIMIT": "-10"}, clear=True)
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_negative_batch_limit(self, mock_imap):
         """Test fetch_recent_emails with negative EMAIL_BATCH_LIMIT"""
         mock_mail = self._setup_mock_imap(mock_imap)
@@ -441,7 +441,7 @@ class TestEmailService:
         # Should use default batch limit of 100
         assert len(emails) == 1
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_payload_decode_exception(self, mock_imap):
         """Test fetch_recent_emails with exception during payload decoding"""
         mock_mail = self._setup_mock_imap(mock_imap)
@@ -468,7 +468,7 @@ class TestEmailService:
         # Should handle the exception and still return the email
         assert len(emails) == 1
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_non_multipart_html(self, mock_imap):
         """Test fetch_recent_emails with non-multipart HTML email"""
         mock_mail = Mock()
@@ -490,7 +490,7 @@ class TestEmailService:
         assert emails[0]["html_body"]
         assert "HTML" in emails[0]["body"]  # Should extract text from HTML
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_fetch_exception(self, mock_imap):
         """Test fetch_recent_emails with exception during individual email fetch"""
         mock_mail = Mock()
@@ -515,7 +515,7 @@ class TestEmailService:
         # Should handle exception and continue with next email
         assert len(emails) == 1
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_search_not_ok(self, mock_imap):
         """Test fetch_email_by_id when search returns non-OK status"""
         mock_mail = Mock()
@@ -527,7 +527,7 @@ class TestEmailService:
         result = EmailService.fetch_email_by_id("user", "pass", "<test@test.com>")
         assert result is None
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_no_messages(self, mock_imap):
         """Test fetch_email_by_id when search returns no messages"""
         mock_mail = Mock()
@@ -539,7 +539,7 @@ class TestEmailService:
         result = EmailService.fetch_email_by_id("user", "pass", "<test@test.com>")
         assert result is None
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_fetch_not_ok(self, mock_imap):
         """Test fetch_email_by_id when fetch returns non-OK status"""
         mock_mail = Mock()
@@ -552,7 +552,7 @@ class TestEmailService:
         result = EmailService.fetch_email_by_id("user", "pass", "<test@test.com>")
         assert result is None
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_exception(self, mock_imap):
         """Test fetch_email_by_id with exception during processing"""
         mock_mail = Mock()
@@ -581,7 +581,7 @@ class TestEmailService:
         # Should not crash, returns whatever is available from other sources
         assert isinstance(accounts, list)
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_custom_search_criterion(self, mock_imap):
         """Test fetch_recent_emails with custom search criterion"""
         mock_mail = Mock()
@@ -603,7 +603,7 @@ class TestEmailService:
         )
         assert len(emails) == 1
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_non_multipart_decode_exception(self, mock_imap):
         """Test fetch_recent_emails with exception in non-multipart decode"""
         mock_mail = Mock()
@@ -625,7 +625,7 @@ class TestEmailService:
 
         # Patch message_from_bytes so that EmailService uses our BadPayloadMessage
         with patch(
-            "backend.services.email_service.email.message_from_bytes"
+            "backend.services.email_parser.email.message_from_bytes"
         ) as mock_message_from_bytes:
             bad_msg = BadPayloadMessage()
             bad_msg["Subject"] = "Test"
@@ -647,7 +647,7 @@ class TestEmailService:
         assert emails[0]["from"] == "test@test.com"
         assert emails[0]["body"] == ""
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_multipart_decode_exceptions(self, mock_imap):
         """Test fetch_email_by_id with exceptions during multipart decoding"""
         mock_mail = Mock()
@@ -686,7 +686,7 @@ class TestEmailService:
         assert "Good text body" in result.get("body", "")
 
     @patch.dict(os.environ, {"EMAIL_BATCH_LIMIT": "5"}, clear=True)
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_with_custom_criterion_and_batch_limit(self, mock_imap):
         """Test fetch with custom search criterion AND batch limiting"""
         mock_mail = Mock()
@@ -711,7 +711,7 @@ class TestEmailService:
         # Should limit to 5 emails
         assert len(emails) == 5
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_non_multipart_html(self, mock_imap):
         """Test fetch_email_by_id with non-multipart HTML email"""
         mock_mail = Mock()
@@ -730,7 +730,7 @@ class TestEmailService:
         assert result is not None
         assert result["html_body"]
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_no_raw_email_data(self, mock_imap):
         """Test fetch_email_by_id when no raw email data is returned"""
         mock_mail = Mock()
@@ -746,7 +746,7 @@ class TestEmailService:
         assert result is None
         mock_mail.logout.assert_called_once()
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_email_by_id_with_attachment(self, mock_imap):
         """Test fetch_email_by_id skips attachments in multipart email"""
         mock_mail = Mock()
@@ -777,7 +777,7 @@ class TestEmailService:
         assert result is not None
         assert result["body"] == "Text content"
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_multipart_get_payload_exception(self, mock_imap):
         """Test exception handling when multipart email get_payload raises an error"""
         mock_mail = Mock()
@@ -788,20 +788,26 @@ class TestEmailService:
 
         # Patch message_from_bytes to return a mocked message
         with patch(
-            "backend.services.email_service.email.message_from_bytes"
+            "backend.services.email_parser.email.message_from_bytes"
         ) as mock_message_from_bytes:
             # Create a real multipart message structure but mock the problematic part
             mock_msg = Mock()
-            mock_msg.get.side_effect = lambda key: {
-                "Subject": "Test Subject",
-                "From": "test@test.com",
-                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
-                "Message-ID": "<test@test.com>",
-                "Reply-To": None,
-            }.get(key)
-            mock_msg.__getitem__ = lambda self, key: {
-                "Subject": "Test Subject",
-            }.get(key)
+            def mock_get(key, default=None):
+                return {
+                    "Subject": "Test Subject",
+                    "From": "test@test.com",
+                    "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                    "Message-ID": "<test@test.com>",
+                    "Reply-To": None,
+                }.get(key, default)
+            
+            mock_msg.get = mock_get
+            def mock_getitem(key):
+                return {
+                    "Subject": "Test Subject",
+                }.get(key)
+            
+            mock_msg.__getitem__ = mock_getitem
             mock_msg.is_multipart.return_value = True
 
             # Create a mock part that raises exception on get_payload(decode=True)
@@ -823,7 +829,7 @@ class TestEmailService:
             assert emails[0]["from"] == "test@test.com"
             assert emails[0]["body"] == ""
 
-    @patch("backend.services.email_service.imaplib.IMAP4_SSL")
+    @patch("backend.services.imap_service.imaplib.IMAP4_SSL")
     def test_fetch_emails_non_multipart_get_payload_exception(self, mock_imap):
         """Test exception handling when non-multipart email get_payload raises an error"""
         mock_mail = Mock()
@@ -834,22 +840,28 @@ class TestEmailService:
 
         # Patch message_from_bytes to return a message that raises on get_payload
         with patch(
-            "backend.services.email_service.email.message_from_bytes"
+            "backend.services.email_parser.email.message_from_bytes"
         ) as mock_message_from_bytes:
             mock_msg = Mock()
-            mock_msg.get.side_effect = lambda key: {
-                "Subject": "Test Subject",
-                "From": "test@test.com",
-                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
-                "Message-ID": "<test@test.com>",
-                "Reply-To": None,
-            }.get(key)
-            mock_msg.__getitem__ = lambda self, key: {
-                "Subject": "Test Subject",
-                "From": "test@test.com",
-                "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
-                "Message-ID": "<test@test.com>",
-            }.get(key)
+            def mock_get2(key, default=None):
+                return {
+                    "Subject": "Test Subject",
+                    "From": "test@test.com",
+                    "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                    "Message-ID": "<test@test.com>",
+                    "Reply-To": None,
+                }.get(key, default)
+            
+            mock_msg.get = mock_get2
+            def mock_getitem2(key):
+                return {
+                    "Subject": "Test Subject",
+                    "From": "test@test.com",
+                    "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
+                    "Message-ID": "<test@test.com>",
+                }.get(key)
+            
+            mock_msg.__getitem__ = mock_getitem2
             mock_msg.is_multipart.return_value = False
             mock_msg.get_content_type.return_value = "text/plain"
             mock_msg.get_payload.side_effect = Exception("Non-multipart payload error")
