@@ -1,8 +1,8 @@
 """Service for managing application settings and configurations."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
-from sqlmodel import Session, func, select
+from sqlmodel import Session, select
 
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.models import CategoryRule, GlobalSettings

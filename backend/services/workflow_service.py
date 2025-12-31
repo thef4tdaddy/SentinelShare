@@ -4,7 +4,7 @@ import json
 import os
 from datetime import datetime, timezone
 from email.utils import parseaddr
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from sqlmodel import Session, select
 

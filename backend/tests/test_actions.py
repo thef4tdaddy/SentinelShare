@@ -62,7 +62,7 @@ class TestToggleIgnored:
         # Mock the EmailForwarder and environment
         with patch.dict("os.environ", {"WIFE_EMAIL": "wife@example.com"}):
             with patch(
-                "backend.routers.actions.EmailForwarder.forward_email",
+                "backend.services.forwarder.EmailForwarder.forward_email",
                 return_value=True,
             ):
                 # Call the endpoint
@@ -106,7 +106,7 @@ class TestToggleIgnored:
 
         with patch.dict("os.environ", {"WIFE_EMAIL": "wife@example.com"}):
             with patch(
-                "backend.routers.actions.EmailForwarder.forward_email",
+                "backend.services.forwarder.EmailForwarder.forward_email",
                 return_value=True,
             ):
                 assert email.id is not None
@@ -158,7 +158,7 @@ class TestToggleIgnored:
         """Test handling when email forwarding fails"""
         with patch.dict("os.environ", {"WIFE_EMAIL": "wife@example.com"}):
             with patch(
-                "backend.routers.actions.EmailForwarder.forward_email",
+                "backend.services.forwarder.EmailForwarder.forward_email",
                 return_value=False,
             ):
                 request = actions.ToggleIgnoredRequest(email_id=sample_ignored_email.id)
@@ -251,7 +251,7 @@ class TestToggleIgnored:
 
         with patch.dict("os.environ", {"WIFE_EMAIL": "wife@example.com"}):
             with patch(
-                "backend.routers.actions.EmailForwarder.forward_email",
+                "backend.services.forwarder.EmailForwarder.forward_email",
                 return_value=True,
             ):
                 request = actions.ToggleIgnoredRequest(email_id=email.id)
@@ -296,7 +296,7 @@ class TestAccountSelection:
                     "html_body": "html content",
                 }
                 with patch(
-                    "backend.routers.actions.EmailForwarder.forward_email",
+                    "backend.services.forwarder.EmailForwarder.forward_email",
                     return_value=True,
                 ):
                     request = actions.ToggleIgnoredRequest(
@@ -342,7 +342,7 @@ class TestAccountSelection:
                 # First attempt fails, second succeeds
                 mock_fetch.side_effect = [None, {"body": "found"}]
                 with patch(
-                    "backend.routers.actions.EmailForwarder.forward_email",
+                    "backend.services.forwarder.EmailForwarder.forward_email",
                     return_value=True,
                 ):
                     request = actions.ToggleIgnoredRequest(
@@ -371,7 +371,7 @@ class TestAccountSelection:
             ) as mock_fetch:
                 mock_fetch.return_value = {"body": "content"}
                 with patch(
-                    "backend.routers.actions.EmailForwarder.forward_email",
+                    "backend.services.forwarder.EmailForwarder.forward_email",
                     return_value=True,
                 ):
                     request = actions.ToggleIgnoredRequest(
@@ -422,7 +422,7 @@ class TestAccountSelection:
                 # First attempt (sender@test.com) fails, fallback succeeds
                 mock_fetch.side_effect = [None, {"body": "found"}]
                 with patch(
-                    "backend.routers.actions.EmailForwarder.forward_email",
+                    "backend.services.forwarder.EmailForwarder.forward_email",
                     return_value=True,
                 ):
                     request = actions.ToggleIgnoredRequest(
@@ -459,7 +459,7 @@ class TestAccountSelection:
             ) as mock_fetch:
                 mock_fetch.return_value = None  # First attempt fails
                 with patch(
-                    "backend.routers.actions.EmailForwarder.forward_email",
+                    "backend.services.forwarder.EmailForwarder.forward_email",
                     return_value=True,
                 ):
                     request = actions.ToggleIgnoredRequest(
