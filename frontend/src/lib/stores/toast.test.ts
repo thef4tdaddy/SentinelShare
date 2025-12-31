@@ -273,7 +273,6 @@ describe('toast store', () => {
 				notificationCount++;
 			});
 
-
 			// Subscription triggers initial notification (count = 1)
 			expect(notificationCount).toBe(1);
 
