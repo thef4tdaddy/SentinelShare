@@ -25,16 +25,14 @@ It turns a manual chore into a "set it and forget it" background process.
 - **🔐 OAuth2 Authentication**: Secure, modern authentication with Google (Gmail) using OAuth2, eliminating the need for App Passwords. Microsoft (Outlook) support coming soon.
 - **📧 In-App Email Management**: Add and manage multiple IMAP accounts directly from the dashboard with encrypted credential storage. Support for both password-based and OAuth2 authentication.
 - **Intelligent Forwarding**: Forwards detected receipts to a target email address with a rich, summary header.
-- **Smart Actions**:
-  - **Block**: Stop forwarding specific senders or categories with one click.
-  - **Always Forward**: Whitelist senders to ensure they are never missed.
-  - **Settings**: Manage preferences directly from the forwarded email or the dashboard.
-- **Modern Web Dashboard**:
-  - **Activity Feed**: Real-time log of processed emails.
-  - **History**: Searchable history of all actions.
-  - **Stats**: Visual breakdown of forwarded vs. blocked emails and spending over time.
-  - **Settings**: Configure manual rules, manage blocking lists, and edit email templates.
-- **Rich Email Templates**: Customizable, beautiful HTML templates for forwarded emails.
+- **🧩 Smart Categorization**: A powerful rules engine to automatically categorize receipts based on sender, subject patterns, or amount ranges.
+- **📤 Manual Receipt Upload**: Drag-and-drop support for manually uploading receipts that didn't arrive via email.
+- **📊 CSV Export**: Securely export filtered expense history to CSV for easy import into budgeting tools.
+- **🖥️ Modern Web Dashboard**:
+  - **Activity & History**: Real-time log and searchable history of all processed emails and actions.
+  - **Stats & Insights**: Visual breakdown of spending patterns and forwarding statistics.
+  - **Rules & Settings**: Centralized control for manual rules, account management, and templates.
+- **✨ Rich Email Templates**: Customizable, beautiful HTML templates for forwarded emails with one-click action buttons.
 
 ## 🛠️ Technology Stack
 
