@@ -126,7 +126,8 @@ def submit_feedback(
     try:
         return ReportService.submit_feedback(email_id, is_receipt, session)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        status_code = 404 if "not found" in str(e).lower() else 400
+        raise HTTPException(status_code=status_code, detail=str(e))
 
 
 class UpdateCategoryRequest(BaseModel):
