@@ -1,13 +1,14 @@
 from typing import List
 
-from backend.constants import DEFAULT_EMAIL_TEMPLATE
-from backend.database import get_session
-from backend.models import GlobalSettings, ManualRule, Preference
-from backend.services.email_service import EmailService
-from backend.services.scheduler import process_emails
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import Session, select
+
+from backend.constants import DEFAULT_EMAIL_TEMPLATE
+from backend.database import get_session
+from backend.models import CategoryRule, GlobalSettings, ManualRule, Preference
+from backend.services.email_service import EmailService
+from backend.services.scheduler import process_emails
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -53,6 +54,95 @@ def delete_rule(rule_id: int, session: Session = Depends(get_session)):
     rule = session.get(ManualRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
+    session.delete(rule)
+    session.commit()
+    return {"ok": True}
+
+
+# Category Rules endpoints
+
+
+@router.get("/category-rules", response_model=List[CategoryRule])
+def get_category_rules(session: Session = Depends(get_session)):
+    """Get all category rules ordered by priority"""
+    return session.exec(
+        select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
+    ).all()
+
+
+@router.post("/category-rules", response_model=CategoryRule)
+def create_category_rule(rule: CategoryRule, session: Session = Depends(get_session)):
+    """Create a new category rule"""
+    # Validate match_type
+    if rule.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400, detail="match_type must be either 'sender' or 'subject'"
+        )
+
+    # Validate pattern and category are not empty
+    if not rule.pattern or not rule.pattern.strip():
+        raise HTTPException(status_code=400, detail="pattern cannot be empty")
+
+    if not rule.assigned_category or not rule.assigned_category.strip():
+        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
+
+    # Validate priority range
+    if rule.priority < 1 or rule.priority > 100:
+        raise HTTPException(
+            status_code=400, detail="priority must be between 1 and 100"
+        )
+
+    session.add(rule)
+    session.commit()
+    session.refresh(rule)
+    return rule
+
+
+@router.put("/category-rules/{rule_id}", response_model=CategoryRule)
+def update_category_rule(
+    rule_id: int, updated_rule: CategoryRule, session: Session = Depends(get_session)
+):
+    """Update an existing category rule"""
+    rule = session.get(CategoryRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Category rule not found")
+
+    # Validate match_type
+    if updated_rule.match_type not in ["sender", "subject"]:
+        raise HTTPException(
+            status_code=400, detail="match_type must be either 'sender' or 'subject'"
+        )
+
+    # Validate pattern and category are not empty
+    if not updated_rule.pattern or not updated_rule.pattern.strip():
+        raise HTTPException(status_code=400, detail="pattern cannot be empty")
+
+    if not updated_rule.assigned_category or not updated_rule.assigned_category.strip():
+        raise HTTPException(status_code=400, detail="assigned_category cannot be empty")
+
+    # Validate priority range
+    if updated_rule.priority < 1 or updated_rule.priority > 100:
+        raise HTTPException(
+            status_code=400, detail="priority must be between 1 and 100"
+        )
+
+    rule.match_type = updated_rule.match_type
+    rule.pattern = updated_rule.pattern
+    rule.assigned_category = updated_rule.assigned_category
+    rule.priority = updated_rule.priority
+
+    session.add(rule)
+    session.commit()
+    session.refresh(rule)
+    return rule
+
+
+@router.delete("/category-rules/{rule_id}")
+def delete_category_rule(rule_id: int, session: Session = Depends(get_session)):
+    """Delete a category rule"""
+    rule = session.get(CategoryRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Category rule not found")
     session.delete(rule)
     session.commit()
     return {"ok": True}
@@ -161,15 +251,19 @@ class EmailAccountResponse(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+    auth_method: str = "password"  # "password" or "oauth2"
+    provider: str | None = None  # "google", "microsoft", etc.
 
 
 @router.get("/accounts", response_model=List[EmailAccountResponse])
 def get_email_accounts(session: Session = Depends(get_session)):
-    """Get all email accounts (without passwords)"""
+    """Get all email accounts (both DB and Env-defined)"""
     from backend.models import EmailAccount
+    from backend.services.email_service import EmailService
 
-    accounts = session.exec(select(EmailAccount)).all()
-    return [
+    # 1. Get DB Accounts
+    db_accounts = session.exec(select(EmailAccount)).all()
+    response_list = [
         EmailAccountResponse(
             id=acc.id,
             email=acc.email,
@@ -179,9 +273,43 @@ def get_email_accounts(session: Session = Depends(get_session)):
             is_active=acc.is_active,
             created_at=acc.created_at.isoformat(),
             updated_at=acc.updated_at.isoformat(),
+            auth_method=acc.auth_method,
+            provider=acc.provider,
         )
-        for acc in accounts
+        for acc in db_accounts
     ]
+
+    # 2. Get Env Accounts (via EmailService)
+    # EmailService.get_all_accounts returns simple dicts with credentials
+    # We need to filter out ones that match DB accounts to avoid duplicates
+    all_service_accounts = EmailService.get_all_accounts()
+
+    db_emails = {acc.email.lower() for acc in db_accounts}
+
+    # Start fake IDs at -1 and go down
+    fake_id = -1
+
+    now_str = "2024-01-01T00:00:00"  # Placeholder timestamp for env accounts
+
+    for acc in all_service_accounts:
+        email = acc.get("email", "").lower()
+        if email and email not in db_emails:
+            # This is an env-only account
+            response_list.append(
+                EmailAccountResponse(
+                    id=fake_id,
+                    email=email,
+                    host=acc.get("imap_server", "unknown"),
+                    port=993,  # Default assumption for env accounts if not specified
+                    username=email,  # Usually same as email
+                    is_active=True,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            fake_id -= 1
+
+    return response_list
 
 
 @router.post("/accounts", response_model=EmailAccountResponse)
@@ -210,8 +338,8 @@ def create_email_account(
     # Encrypt the password
     try:
         encrypted_password = EncryptionService.encrypt(account.password)
-    except Exception as e:
-        logging.error(f"Password encryption failed: {e}")
+    except Exception:
+        logging.exception("Password encryption failed")
         raise HTTPException(status_code=500, detail="Failed to encrypt password")
 
     # Create the account
@@ -240,6 +368,8 @@ def create_email_account(
         is_active=new_account.is_active,
         created_at=new_account.created_at.isoformat(),
         updated_at=new_account.updated_at.isoformat(),
+        auth_method=new_account.auth_method,
+        provider=new_account.provider,
     )
 
 
@@ -258,31 +388,60 @@ def delete_email_account(account_id: int, session: Session = Depends(get_session
 
 
 @router.post("/accounts/{account_id}/test")
-def test_email_account(account_id: int, session: Session = Depends(get_session)):
+async def test_email_account(account_id: int, session: Session = Depends(get_session)):
     """Test connection for a specific email account"""
     import logging
 
     from backend.models import EmailAccount
     from backend.services.encryption_service import EncryptionService
+    from backend.services.oauth2_service import OAuth2Service
 
     account = session.get(EmailAccount, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
-    # Decrypt password
     try:
-        password = EncryptionService.decrypt(account.encrypted_password)
-        if not password:
-            raise HTTPException(status_code=500, detail="Failed to decrypt password")
+        if account.auth_method == "oauth2":
+            # OAuth2 account - get valid access token
+            access_token = await OAuth2Service.ensure_valid_token(session, account)
+            if not access_token:
+                raise HTTPException(
+                    status_code=500, detail="Failed to obtain OAuth2 access token"
+                )
+
+            result = EmailService.test_connection(
+                account.username,
+                None,
+                account.host,
+                auth_method="oauth2",
+                access_token=access_token,
+            )
+        else:
+            # Password-based account
+            if not account.encrypted_password:
+                raise HTTPException(
+                    status_code=500, detail="No password found for account"
+                )
+
+            password = EncryptionService.decrypt(account.encrypted_password)
+            if not password:
+                raise HTTPException(
+                    status_code=500, detail="Failed to decrypt password"
+                )
+
+            result = EmailService.test_connection(
+                account.username, password, account.host
+            )
+
+        return {
+            "account": account.email,
+            "success": result["success"],
+            # Do not expose low-level exception messages to the client
+            "error": None if result["success"] else "Failed to connect to email server",
+        }
     except ValueError as e:
-        logging.error(f"Password decryption failed for account {account_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to decrypt password")
-
-    # Test connection
-    result = EmailService.test_connection(account.username, password, account.host)
-
-    return {
-        "account": account.email,
-        "success": result["success"],
-        "error": result["error"],
-    }
+        logging.error(f"Account test failed for {account_id}: {e}")
+        raise HTTPException(status_code=500, detail="Email account test failed")
+    except Exception:
+        logging.exception(f"Unexpected error testing account {account_id}")
+        raise HTTPException(status_code=500, detail="Email account test failed")

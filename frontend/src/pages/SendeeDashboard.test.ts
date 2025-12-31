@@ -30,7 +30,7 @@ describe('SendeeDashboard Component', () => {
 		render(SendeeDashboard, { props: { token: 'test-token', isAdmin: false } });
 
 		await waitFor(() => {
-			expect(screen.getByText('Forwarding Preferences')).toBeTruthy();
+			expect(screen.getByText('Sendee Set Preferences')).toBeTruthy();
 		});
 	});
 
@@ -211,7 +211,7 @@ describe('SendeeDashboard Component', () => {
 		render(SendeeDashboard, { props: { token: 'test-token', isAdmin: false } });
 
 		await waitFor(() => {
-			expect(screen.getByText('No blocked senders yet.')).toBeTruthy();
+			expect(screen.getByText('No ignored senders yet.')).toBeTruthy();
 		});
 	});
 
@@ -284,7 +284,7 @@ describe('SendeeDashboard Component', () => {
 			await fireEvent.click(blockedButton);
 
 			await waitFor(() => {
-				expect(screen.getByText('No blocked senders yet.')).toBeTruthy();
+				expect(screen.getByText('No ignored senders yet.')).toBeTruthy();
 			});
 		}
 	});
@@ -442,7 +442,7 @@ describe('SendeeDashboard Component', () => {
 
 		await waitFor(() => {
 			expect(screen.getByText('No senders in your allow-list.')).toBeTruthy();
-			expect(screen.getByText('No blocked senders yet.')).toBeTruthy();
+			expect(screen.getByText('No ignored senders yet.')).toBeTruthy();
 		});
 	});
 
@@ -464,7 +464,7 @@ describe('SendeeDashboard Component', () => {
 		});
 	});
 
-	it('renders Blocked Senders section with correct styling', async () => {
+	it('renders Ignored Senders section with correct styling', async () => {
 		const mockPreferences = {
 			success: true,
 			email: 'user@example.com',
@@ -477,7 +477,7 @@ describe('SendeeDashboard Component', () => {
 		render(SendeeDashboard, { props: { token: 'test-token', isAdmin: false } });
 
 		await waitFor(() => {
-			expect(screen.getByText('Blocked Senders')).toBeTruthy();
+			expect(screen.getByText('Ignored Senders')).toBeTruthy();
 			expect(
 				screen.getByText('SentinelShare will ignore all emails from these senders.')
 			).toBeTruthy();
@@ -614,7 +614,7 @@ describe('SendeeDashboard Component', () => {
 		const badges = Array.from(container.querySelectorAll('.badge'));
 		const blockedBadge = badges.find(
 			(badge) =>
-				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-danger')
+				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-red-100')
 		);
 		const xButton = blockedBadge?.querySelector('button');
 
@@ -626,7 +626,7 @@ describe('SendeeDashboard Component', () => {
 
 			// Verify it's not in blocked anymore
 			await waitFor(() => {
-				expect(screen.getByText('No blocked senders yet.')).toBeTruthy();
+				expect(screen.getByText('No ignored senders yet.')).toBeTruthy();
 			});
 		}
 	});
@@ -659,7 +659,7 @@ describe('SendeeDashboard Component', () => {
 		const badges = Array.from(container.querySelectorAll('.badge'));
 		const blockedBadge = badges.find(
 			(badge) =>
-				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-danger')
+				badge.textContent?.includes('spam@example.com') && badge.className.includes('bg-red-100')
 		);
 		const xButton = blockedBadge?.querySelector('button');
 

@@ -22,18 +22,17 @@ It turns a manual chore into a "set it and forget it" background process.
 ## 🚀 Features
 
 - **🌙 Dark Mode Support**: Sleek, modern interface with automatic system preference detection and manual override (theme persistence).
-- **📧 In-App Email Management**: Add and manage multiple IMAP accounts directly from the dashboard with encrypted credential storage.
+- **🔐 OAuth2 Authentication**: Secure, modern authentication with Google (Gmail) using OAuth2, eliminating the need for App Passwords. Microsoft (Outlook) support coming soon.
+- **📧 In-App Email Management**: Add and manage multiple IMAP accounts directly from the dashboard with encrypted credential storage. Support for both password-based and OAuth2 authentication.
 - **Intelligent Forwarding**: Forwards detected receipts to a target email address with a rich, summary header.
-- **Smart Actions**:
-  - **Block**: Stop forwarding specific senders or categories with one click.
-  - **Always Forward**: Whitelist senders to ensure they are never missed.
-  - **Settings**: Manage preferences directly from the forwarded email or the dashboard.
-- **Modern Web Dashboard**:
-  - **Activity Feed**: Real-time log of processed emails.
-  - **History**: Searchable history of all actions.
-  - **Stats**: Visual breakdown of forwarded vs. blocked emails and spending over time.
-  - **Settings**: Configure manual rules, manage blocking lists, and edit email templates.
-- **Rich Email Templates**: Customizable, beautiful HTML templates for forwarded emails.
+- **🧩 Smart Categorization**: A powerful rules engine to automatically categorize receipts based on sender, subject patterns, or amount ranges.
+- **📤 Manual Receipt Upload**: Drag-and-drop support for manually uploading receipts that didn't arrive via email.
+- **📊 CSV Export**: Securely export filtered expense history to CSV for easy import into budgeting tools.
+- **🖥️ Modern Web Dashboard**:
+  - **Activity & History**: Real-time log and searchable history of all processed emails and actions.
+  - **Stats & Insights**: Visual breakdown of spending patterns and forwarding statistics.
+  - **Rules & Settings**: Centralized control for manual rules, account management, and templates.
+- **✨ Rich Email Templates**: Customizable, beautiful HTML templates for forwarded emails with one-click action buttons.
 
 ## 🛠️ Technology Stack
 
@@ -139,7 +138,10 @@ Create a `.env` file in the root directory with the following variables:
 SECRET_KEY=your_secret_key_here
 APP_URL=http://localhost:5173  # Or your production URL
 
-# Primary Email (Source)
+# Authentication
+DASHBOARD_PASSWORD=your_secure_password
+
+# Primary Email (Source) - Legacy/Manual IMAP
 GMAIL_EMAIL=your_email@gmail.com
 GMAIL_PASSWORD=your_app_password
 
@@ -150,7 +152,37 @@ SENDER_PASSWORD=your_app_password
 
 # Optional: Additional Accounts (JSON string)
 EMAIL_ACCOUNTS='[{"email": "other@icloud.com", "password": "...", "imap_server": "imap.mail.me.com"}]'
+
+# OAuth2 Configuration (Recommended for Gmail)
+# Get credentials from Google Cloud Console: https://console.cloud.google.com/
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# OAuth2 Configuration for Microsoft (Coming Soon)
+MICROSOFT_CLIENT_ID=your_microsoft_client_id
+MICROSOFT_CLIENT_SECRET=your_microsoft_client_secret
 ```
+
+#### 🔐 OAuth2 Setup (Recommended)
+
+OAuth2 is the preferred authentication method for Gmail as it's more secure than App Passwords and provides scoped access.
+
+**Google OAuth2 Setup:**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Enable the Gmail API for your project
+4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
+5. Choose "Web application" as the application type
+6. Add authorized redirect URIs:
+   - Development: `http://localhost:8000/api/auth/google/callback`
+   - Production: `https://your-domain.com/api/auth/google/callback`
+7. Copy the Client ID and Client Secret to your `.env` file
+8. In the dashboard, click "Connect with Google" to authorize access
+
+**Microsoft OAuth2 Setup (Coming Soon):**
+
+Microsoft OAuth2 support is planned for future releases. For now, use IMAP with App Passwords for Outlook accounts.
 
 ### 5. Running the Application
 
@@ -174,7 +206,7 @@ Visit `http://localhost:5173` (or your configured port) to access the dashboard.
 ## 📚 Developer Documentation
 
 - **[Project Context & Rules](GEMINI.md)**: Essential guide for AI Agents and Developers, covering architecture, "gotchas", and best practices.
-- **[Workflows](WORKFLOWS.md)**: Inventory of CI/CD pipelines and future automation recommendations.
+- **[Workflows](docs/WORKFLOWS.md)**: Inventory of CI/CD pipelines and future automation recommendations.
 - **[Copilot Agent](.github/agents/SentinelShareCopilotAgent.md)**: Configuration and system prompt for the `SentinelShareCopilotAgent`.
 
 ## 🤝 Contributing

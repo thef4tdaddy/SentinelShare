@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content, get_email_content_hash
+from backend.services.categorizer import Categorizer
 from backend.services.command_service import CommandService
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
@@ -108,18 +109,81 @@ def process_emails():
                 user = acc.get("email")
                 pwd = acc.get("password")
                 server = acc.get("imap_server", "imap.gmail.com")
+                port = acc.get("imap_port", 993)
+                auth_method = acc.get("auth_method", "password")
+                account_id = acc.get("account_id")
 
-                if user and pwd:
-                    print(f"   Scanning account #{i+1}...")
+                if user:
+                    # Avoid logging potentially tainted auth_method value directly
+                    auth_label = (
+                        "OAuth2"
+                        if auth_method == "oauth2" and account_id
+                        else "password"
+                    )
+                    print(f"   Scanning account #{i+1} ({auth_label} auth)...")
                     try:
-                        fetched = EmailService.fetch_recent_emails(user, pwd, server)
-                        # Tag each email with the source account
-                        for email_data in fetched:
-                            email_data["account_email"] = user
-                        all_emails.extend(fetched)
+                        if auth_method == "oauth2" and account_id:
+                            # OAuth2 account - need to refresh token
+                            import asyncio
+
+                            from backend.database import engine as db_engine
+                            from backend.models import EmailAccount
+                            from backend.services.oauth2_service import OAuth2Service
+
+                            with Session(db_engine) as session:
+                                oauth_account = session.get(EmailAccount, account_id)
+                                if oauth_account:
+                                    try:
+                                        access_token = asyncio.run(
+                                            OAuth2Service.ensure_valid_token(
+                                                session, oauth_account
+                                            )
+                                        )
+                                        if access_token:
+                                            fetched = EmailService.fetch_recent_emails(
+                                                username=user,
+                                                password=None,
+                                                imap_server=server,
+                                                imap_port=port,
+                                                auth_method="oauth2",
+                                                access_token=access_token,
+                                            )
+                                            # Tag each email with the source account
+                                            for email_data in fetched:
+                                                email_data["account_email"] = user
+                                            all_emails.extend(fetched)
+                                        else:
+                                            print(
+                                                f"❌ Failed to get OAuth2 token for account #{i+1}"
+                                            )
+                                            error_occurred = True
+                                            error_msg = f"Error scanning account #{i+1}: OAuth2 token refresh failed"
+                                    except Exception as oauth_err:
+                                        print(
+                                            f"❌ OAuth2 error for account #{i+1}: {type(oauth_err).__name__}"
+                                        )
+                                        error_occurred = True
+                                        error_msg = f"Error scanning account #{i+1}: OAuth2 error ({type(oauth_err).__name__})"
+                                else:
+                                    print(
+                                        f"❌ OAuth2 account not found in database for account #{i+1}"
+                                    )
+                        elif pwd:
+                            # Password-based account
+                            fetched = EmailService.fetch_recent_emails(
+                                user, pwd, server, imap_port=port
+                            )
+                            # Tag each email with the source account
+                            for email_data in fetched:
+                                email_data["account_email"] = user
+                            all_emails.extend(fetched)
+                        else:
+                            print(
+                                f"⚠️ Skipping account #{i+1}: No credentials available"
+                            )
                     except Exception as e:
                         # CodeQL: Avoid logging full exception as it may contain credentials
-                        print(f"❌ Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
+                        print(f"❌ Error processing account #{i+1}: {type(e).__name__}")
                         error_occurred = True
                         error_msg = f"Error scanning account #{i+1}: Connection failed ({type(e).__name__})"
         else:
@@ -162,6 +226,13 @@ def process_emails():
                     session.add(run)
                     session.commit()
                 return
+
+            # Pre-fetch category rules for batch optimization
+            from backend.models import CategoryRule
+
+            category_rules = session.exec(
+                select(CategoryRule).order_by(CategoryRule.priority.desc())
+            ).all()
 
             for email_data in emails:
                 try:
@@ -235,7 +306,14 @@ def process_emails():
 
                     # Detect (passing session for manual rules/preferences)
                     is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
-                    category = ReceiptDetector.categorize_receipt(email_data)
+
+                    # Use new smart categorization system
+                    category = Categorizer.predict_category(
+                        email_data, session=session, rules=category_rules
+                    )
+                    # Fallback to hardcoded logic if no rules matched
+                    if category == "other":
+                        category = Categorizer.get_fallback_category(email_data)
 
                     LearningService.run_shadow_mode(session, email_data)
 

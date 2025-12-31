@@ -238,10 +238,16 @@ def test_update_email_template_existing(session: Session):
 
 def test_get_email_accounts_empty(session: Session):
     """Test getting email accounts when none exist"""
+    from unittest.mock import patch
+
     from backend.routers.settings import get_email_accounts
 
-    accounts = get_email_accounts(session=session)
-    assert len(accounts) == 0
+    # Mock EmailService to return no env accounts
+    with patch(
+        "backend.services.email_service.EmailService.get_all_accounts", return_value=[]
+    ):
+        accounts = get_email_accounts(session=session)
+        assert len(accounts) == 0
 
 
 def test_create_email_account(session: Session, monkeypatch):
@@ -319,8 +325,14 @@ def test_delete_email_account(session: Session, monkeypatch):
     assert result["ok"] is True
 
     # Verify it's gone
-    accounts = get_email_accounts(session=session)
-    assert len(accounts) == 0
+    # Mock EmailService to return no env accounts so we verify DB is empty
+    from unittest.mock import patch
+
+    with patch(
+        "backend.services.email_service.EmailService.get_all_accounts", return_value=[]
+    ):
+        accounts = get_email_accounts(session=session)
+        assert len(accounts) == 0
 
 
 def test_delete_email_account_not_found(session: Session):
@@ -360,7 +372,9 @@ def test_test_email_account(session: Session, monkeypatch):
     with patch("backend.routers.settings.EmailService.test_connection") as mock_test:
         mock_test.return_value = {"success": True, "error": None}
 
-        result = test_email_account(created.id, session=session)
+        import asyncio
+
+        result = asyncio.run(test_email_account(created.id, session=session))
 
         assert result["account"] == "test@example.com"
         assert result["success"] is True
@@ -371,12 +385,14 @@ def test_test_email_account(session: Session, monkeypatch):
 
 def test_test_email_account_not_found(session: Session):
     """Test testing a non-existent email account raises 404"""
+    import asyncio
+
     from fastapi import HTTPException
 
     from backend.routers.settings import test_email_account
 
     with pytest.raises(HTTPException) as exc_info:
-        test_email_account(999, session=session)
+        asyncio.run(test_email_account(999, session=session))
 
     assert exc_info.value.status_code == 404
     assert "Account not found" in str(exc_info.value.detail)

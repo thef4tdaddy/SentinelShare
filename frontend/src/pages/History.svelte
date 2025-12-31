@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { fetchJson } from '../lib/api';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { onMount } from 'svelte';
 	import { formatDate } from '../lib/dateUtils';
+	import CategoryEditModal from '../components/CategoryEditModal.svelte';
 	import {
 		Clock,
 		Mail,
@@ -15,8 +17,14 @@
 		X,
 		Search,
 		ThumbsUp,
-		ThumbsDown
+		ThumbsDown,
+		Edit2,
+		Download
 	} from 'lucide-svelte';
+
+	// Constants
+	const SUCCESS_MESSAGE_DELAY = 1500; // milliseconds
+	const FEEDBACK_MESSAGE_DELAY = 2000; // milliseconds
 
 	interface Email {
 		id: number;
@@ -55,45 +63,54 @@
 		};
 	}
 
-	let emails: Email[] = [];
-	let runs: Run[] = [];
-	let stats = {
+	let emails = $state<Email[]>([]);
+	let runs = $state<Run[]>([]);
+	let stats = $state({
 		total: 0,
 		forwarded: 0,
 		blocked: 0,
 		errors: 0,
 		total_amount: 0,
-		status_breakdown: {}
-	};
+		status_breakdown: {} as Record<string, number>
+	});
 
-	let pagination = {
+	let pagination = $state({
 		page: 1,
 		per_page: 50,
 		total: 0,
 		total_pages: 0
-	};
+	});
 
-	let filters = {
+	let filters = $state({
 		status: '',
 		date_from: '',
-		date_to: ''
-	};
+		date_to: '',
+		sender: '',
+		min_amount: '',
+		max_amount: ''
+	});
 
-	let loading = true;
-	let activeTab: 'emails' | 'runs' = 'emails';
-	let showModal = false;
-	let selectedEmail: Email | null = null;
-	let isProcessing = false;
-	let isAnalyzing = false;
-	let selectedAnalysis: AnalysisOutcome | null = null;
-	let successMessage = '';
-	let errorMessage = '';
+	let loading = $state(true);
+	let activeTab = $state<'emails' | 'runs'>('emails');
+	let showModal = $state(false);
+	let selectedEmail = $state<Email | null>(null);
+	let isProcessing = $state(false);
+	let isAnalyzing = $state(false);
+	let selectedAnalysis = $state<AnalysisOutcome | null>(null);
+	let successMessage = $state('');
+	let errorMessage = $state('');
+	let showCategoryEditModal = $state(false);
+	let categoryEditEmail = $state<{
+		id: number;
+		category: string;
+		sender: string;
+		subject: string;
+	} | null>(null);
 
 	async function loadHistory() {
 		loading = true;
 		try {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity
-			const params = new URLSearchParams({
+			const params = new SvelteURLSearchParams({
 				page: pagination.page.toString(),
 				per_page: pagination.per_page.toString()
 			});
@@ -101,6 +118,9 @@
 			if (filters.status) params.append('status', filters.status);
 			if (filters.date_from) params.append('date_from', filters.date_from);
 			if (filters.date_to) params.append('date_to', filters.date_to);
+			if (filters.sender) params.append('sender', filters.sender);
+			if (filters.min_amount) params.append('min_amount', filters.min_amount);
+			if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
 			const [historyRes, statsRes, runsRes] = await Promise.all([
 				fetchJson(`/history/emails?${params}`),
@@ -108,10 +128,17 @@
 				fetchJson('/history/runs')
 			]);
 
-			emails = historyRes.emails;
-			pagination = historyRes.pagination;
-			stats = statsRes;
-			runs = runsRes.runs;
+			emails = historyRes.emails ?? [];
+			pagination = historyRes.pagination ?? { page: 1, per_page: 50, total: 0, total_pages: 0 };
+			stats = statsRes ?? {
+				total: 0,
+				forwarded: 0,
+				blocked: 0,
+				errors: 0,
+				total_amount: 0,
+				status_breakdown: {}
+			};
+			runs = runsRes.runs ?? [];
 		} catch (e) {
 			console.error('Failed to load history', e);
 		} finally {
@@ -164,7 +191,7 @@
 				return 'bg-emerald-100 text-emerald-800 border-emerald-200';
 			case 'blocked':
 			case 'ignored':
-				return 'bg-gray-100 text-gray-600 border-gray-200';
+				return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
 			case 'error':
 				return 'bg-red-100 text-red-800 border-red-200';
 			default:
@@ -214,10 +241,39 @@
 			setTimeout(async () => {
 				closeModal();
 				await loadHistory();
-			}, 1500);
+			}, SUCCESS_MESSAGE_DELAY);
 		} catch (e) {
 			console.error('Toggle failed', e);
 			errorMessage = 'Failed to toggle email status.';
+		} finally {
+			isProcessing = false;
+		}
+	}
+
+	async function confirmToggleToIgnored() {
+		if (!selectedEmail || isProcessing) return;
+
+		isProcessing = true;
+		errorMessage = '';
+		successMessage = '';
+
+		try {
+			const result = await fetchJson('/actions/toggle-to-ignored', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email_id: selectedEmail.id })
+			});
+
+			successMessage = result.message || 'Email status changed to ignored successfully!';
+
+			// Wait a moment to show success message, then close and reload
+			setTimeout(async () => {
+				closeModal();
+				await loadHistory();
+			}, SUCCESS_MESSAGE_DELAY);
+		} catch (e) {
+			console.error('Toggle to ignored failed', e);
+			errorMessage = 'Failed to change email status to ignored.';
 		} finally {
 			isProcessing = false;
 		}
@@ -228,7 +284,7 @@
 		isAnalyzing = true;
 		errorMessage = '';
 		try {
-			selectedAnalysis = await fetchJson(`/api/history/reprocess/${emailId}`, {
+			selectedAnalysis = await fetchJson(`/history/reprocess/${emailId}`, {
 				method: 'POST'
 			});
 		} catch (e) {
@@ -239,11 +295,30 @@
 		}
 	}
 
+	function openCategoryEditModal(email: Email) {
+		categoryEditEmail = {
+			id: email.id,
+			category: email.category || 'other',
+			sender: email.sender,
+			subject: email.subject
+		};
+		showCategoryEditModal = true;
+	}
+
+	function closeCategoryEditModal() {
+		showCategoryEditModal = false;
+		categoryEditEmail = null;
+	}
+
+	function handleCategoryUpdateSuccess() {
+		loadHistory();
+	}
+
 	async function submitFeedback(isReceipt: boolean) {
 		if (!selectedEmail) return;
 		isProcessing = true;
 		try {
-			await fetchJson('/api/history/feedback', {
+			await fetchJson('/history/feedback', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email_id: selectedEmail.id, is_receipt: isReceipt })
@@ -252,12 +327,55 @@
 			setTimeout(() => {
 				closeModal();
 				loadHistory();
-			}, 2000);
+			}, FEEDBACK_MESSAGE_DELAY);
 		} catch (e) {
 			console.error('Failed to submit feedback', e);
 			errorMessage = 'Failed to submit feedback.';
 		} finally {
 			isProcessing = false;
+		}
+	}
+
+	async function exportToCSV() {
+		// Build URL with current filters
+		const params = new SvelteURLSearchParams({ format: 'csv' });
+		if (filters.status) params.append('status', filters.status);
+		if (filters.date_from) params.append('date_from', filters.date_from);
+		if (filters.date_to) params.append('date_to', filters.date_to);
+		if (filters.sender) params.append('sender', filters.sender);
+		if (filters.min_amount) params.append('min_amount', filters.min_amount);
+		if (filters.max_amount) params.append('max_amount', filters.max_amount);
+
+		const url = `/api/history/export?${params.toString()}`;
+
+		// Fetch CSV first so we can handle errors and provide user feedback
+		errorMessage = '';
+		successMessage = 'Exporting history...';
+		try {
+			const response = await fetch(url, { method: 'GET' });
+			if (!response.ok) {
+				throw new Error(`Export failed with status ${response.status}`);
+			}
+
+			const blob = await response.blob();
+			const downloadUrl = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = downloadUrl;
+			// Generate filename with current date like the backend does
+			const date = new Date().toISOString().split('T')[0];
+			a.download = `expenses_${date}.csv`;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(downloadUrl);
+			successMessage = 'Export successful!';
+			setTimeout(() => {
+				if (successMessage === 'Export successful!') successMessage = '';
+			}, 3000);
+		} catch (e) {
+			console.error('Failed to export history as CSV', e);
+			errorMessage = 'Failed to export history. Please try again.';
+			successMessage = '';
 		}
 	}
 </script>
@@ -268,6 +386,26 @@
 		Complete history of email processing and automated runs.
 	</p>
 </div>
+
+<!-- Global Alerts -->
+{#if !showModal}
+	{#if successMessage}
+		<div
+			class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<CheckCircle size={24} class="text-emerald-600 shrink-0" />
+			<p class="text-emerald-800 font-medium">{successMessage}</p>
+		</div>
+	{/if}
+	{#if errorMessage}
+		<div
+			class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 animate-in fade-in slide-in-from-top-4 duration-300"
+		>
+			<AlertCircle size={24} class="text-red-600 shrink-0" />
+			<p class="text-red-800 font-medium">{errorMessage}</p>
+		</div>
+	{/if}
+{/if}
 
 <!-- Stats Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -344,7 +482,7 @@
 
 {#if activeTab === 'emails'}
 	<!-- Filters -->
-	<div class="card mb-6">
+	<div class="card mb-6" role="search" aria-label="Email filters">
 		<div class="flex flex-wrap gap-4 items-end">
 			<div class="flex-1 min-w-[200px]">
 				<label for="status-filter" class="block text-sm font-medium text-text-main mb-2">
@@ -362,6 +500,20 @@
 					<option value="ignored">Ignored</option>
 					<option value="error">Error</option>
 				</select>
+			</div>
+
+			<div class="flex-1 min-w-[200px]">
+				<label for="sender-filter" class="block text-sm font-medium text-text-main mb-2">
+					Vendor/Sender
+				</label>
+				<input
+					id="sender-filter"
+					type="text"
+					bind:value={filters.sender}
+					onchange={handleFilterChange}
+					placeholder="Search by sender..."
+					class="input"
+				/>
 			</div>
 
 			<div class="flex-1 min-w-[200px]">
@@ -388,14 +540,62 @@
 				/>
 			</div>
 
+			<div class="flex-1 min-w-[150px]">
+				<label for="min-amount" class="block text-sm font-medium text-text-main mb-2">
+					Min Amount
+				</label>
+				<input
+					id="min-amount"
+					type="number"
+					bind:value={filters.min_amount}
+					onchange={handleFilterChange}
+					placeholder="0.00"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
+			<div class="flex-1 min-w-[150px]">
+				<label for="max-amount" class="block text-sm font-medium text-text-main mb-2">
+					Max Amount
+				</label>
+				<input
+					id="max-amount"
+					type="number"
+					bind:value={filters.max_amount}
+					onchange={handleFilterChange}
+					placeholder="999.99"
+					step="0.01"
+					min="0"
+					class="input"
+				/>
+			</div>
+
+			<div class="sr-only" aria-live="polite">
+				{loading ? 'Loading emails...' : `${pagination.total} emails found`}
+			</div>
+
 			<button
 				onclick={() => {
-					filters = { status: '', date_from: '', date_to: '' };
+					filters = {
+						status: '',
+						date_from: '',
+						date_to: '',
+						sender: '',
+						min_amount: '',
+						max_amount: ''
+					};
 					handleFilterChange();
 				}}
 				class="btn btn-secondary"
 			>
 				Clear Filters
+			</button>
+
+			<button onclick={exportToCSV} class="btn btn-primary" title="Export to CSV">
+				<Download size={16} />
+				Export
 			</button>
 		</div>
 	</div>
@@ -451,7 +651,7 @@
 								</div>
 							</td>
 						</tr>
-					{:else if emails.length === 0}
+					{:else if emails?.length === 0}
 						<tr>
 							<td
 								colspan="6"
@@ -466,7 +666,8 @@
 							</td>
 						</tr>
 					{:else}
-						{#each emails as email (email.id)}
+						{#each emails ?? [] as email (email.id)}
+							{@const StatusIcon = getStatusIcon(email.status)}
 							<tr
 								class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
 							>
@@ -479,7 +680,18 @@
 											)} cursor-pointer hover:opacity-80 transition-opacity"
 											title="Click to forward and create rule"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
+											{email.status}
+										</button>
+									{:else if email.status === 'forwarded' || email.status === 'blocked'}
+										<button
+											onclick={() => openModal(email)}
+											class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize shadow-sm {getStatusColor(
+												email.status
+											)} cursor-pointer hover:opacity-80 transition-opacity"
+											title="Click to change to ignored"
+										>
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</button>
 									{:else}
@@ -488,7 +700,7 @@
 												email.status
 											)}"
 										>
-											<svelte:component this={getStatusIcon(email.status)} size={12} class="mr-1" />
+											<StatusIcon size={12} class="mr-1" />
 											{email.status}
 										</span>
 									{/if}
@@ -521,7 +733,17 @@
 									{/if}
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm">
-									{email.category || '-'}
+									<div class="flex items-center gap-2">
+										<span>{email.category || '-'}</span>
+										<button
+											onclick={() => openCategoryEditModal(email)}
+											class="p-1 text-gray-400 hover:text-primary transition-colors"
+											title="Edit Category"
+											aria-label="Edit category"
+										>
+											<Edit2 size={14} />
+										</button>
+									</div>
 								</td>
 								<td class="py-3 px-4 text-text-secondary text-sm">
 									{formatAmount(email.amount)}
@@ -550,7 +772,8 @@
 				<p>No activity found.</p>
 			</div>
 		{:else}
-			{#each emails as email (email.id)}
+			{#each emails ?? [] as email (email.id)}
+				{@const StatusIcon = getStatusIcon(email.status)}
 				<div
 					class="card border-l-4 {email.status === 'forwarded'
 						? 'border-l-emerald-500'
@@ -566,7 +789,17 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
+								{email.status}
+							</button>
+						{:else if email.status === 'forwarded' || email.status === 'blocked'}
+							<button
+								onclick={() => openModal(email)}
+								class="badge {getStatusColor(
+									email.status
+								)} flex items-center gap-1 py-1 px-3 shadow-sm"
+							>
+								<StatusIcon size={12} />
 								{email.status}
 							</button>
 						{:else}
@@ -575,11 +808,13 @@
 									email.status
 								)} flex items-center gap-1 py-1 px-3 shadow-sm"
 							>
-								<svelte:component this={getStatusIcon(email.status)} size={12} />
+								<StatusIcon size={12} />
 								{email.status}
 							</div>
 						{/if}
-						<span class="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded">
+						<span
+							class="text-[10px] font-medium text-gray-400 bg-gray-50 dark:bg-gray-800 dark:text-gray-500 px-2 py-1 rounded"
+						>
 							{formatDate(email.processed_at)}
 						</span>
 					</div>
@@ -600,9 +835,14 @@
 					</div>
 
 					<div class="flex items-center justify-between pt-3 border-t border-gray-50">
-						<div class="text-[10px] text-gray-400">
+						<button
+							onclick={() => openCategoryEditModal(email)}
+							class="text-[10px] text-gray-400 hover:text-primary transition-colors flex items-center gap-1"
+							title="Edit category"
+						>
 							{email.category ? `#${email.category}` : '#unsorted'}
-						</div>
+							<Edit2 size={12} />
+						</button>
 						<button
 							onclick={() => {
 								selectedEmail = email;
@@ -670,7 +910,7 @@
 					</div>
 				</div>
 			{:else}
-				{#each runs as run (run.run_time)}
+				{#each runs ?? [] as run (run.run_time)}
 					<div
 						class="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors"
 					>
@@ -737,7 +977,7 @@
 
 		<!-- Modal Content -->
 		<div
-			class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10"
+			class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 z-10"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
@@ -746,7 +986,13 @@
 			<!-- Modal Header -->
 			<div class="flex items-center justify-between mb-4">
 				<h3 id="modal-title" class="text-lg font-bold text-text-main dark:text-text-main-dark">
-					Forward Ignored Email
+					{#if selectedEmail.status === 'ignored'}
+						Forward Ignored Email
+					{:else if selectedEmail.status === 'forwarded' || selectedEmail.status === 'blocked'}
+						Change Email Status
+					{:else}
+						Email Details
+					{/if}
 				</h3>
 				<button
 					onclick={closeModal}
@@ -868,9 +1114,35 @@
 								Forward & Create Rule
 							{/if}
 						</button>
+					{:else if selectedEmail.status === 'forwarded' || selectedEmail.status === 'blocked'}
+						<button
+							onclick={confirmToggleToIgnored}
+							class="btn btn-primary"
+							disabled={isProcessing}
+						>
+							{#if isProcessing}
+								<RefreshCw size={16} class="animate-spin" />
+							{:else}
+								<RefreshCw size={16} />
+								Change to Ignored
+							{/if}
+						</button>
 					{/if}
 				</div>
 			</div>
 		</div>
 	</div>
+{/if}
+
+<!-- Category Edit Modal -->
+{#if categoryEditEmail}
+	<CategoryEditModal
+		bind:isOpen={showCategoryEditModal}
+		emailId={categoryEditEmail.id}
+		currentCategory={categoryEditEmail.category}
+		sender={categoryEditEmail.sender}
+		subject={categoryEditEmail.subject}
+		onClose={closeCategoryEditModal}
+		onSuccess={handleCategoryUpdateSuccess}
+	/>
 {/if}

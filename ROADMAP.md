@@ -10,6 +10,12 @@ _Goal: Ensure the system is robust, upgradeable, and professional before the fir
   - _Why:_ Users need to know which version they are running for debugging. Add `v1.0.0` to the footer/sidebar.
 - [x] **GitHub Templates**
   - _Why:_ Standardize bug reports and PRs with `.github/PULL_REQUEST_TEMPLATE.md` and `ISSUE_TEMPLATE`.
+- [x] **OAuth2 Support (Gmail)**
+  - _Why:_ Secure, token-based authentication (XOAUTH2) to replace legacy App Passwords, improving security and stability.
+- [x] **Smart Categorization (Rules Engine)**
+  - _Why:_ Automatically categorize receipts based on sender, subject, or body content using a flexible rule system.
+- [x] **Comprehensive Testing Suite**
+  - _Why:_ Achieve 100% test coverage for critical components (Toast, API, Routers) and integrate Lighthouse CI for performance monitoring.
 
 ## 🚀 Post-1.0: Intelligence & Integrations
 
