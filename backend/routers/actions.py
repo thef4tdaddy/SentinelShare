@@ -288,11 +288,13 @@ def update_preferences(
 
 
 class ToggleEmailRequest(BaseModel):
+    """Request model for toggling email status"""
+
     email_id: int
 
 
-class ToggleIgnoredRequest(BaseModel):
-    email_id: int
+# Alias for backward compatibility
+ToggleIgnoredRequest = ToggleEmailRequest
 
 
 @router.post("/toggle-to-ignored")

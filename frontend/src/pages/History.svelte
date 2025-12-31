@@ -20,6 +20,10 @@
 		Download
 	} from 'lucide-svelte';
 
+	// Constants
+	const SUCCESS_MESSAGE_DELAY = 1500; // milliseconds
+	const FEEDBACK_MESSAGE_DELAY = 2000; // milliseconds
+
 	interface Email {
 		id: number;
 		email_id: string;
@@ -228,7 +232,7 @@
 			setTimeout(async () => {
 				closeModal();
 				await loadHistory();
-			}, 1500);
+			}, SUCCESS_MESSAGE_DELAY);
 		} catch (e) {
 			console.error('Toggle failed', e);
 			errorMessage = 'Failed to toggle email status.';
@@ -257,7 +261,7 @@
 			setTimeout(async () => {
 				closeModal();
 				await loadHistory();
-			}, 1500);
+			}, SUCCESS_MESSAGE_DELAY);
 		} catch (e) {
 			console.error('Toggle to ignored failed', e);
 			errorMessage = 'Failed to change email status to ignored.';
@@ -295,7 +299,7 @@
 			setTimeout(() => {
 				closeModal();
 				loadHistory();
-			}, 2000);
+			}, FEEDBACK_MESSAGE_DELAY);
 		} catch (e) {
 			console.error('Failed to submit feedback', e);
 			errorMessage = 'Failed to submit feedback.';
