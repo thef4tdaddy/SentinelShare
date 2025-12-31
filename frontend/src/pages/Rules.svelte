@@ -85,7 +85,7 @@
 
 	<div class="card">
 		<div class="flex items-center gap-3 mb-4">
-			<div class="p-2 bg-gray-100 text-gray-600 rounded-lg">
+			<div class="p-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg">
 				<Eye size={20} />
 			</div>
 			<h3 class="font-bold text-text-main m-0">Shadow Stats</h3>
@@ -116,7 +116,10 @@
 	<div class="flex items-center justify-between mb-6">
 		<h3 class="text-lg font-bold text-text-main m-0">Active & Suggested Rules</h3>
 		<div class="flex gap-2">
-			<span class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">Manual</span>
+			<span
+				class="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded text-xs"
+				>Manual</span
+			>
 			<span class="px-2 py-1 bg-indigo-100 text-indigo-600 rounded text-xs">Shadow</span>
 			<span class="px-2 py-1 bg-emerald-100 text-emerald-600 rounded text-xs">Auto</span>
 		</div>

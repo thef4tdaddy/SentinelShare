@@ -101,13 +101,16 @@
 				</div>
 
 				<!-- Available Variables -->
-				<div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+				<div
+					class="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+				>
 					<p class="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
 						Available Variables
 					</p>
 					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
 						<div>
-							<code class="bg-gray-100 text-sm px-2 py-0.5 rounded font-mono text-blue-600"
+							<code
+								class="bg-gray-100 dark:bg-gray-900/50 text-sm px-2 py-0.5 rounded font-mono text-blue-600 dark:text-blue-400"
 								>{'{subject}'}</code
 							>
 							<span class="text-text-secondary text-xs block">Email subject</span>
@@ -153,7 +156,9 @@
 
 				<!-- Preview Section -->
 				{#if showPreview}
-					<div class="bg-gray-100 border border-gray-200 rounded-lg p-4">
+					<div
+						class="bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+					>
 						<p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
 							Preview (with sample data)
 						</p>
