@@ -129,3 +129,63 @@ def test_upload_receipt_requires_auth(client):
     response = client.post("/api/actions/upload", files=files)
 
     assert response.status_code == 401
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_file_write_error(client, session):
+    """Test handling of file write errors during upload"""
+    pdf_content = b"%PDF-1.4\n%test content"
+    files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    # Mock the open() builtin to raise an error during file write
+    with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+        response = client.post("/api/actions/upload", files=files)
+
+        assert response.status_code == 500
+        assert "Failed to save file" in response.json()["detail"]
+        assert "Permission denied" in response.json()["detail"]
+
+
+@patch.dict(os.environ, {"SECRET_KEY": MOCK_SECRET, "DASHBOARD_PASSWORD": ""})
+def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
+    """Test handling of database errors with file cleanup during upload"""
+    pdf_content = b"%PDF-1.4\n%test content"
+    files = {"file": ("test_receipt.pdf", io.BytesIO(pdf_content), "application/pdf")}
+
+    # Track files that were created
+    created_files = []
+    removed_files = []
+    original_open = open
+    original_remove = os.remove
+
+    def tracking_open(file, *args, **kwargs):
+        """Track file creation and redirect to tmp_path for isolation"""
+        mode = args[0] if args else kwargs.get("mode", "r")
+        
+        # For write modes, track the file
+        if isinstance(file, str) and any(char in mode for char in ("w", "a", "x")):
+            created_files.append(file)
+        
+        return original_open(file, *args, **kwargs)
+
+    def tracking_remove(path):
+        """Track file removal"""
+        removed_files.append(path)
+        # Actually remove the file if it exists
+        if os.path.exists(path):
+            return original_remove(path)
+
+    with patch("builtins.open", side_effect=tracking_open):
+        with patch("os.remove", side_effect=tracking_remove):
+            # Mock session.commit to raise an error
+            with patch.object(session, "commit", side_effect=Exception("Database error")):
+                response = client.post("/api/actions/upload", files=files)
+
+                assert response.status_code == 500
+                assert "Failed to create database record" in response.json()["detail"]
+                assert "Database error" in response.json()["detail"]
+
+                # Verify that file was created and then cleaned up after error
+                assert len(created_files) > 0, "Expected file to be created"
+                assert len(removed_files) > 0, "Expected file to be cleaned up"
+                assert created_files[0] == removed_files[0], "Expected cleanup to remove the created file"
