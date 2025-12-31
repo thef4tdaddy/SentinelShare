@@ -287,8 +287,55 @@ def update_preferences(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-class ToggleIgnoredRequest(BaseModel):
+class ToggleEmailRequest(BaseModel):
+    """Request model for toggling email status"""
+
     email_id: int
+
+
+# Alias for backward compatibility
+ToggleIgnoredRequest = ToggleEmailRequest
+
+
+@router.post("/toggle-to-ignored")
+def toggle_to_ignored_email(
+    request: ToggleEmailRequest, session: Session = Depends(get_session)
+):
+    """
+    Toggle a forwarded or blocked email back to ignored status
+    """
+    # Get the email
+    email = session.get(ProcessedEmail, request.email_id)
+    if not email:
+        raise HTTPException(status_code=404, detail="Email not found")
+
+    # Check if email is forwarded or blocked
+    if email.status not in ["forwarded", "blocked"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Email status is '{email.status}'. Only 'forwarded' or 'blocked' emails can be changed to 'ignored'",
+        )
+
+    # Update email status to ignored
+    previous_status = email.status
+    email.status = "ignored"
+    email.reason = f"Manually changed from {previous_status} to ignored"
+
+    try:
+        session.add(email)
+        session.commit()
+        session.refresh(email)
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update email status: {str(e)}"
+        )
+
+    return {
+        "success": True,
+        "email": email,
+        "message": f"Email status changed from {previous_status} to ignored",
+    }
 
 
 @router.post("/toggle-ignored")
