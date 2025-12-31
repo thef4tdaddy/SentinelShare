@@ -39,7 +39,13 @@ class EmailService:
             return None
 
     @staticmethod
-    def _imap_login(mail: imaplib.IMAP4_SSL, username: str, password: str, auth_method: str = "password", access_token: Optional[str] = None) -> None:
+    def _imap_login(
+        mail: imaplib.IMAP4_SSL,
+        username: str,
+        password: str,
+        auth_method: str = "password",
+        access_token: Optional[str] = None,
+    ) -> None:
         """
         Perform IMAP login using either password or OAuth2.
 
@@ -130,9 +136,7 @@ class EmailService:
 
                         all_accounts.append(account_dict)
                     except Exception as e:
-                        logging.error(
-                            f"Failed to process account {acc.email}: {e}"
-                        )
+                        logging.error(f"Failed to process account {acc.email}: {e}")
         except Exception as e:
             logging.warning(f"Could not fetch accounts from database: {e}")
 
@@ -247,7 +251,10 @@ class EmailService:
                 return {"success": False, "error": "Credentials missing"}
         elif auth_method == "oauth2":
             if not email_user or not access_token:
-                return {"success": False, "error": "Email and access token required for OAuth2"}
+                return {
+                    "success": False,
+                    "error": "Email and access token required for OAuth2",
+                }
 
         try:
             mail = imaplib.IMAP4_SSL(imap_server)
@@ -256,7 +263,7 @@ class EmailService:
             )
             mail.logout()
             return {"success": True, "error": None}
-        except Exception as e:
+        except Exception:
             logging.exception("Error when testing email connection")
             # Return a generic error message to avoid exposing internal exception details
             return {

@@ -13,6 +13,7 @@ def utc_now():
 
 class AuthMethod(str, Enum):
     """Authentication method for email accounts"""
+
     PASSWORD = "password"
     OAUTH2 = "oauth2"
 
@@ -101,6 +102,26 @@ class LearningCandidate(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class CategoryRule(SQLModel, table=True):
+    """
+    Represents a rule for automatically categorizing receipts based on patterns.
+    Rules can match on sender or subject and assign a category.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    match_type: str = Field(regex="^(sender|subject)$")  # "sender" or "subject"
+    pattern: str = Field(
+        min_length=1
+    )  # Pattern to match (supports wildcards like *@uber.com)
+    assigned_category: str = Field(
+        min_length=1
+    )  # Category to assign when matched (e.g., "Travel")
+    priority: int = Field(
+        default=10, ge=1, le=100
+    )  # Higher priority rules are checked first (1-100)
+    created_at: datetime = Field(default_factory=utc_now)
+
+
 class EmailAccount(SQLModel, table=True):
     """
     Represents an email account for monitoring receipts.
@@ -113,15 +134,19 @@ class EmailAccount(SQLModel, table=True):
     host: str = Field(default="imap.gmail.com")  # IMAP server host
     port: int = Field(default=993)  # IMAP server port
     username: str  # Username for IMAP login (usually same as email)
-    encrypted_password: Optional[str] = None  # Encrypted password using Fernet (for password auth)
-    
+    encrypted_password: Optional[str] = (
+        None  # Encrypted password using Fernet (for password auth)
+    )
+
     # OAuth2 fields
-    auth_method: str = Field(default="password", sa_column_kwargs={"server_default": "password"})  # Use AuthMethod enum values
+    auth_method: str = Field(
+        default="password", sa_column_kwargs={"server_default": "password"}
+    )  # Use AuthMethod enum values
     provider: Optional[str] = None  # "google", "microsoft", or "custom"
     encrypted_access_token: Optional[str] = None  # Encrypted OAuth2 access token
     encrypted_refresh_token: Optional[str] = None  # Encrypted OAuth2 refresh token
     token_expires_at: Optional[datetime] = None  # When the access token expires (UTC)
-    
+
     is_active: bool = Field(default=True)  # Whether to monitor this account
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(

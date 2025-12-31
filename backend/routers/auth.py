@@ -79,7 +79,12 @@ def oauth2_authorize(request: Request, provider: str):
 
 @router.get("/{provider}/callback")
 async def oauth2_callback(
-    request: Request, provider: str, code: str, state: str, error: str | None = None, session: Session = Depends(get_session)
+    request: Request,
+    provider: str,
+    code: str,
+    state: str,
+    error: str | None = None,
+    session: Session = Depends(get_session),
 ):
     """
     Handle OAuth2 callback from provider.
@@ -152,7 +157,9 @@ async def oauth2_callback(
                     )
                     userinfo_response.raise_for_status()
                     userinfo = userinfo_response.json()
-                    user_email = userinfo.get("mail") or userinfo.get("userPrincipalName")
+                    user_email = userinfo.get("mail") or userinfo.get(
+                        "userPrincipalName"
+                    )
         except httpx.HTTPError as e:
             logging.error(f"Failed to fetch user info from {provider}: {e}")
             raise HTTPException(

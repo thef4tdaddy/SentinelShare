@@ -2,11 +2,11 @@
 Tests for OAuth2 authentication endpoints
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from fastapi.testclient import TestClient
-from urllib.parse import urlparse
 
 from backend.main import app
 
@@ -39,7 +39,9 @@ class TestOAuth2Endpoints:
         assert response.status_code == 400
         assert "Unsupported OAuth2 provider" in response.json()["detail"]
 
-    def test_oauth2_authorize_missing_credentials(self, client: TestClient, monkeypatch):
+    def test_oauth2_authorize_missing_credentials(
+        self, client: TestClient, monkeypatch
+    ):
         """Test OAuth2 authorization without configured credentials"""
         # Ensure GOOGLE_CLIENT_ID is not set
         monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
@@ -51,7 +53,9 @@ class TestOAuth2Endpoints:
 
     def test_oauth2_callback_missing_state(self, client: TestClient):
         """Test OAuth2 callback without state in session"""
-        response = client.get("/api/auth/google/callback?code=test_code&state=test_state")
+        response = client.get(
+            "/api/auth/google/callback?code=test_code&state=test_state"
+        )
 
         # Without session state, should fail CSRF check
         assert response.status_code == 400
@@ -70,13 +74,12 @@ class TestOAuth2Endpoints:
     def test_oauth2_service_url_encoding(self):
         """Test that OAuth2Service properly encodes URLs"""
         from backend.services.oauth2_service import OAuth2Service
-        from unittest.mock import patch
 
         with patch.dict("os.environ", {"GOOGLE_CLIENT_ID": "test_client_id"}):
             url = OAuth2Service.get_authorization_url(
                 "google",
                 "http://localhost/callback?param=value&other=test",
-                "test_state"
+                "test_state",
             )
 
             # Check that the redirect_uri is properly URL-encoded
@@ -87,8 +90,9 @@ class TestOAuth2Endpoints:
 
     def test_oauth2_xoauth2_string_generation(self):
         """Test XOAUTH2 string generation"""
-        from backend.services.oauth2_service import OAuth2Service
         import base64
+
+        from backend.services.oauth2_service import OAuth2Service
 
         auth_string = OAuth2Service.generate_xoauth2_string(
             "test@example.com", "test_token"
@@ -132,4 +136,3 @@ class TestOAuth2Endpoints:
         config = OAuth2Config.get_config("invalid")
 
         assert config is None
-

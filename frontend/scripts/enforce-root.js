@@ -39,7 +39,8 @@ const ALLOWED = new Set([
   'playwright.config.ts',
   'tests',
   'playwright-report',
-  'test-results'
+  'test-results',
+  '.lighthouseci'
 ]);
 
 // Ignored patterns (e.g., temporary files)

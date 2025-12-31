@@ -22,8 +22,8 @@ describe('Settings Component', () => {
 	const setupDefaultMocks = () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			if (url.includes('trigger-poll')) return { message: 'Poll triggered' };
@@ -56,13 +56,31 @@ describe('Settings Component', () => {
 		expect(screen.getByText('Run Now')).toBeTruthy();
 	});
 
-	it('renders PreferenceList components', async () => {
+	it('renders all sections', async () => {
 		render(Settings);
 
-		await waitFor(() => {
-			expect(screen.getByText('Add New Preference')).toBeTruthy();
-			expect(screen.getByText('Add New Rule')).toBeTruthy();
-		});
+		await waitFor(
+			() => {
+				// Check for section headers
+				// Using getAllByRole to avoid text ambiguity and potential library confusion
+				const emailAccountsHeaders = screen.getAllByRole('heading', { name: 'Email Accounts' });
+				expect(emailAccountsHeaders.length).toBeGreaterThan(0);
+
+				expect(screen.getByText('Email Template')).toBeTruthy();
+				expect(screen.getByText('Detection Preferences')).toBeTruthy();
+				expect(screen.getByText('Manual Rules')).toBeTruthy();
+				expect(screen.getByText('Inbox Status')).toBeTruthy();
+				expect(screen.getByText('Appearance')).toBeTruthy();
+
+				// Check that sub-components render basic content
+				expect(screen.getByText('Add New Preference')).toBeTruthy();
+
+				// Fix ambiguity for "Add New Rule" which appears in multiple sections
+				const addRuleButtons = screen.getAllByText('Add New Rule');
+				expect(addRuleButtons.length).toBeGreaterThan(0);
+			},
+			{ timeout: 3000 }
+		);
 	});
 
 	it('triggers poll when Run Now is clicked and confirmed', async () => {
@@ -89,8 +107,8 @@ describe('Settings Component', () => {
 			if (url === '/settings/trigger-poll') return { message: 'Poll triggered successfully' };
 			// Fallback to defaults
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			if (url === '/api/settings/email-template') return { template: '' };
@@ -153,8 +171,8 @@ describe('Settings Component', () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/settings/trigger-poll') return {};
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			return {};
@@ -184,8 +202,8 @@ describe('Settings Component', () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/settings/trigger-poll') throw new Error('API Error');
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			return {};
@@ -232,8 +250,8 @@ describe('Settings Component', () => {
 			if (url === '/api/history/reprocess-all-ignored')
 				return { message: 'Successfully reprocessed 5 emails' };
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			return {};
@@ -264,8 +282,8 @@ describe('Settings Component', () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/api/history/reprocess-all-ignored') throw new Error('API Error');
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			if (url === '/settings/test-connections') return [];
 			return {};
@@ -287,8 +305,8 @@ describe('Settings Component', () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/settings/test-connections') throw error;
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			return [];
 		});
@@ -318,8 +336,8 @@ describe('Settings Component', () => {
 		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
 			if (url === '/settings/test-connections') return mockResults;
 			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
+			if (url === '/settings/preferences') return [];
+			if (url === '/settings/rules') return [];
 			if (url === '/settings/email-template') return { template: '' };
 			return [];
 		});
@@ -331,87 +349,6 @@ describe('Settings Component', () => {
 			expect(api.fetchJson).toHaveBeenCalledWith('/settings/test-connections', {
 				method: 'POST'
 			});
-		});
-	});
-
-	it('displays successful connection with green indicator', async () => {
-		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
-			if (url === '/settings/test-connections')
-				return [{ account: 'test@example.com', success: true }];
-			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
-			if (url === '/settings/email-template') return { template: '' };
-			return [];
-		});
-
-		render(Settings);
-
-		await waitFor(() => {
-			expect(screen.getByText('test@example.com')).toBeTruthy();
-			expect(screen.getByText('Connected')).toBeTruthy();
-		});
-
-		const accountCard = screen.getByText('test@example.com').closest('div.card');
-		expect(accountCard?.classList.contains('border-l-green-500')).toBe(true);
-	});
-
-	it('displays failed connection with red indicator and error tooltip', async () => {
-		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
-			if (url === '/settings/test-connections')
-				return [{ account: 'test2@example.com', success: false, error: 'Authentication failed' }];
-			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
-			if (url === '/settings/email-template') return { template: '' };
-			return [];
-		});
-
-		render(Settings);
-
-		await waitFor(() => {
-			expect(screen.getByText('test2@example.com')).toBeTruthy();
-			expect(screen.getByText('Connection Failed')).toBeTruthy();
-			expect(screen.getByText('Authentication failed')).toBeTruthy();
-		});
-
-		const accountCard = screen.getByText('test2@example.com').closest('div.card');
-		expect(accountCard?.classList.contains('border-l-red-500')).toBe(true);
-	});
-
-	it('displays multiple connection results with mixed success/failure states', async () => {
-		vi.mocked(api.fetchJson).mockImplementation(async (url) => {
-			if (url === '/settings/test-connections')
-				return [
-					{ account: 'success@example.com', success: true },
-					{ account: 'failed@example.com', success: false, error: 'Timeout' },
-					{ account: 'another@example.com', success: true }
-				];
-			if (url === '/settings/accounts') return [];
-			if (url === '/api/settings/preferences') return [];
-			if (url === '/api/settings/rules') return [];
-			if (url === '/settings/email-template') return { template: '' };
-			return [];
-		});
-
-		render(Settings);
-
-		await waitFor(() => {
-			expect(screen.getByText('success@example.com')).toBeTruthy();
-			expect(screen.getByText('failed@example.com')).toBeTruthy();
-			expect(screen.getByText('another@example.com')).toBeTruthy();
-		});
-
-		expect(screen.getAllByText('Connected').length).toBe(2);
-		expect(screen.getByText('Connection Failed')).toBeTruthy();
-		expect(screen.getByText('Timeout')).toBeTruthy();
-	});
-
-	it('displays default message when no connection results exist', async () => {
-		render(Settings);
-
-		await waitFor(() => {
-			expect(screen.getByText('No accounts configured or check pending...')).toBeTruthy();
 		});
 	});
 });

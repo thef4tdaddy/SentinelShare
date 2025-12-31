@@ -238,10 +238,16 @@ def test_update_email_template_existing(session: Session):
 
 def test_get_email_accounts_empty(session: Session):
     """Test getting email accounts when none exist"""
+    from unittest.mock import patch
+
     from backend.routers.settings import get_email_accounts
 
-    accounts = get_email_accounts(session=session)
-    assert len(accounts) == 0
+    # Mock EmailService to return no env accounts
+    with patch(
+        "backend.services.email_service.EmailService.get_all_accounts", return_value=[]
+    ):
+        accounts = get_email_accounts(session=session)
+        assert len(accounts) == 0
 
 
 def test_create_email_account(session: Session, monkeypatch):
@@ -319,8 +325,14 @@ def test_delete_email_account(session: Session, monkeypatch):
     assert result["ok"] is True
 
     # Verify it's gone
-    accounts = get_email_accounts(session=session)
-    assert len(accounts) == 0
+    # Mock EmailService to return no env accounts so we verify DB is empty
+    from unittest.mock import patch
+
+    with patch(
+        "backend.services.email_service.EmailService.get_all_accounts", return_value=[]
+    ):
+        accounts = get_email_accounts(session=session)
+        assert len(accounts) == 0
 
 
 def test_delete_email_account_not_found(session: Session):
@@ -361,6 +373,7 @@ def test_test_email_account(session: Session, monkeypatch):
         mock_test.return_value = {"success": True, "error": None}
 
         import asyncio
+
         result = asyncio.run(test_email_account(created.id, session=session))
 
         assert result["account"] == "test@example.com"
@@ -372,11 +385,12 @@ def test_test_email_account(session: Session, monkeypatch):
 
 def test_test_email_account_not_found(session: Session):
     """Test testing a non-existent email account raises 404"""
+    import asyncio
+
     from fastapi import HTTPException
 
     from backend.routers.settings import test_email_account
 
-    import asyncio
     with pytest.raises(HTTPException) as exc_info:
         asyncio.run(test_email_account(999, session=session))
 

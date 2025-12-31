@@ -133,7 +133,7 @@
 		</div>
 	{:else if !Array.isArray(candidates) || candidates.length === 0}
 		<div
-			class="text-text-secondary/60 py-8 text-center text-sm bg-white/50 rounded-lg border border-dashed border-gray-200"
+			class="text-text-secondary/60 py-8 text-center text-sm bg-white/50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-200 dark:border-gray-700"
 		>
 			No suggestions found. Try scanning your history for missed receipts.
 		</div>
@@ -141,7 +141,7 @@
 		<div class="space-y-4">
 			{#each candidates as candidate (candidate.id)}
 				<div
-					class="bg-white border border-primary/10 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 transition-all hover:shadow-md hover:border-primary/20 group"
+					class="bg-white dark:bg-gray-800 border border-primary/10 dark:border-primary/20 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 transition-all hover:shadow-md hover:border-primary/20 group"
 				>
 					<div class="flex-1">
 						<div class="flex items-center gap-2 mb-2">
