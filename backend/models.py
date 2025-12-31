@@ -94,6 +94,26 @@ class LearningCandidate(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class CategoryRule(SQLModel, table=True):
+    """
+    Represents a rule for automatically categorizing receipts based on patterns.
+    Rules can match on sender or subject and assign a category.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    match_type: str = Field(regex="^(sender|subject)$")  # "sender" or "subject"
+    pattern: str = Field(
+        min_length=1
+    )  # Pattern to match (supports wildcards like *@uber.com)
+    assigned_category: str = Field(
+        min_length=1
+    )  # Category to assign when matched (e.g., "Travel")
+    priority: int = Field(
+        default=10, ge=1, le=100
+    )  # Higher priority rules are checked first (1-100)
+    created_at: datetime = Field(default_factory=utc_now)
+
+
 class EmailAccount(SQLModel, table=True):
     """
     Represents an email account for monitoring receipts.
