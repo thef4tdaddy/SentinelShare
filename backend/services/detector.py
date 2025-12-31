@@ -1,11 +1,7 @@
-import fnmatch
-import os
-import re
 from typing import Any, Dict, List, Optional
 
-from sqlmodel import col, select
 
-from ..models import ManualRule, Preference
+from ..models import ManualRule
 from .detectors import (
     DetectionStrategy,
     ManualRuleStrategy,
@@ -13,7 +9,6 @@ from .detectors import (
     ShippingStrategy,
     TransactionalStrategy,
 )
-from .email_service import EmailService
 
 
 class ReceiptDetector:
@@ -56,22 +51,29 @@ class ReceiptDetector:
         # Strategy 2: Transactional Detection (includes reply/forward exclusion)
         transactional_result = TransactionalStrategy().detect(email, session)
         if transactional_result.is_match:
-            print(f"✅ {transactional_result.reason}: {ReceiptDetector._mask_text(subject)}")
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"✅ {transactional_result.reason}: {masked}")
             return True
-        elif transactional_result.reason and "Reply or forward" in transactional_result.reason:
-            print(f"🚫 {transactional_result.reason}: {ReceiptDetector._mask_text(subject)}")
+        elif (
+            transactional_result.reason
+            and "Reply or forward" in transactional_result.reason
+        ):
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"🚫 {transactional_result.reason}: {masked}")
             return False
 
         # Strategy 3: Promotional Detection (exclusion)
         promotional_result = PromotionalStrategy().detect(email, session)
         if promotional_result.is_match:
-            print(f"🚫 Excluded promotional email: {ReceiptDetector._mask_text(subject)}")
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"🚫 Excluded promotional email: {masked}")
             return False
 
         # Strategy 4: Shipping Detection (exclusion)
         shipping_result = ShippingStrategy().detect(email, session)
         if shipping_result.is_match:
-            print(f"🚫 Excluded shipping notification: {ReceiptDetector._mask_text(subject)}")
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"🚫 Excluded shipping notification: {masked}")
             return False
 
         print(f"❌ Not a receipt: {ReceiptDetector._mask_text(subject)}")

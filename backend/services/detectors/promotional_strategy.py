@@ -230,7 +230,11 @@ class PromotionalStrategy(DetectionStrategy):
             )
 
         # Check tracking patterns
-        if any(re.search(pattern, body, re.IGNORECASE) for pattern in self.TRACKING_PATTERNS):
+        has_tracking = any(
+            re.search(pattern, body, re.IGNORECASE)
+            for pattern in self.TRACKING_PATTERNS
+        )
+        if has_tracking:
             return DetectionResult(
                 is_match=True,
                 confidence=70,

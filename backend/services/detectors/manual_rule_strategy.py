@@ -37,10 +37,11 @@ class ManualRuleStrategy(DetectionStrategy):
             for pref in always_forward:
                 p_item = pref.item.lower()
                 if p_item in sender or p_item in subject:
+                    masked = self._mask_text(pref.item)
                     return DetectionResult(
                         is_match=True,
                         confidence=100,
-                        reason=f"Preference match (Always Forward): {self._mask_text(pref.item)}",
+                        reason=f"Preference match (Always Forward): {masked}",
                         matched_by="Always Forward Preference",
                     )
 
@@ -55,10 +56,11 @@ class ManualRuleStrategy(DetectionStrategy):
             for pref in blocked:
                 p_item = pref.item.lower()
                 if p_item in sender or p_item in subject:
+                    masked = self._mask_text(pref.item)
                     return DetectionResult(
                         is_match=False,
                         confidence=100,
-                        reason=f"Preference match (Blocked): {self._mask_text(pref.item)}",
+                        reason=f"Preference match (Blocked): {masked}",
                         matched_by="Blocked Preference",
                     )
 

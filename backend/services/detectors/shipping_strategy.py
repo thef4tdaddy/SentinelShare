@@ -112,7 +112,8 @@ class ShippingStrategy(DetectionStrategy):
         # Check shipping patterns in content
         text = f"{subject} {body}"
         has_shipping_pattern = any(
-            re.search(pattern, text, re.IGNORECASE) for pattern in self.SHIPPING_PATTERNS
+            re.search(pattern, text, re.IGNORECASE)
+            for pattern in self.SHIPPING_PATTERNS
         )
 
         if not has_shipping_pattern:
@@ -120,7 +121,8 @@ class ShippingStrategy(DetectionStrategy):
 
         # Check if it also has purchase indicators
         has_purchase_indicators = any(
-            re.search(pattern, text, re.IGNORECASE) for pattern in self.PURCHASE_INDICATORS
+            re.search(pattern, text, re.IGNORECASE)
+            for pattern in self.PURCHASE_INDICATORS
         )
 
         # It's shipping only if it has shipping patterns but NOT purchase indicators

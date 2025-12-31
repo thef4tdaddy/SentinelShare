@@ -54,7 +54,8 @@ class TransactionalStrategy(DetectionStrategy):
         r"amount:?\s*\$[0-9,]+\.[0-9]{2}",
         r"paid:?\s*\$[0-9,]+\.[0-9]{2}",
         r"view your order",
-        r"arriving (tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
+        r"arriving (tomorrow|today|monday|tuesday|wednesday|thursday|friday"
+        r"|saturday|sunday)",
     ]
 
     TRANSACTION_INDICATORS = [
@@ -167,7 +168,11 @@ class TransactionalStrategy(DetectionStrategy):
 
     def _is_reply_or_forward(self, subject: str, sender: str) -> bool:
         """Check if email is a reply or forward."""
-        if any(re.match(pattern, subject, re.IGNORECASE) for pattern in self.REPLY_PATTERNS):
+        is_reply_pattern = any(
+            re.match(pattern, subject, re.IGNORECASE)
+            for pattern in self.REPLY_PATTERNS
+        )
+        if is_reply_pattern:
             return True
 
         # Check if from wife's email
@@ -211,7 +216,8 @@ class TransactionalStrategy(DetectionStrategy):
         # Check regex patterns
         text = f"{subject} {body}"
         has_regex = any(
-            re.search(pattern, text, re.IGNORECASE) for pattern in self.STRONG_REGEX_PATTERNS
+            re.search(pattern, text, re.IGNORECASE)
+            for pattern in self.STRONG_REGEX_PATTERNS
         )
 
         if not (has_keyword or has_regex):
@@ -219,10 +225,13 @@ class TransactionalStrategy(DetectionStrategy):
 
         # Must have supporting evidence
         return any(
-            re.search(pattern, text, re.IGNORECASE) for pattern in self.SUPPORTING_EVIDENCE
+            re.search(pattern, text, re.IGNORECASE)
+            for pattern in self.SUPPORTING_EVIDENCE
         )
 
-    def _calculate_transactional_score(self, subject: str, body: str, sender: str) -> int:
+    def _calculate_transactional_score(
+        self, subject: str, body: str, sender: str
+    ) -> int:
         """Calculate transactional score based on indicators."""
         score = 0
         text = f"{subject} {body} {sender}"
