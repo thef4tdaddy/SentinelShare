@@ -1,9 +1,8 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 from ..models import ManualRule
 from .detectors import (
-    DetectionStrategy,
     ManualRuleStrategy,
     PromotionalStrategy,
     ShippingStrategy,
@@ -19,13 +18,12 @@ class ReceiptDetector:
     is a receipt. Strategies are evaluated in priority order.
     """
 
-    # Registry of detection strategies in priority order
-    _strategies: List[DetectionStrategy] = [
-        ManualRuleStrategy(),
-        TransactionalStrategy(),
-        PromotionalStrategy(),
-        ShippingStrategy(),
-    ]
+    # Singleton strategy instances
+    _manual_rule_strategy = ManualRuleStrategy()
+    _transactional_strategy = TransactionalStrategy()
+    _promotional_strategy = PromotionalStrategy()
+    _shipping_strategy = ShippingStrategy()
+
     @staticmethod
     def is_receipt(email: Any, session: Any = None) -> bool:
         """
@@ -40,7 +38,7 @@ class ReceiptDetector:
         ).lower()
 
         # Strategy 1: Manual Rules & Preferences (highest priority)
-        manual_result = ManualRuleStrategy().detect(email, session)
+        manual_result = ReceiptDetector._manual_rule_strategy.detect(email, session)
         if manual_result.is_match:
             print(f"✅ {manual_result.reason}")
             return True
@@ -49,7 +47,9 @@ class ReceiptDetector:
             return False
 
         # Strategy 2: Transactional Detection (includes reply/forward exclusion)
-        transactional_result = TransactionalStrategy().detect(email, session)
+        transactional_result = ReceiptDetector._transactional_strategy.detect(
+            email, session
+        )
         if transactional_result.is_match:
             masked = ReceiptDetector._mask_text(subject)
             print(f"✅ {transactional_result.reason}: {masked}")
@@ -63,14 +63,16 @@ class ReceiptDetector:
             return False
 
         # Strategy 3: Promotional Detection (exclusion)
-        promotional_result = PromotionalStrategy().detect(email, session)
+        promotional_result = ReceiptDetector._promotional_strategy.detect(
+            email, session
+        )
         if promotional_result.is_match:
             masked = ReceiptDetector._mask_text(subject)
             print(f"🚫 Excluded promotional email: {masked}")
             return False
 
         # Strategy 4: Shipping Detection (exclusion)
-        shipping_result = ShippingStrategy().detect(email, session)
+        shipping_result = ReceiptDetector._shipping_strategy.detect(email, session)
         if shipping_result.is_match:
             masked = ReceiptDetector._mask_text(subject)
             print(f"🚫 Excluded shipping notification: {masked}")
@@ -87,7 +89,6 @@ class ReceiptDetector:
         subject = (
             getattr(email, "subject", None) or email.get("subject", "") or ""
         ).lower()
-        (getattr(email, "body", None) or email.get("body", "") or "").lower()
         sender = (
             getattr(email, "sender", None)
             or email.get("from", None)

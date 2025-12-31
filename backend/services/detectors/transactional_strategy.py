@@ -175,9 +175,9 @@ class TransactionalStrategy(DetectionStrategy):
         if is_reply_pattern:
             return True
 
-        # Check if from wife's email
-        wife_email = (os.environ.get("WIFE_EMAIL") or "your-wife@email.com").lower()
-        if wife_email in sender:
+        # Check if from wife's email (if configured)
+        wife_email = os.environ.get("WIFE_EMAIL")
+        if wife_email and wife_email.lower() in sender:
             return True
 
         # Check if from your own email addresses

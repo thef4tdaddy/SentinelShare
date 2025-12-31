@@ -3,7 +3,7 @@
 import fnmatch
 from typing import Any, Optional
 
-from sqlmodel import select
+from sqlmodel import col, select
 
 from ...models import ManualRule, Preference
 from .base import DetectionResult, DetectionStrategy
@@ -46,8 +46,6 @@ class ManualRuleStrategy(DetectionStrategy):
                     )
 
             # 3. Preferences (Blocked Sender / Category)
-            from sqlmodel import col
-
             blocked = session.exec(
                 select(Preference).where(
                     col(Preference.type).in_(["Blocked Sender", "Blocked Category"])
