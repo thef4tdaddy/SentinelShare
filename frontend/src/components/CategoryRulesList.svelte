@@ -154,7 +154,10 @@
 		<h4 class="font-semibold mb-3 text-text-main dark:text-text-main-dark">Add New Rule</h4>
 		<div class="grid gap-4 md:grid-cols-2">
 			<div>
-				<label for="new-match-type" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+				<label
+					for="new-match-type"
+					class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+				>
 					Match Type
 				</label>
 				<select
@@ -168,7 +171,10 @@
 				</select>
 			</div>
 			<div>
-				<label for="new-pattern" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+				<label
+					for="new-pattern"
+					class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+				>
 					Pattern (supports wildcards like *@uber.com)
 				</label>
 				<input
@@ -181,7 +187,10 @@
 				/>
 			</div>
 			<div>
-				<label for="new-category" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+				<label
+					for="new-category"
+					class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+				>
 					Category
 				</label>
 				<input
@@ -194,7 +203,10 @@
 				/>
 			</div>
 			<div>
-				<label for="new-priority" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+				<label
+					for="new-priority"
+					class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+				>
 					Priority (higher = checked first)
 				</label>
 				<input
@@ -233,7 +245,10 @@
 						<!-- Edit Mode -->
 						<div class="grid gap-4 md:grid-cols-2">
 							<div>
-								<label for="edit-match-type-{rule.id}" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+								<label
+									for="edit-match-type-{rule.id}"
+									class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+								>
 									Match Type
 								</label>
 								<select
@@ -247,7 +262,10 @@
 								</select>
 							</div>
 							<div>
-								<label for="edit-pattern-{rule.id}" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+								<label
+									for="edit-pattern-{rule.id}"
+									class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+								>
 									Pattern
 								</label>
 								<input
@@ -259,7 +277,10 @@
 								/>
 							</div>
 							<div>
-								<label for="edit-category-{rule.id}" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+								<label
+									for="edit-category-{rule.id}"
+									class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+								>
 									Category
 								</label>
 								<input
@@ -271,7 +292,10 @@
 								/>
 							</div>
 							<div>
-								<label for="edit-priority-{rule.id}" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1">
+								<label
+									for="edit-priority-{rule.id}"
+									class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-1"
+								>
 									Priority
 								</label>
 								<input

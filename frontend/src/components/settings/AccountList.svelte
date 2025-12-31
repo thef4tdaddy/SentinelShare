@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { SvelteSet } from 'svelte/reactivity';
-	import { fetchJson } from '../lib/api';
-	import { toasts } from '../lib/stores/toast';
+	import { fetchJson } from '../../lib/api';
+	import { toasts } from '../../lib/stores/toast';
 	import { Trash2, Plus, CheckCircle, XCircle, Loader2, Mail } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 

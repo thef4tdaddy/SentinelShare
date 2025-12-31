@@ -1,10 +1,11 @@
 """Tests for Smart Categorization Service"""
 
 import pytest
-from backend.models import CategoryRule
-from backend.services.categorizer import Categorizer
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+from backend.models import CategoryRule
+from backend.services.categorizer import Categorizer
 
 
 # Create in-memory SQLite database for testing
@@ -107,7 +108,10 @@ def test_predict_category_priority_ordering(session):
 def test_predict_category_multiple_rules(session):
     """Test that first matching rule wins"""
     rule1 = CategoryRule(
-        match_type="sender", pattern="*@uber.com", assigned_category="Travel", priority=10
+        match_type="sender",
+        pattern="*@uber.com",
+        assigned_category="Travel",
+        priority=10,
     )
     rule2 = CategoryRule(
         match_type="sender",

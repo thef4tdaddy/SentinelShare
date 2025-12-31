@@ -15,9 +15,7 @@ from ..models import CategoryRule
 
 class Categorizer:
     @staticmethod
-    def predict_category(
-        email: Any, session: Optional[Session] = None
-    ) -> str:
+    def predict_category(email: Any, session: Optional[Session] = None) -> str:
         """
         Predict the category for an email based on CategoryRule patterns.
 
@@ -37,10 +35,11 @@ class Categorizer:
         if hasattr(email, "get"):
             # Dict-like: prefer keys; fall back to empty string.
             raw_subject = email.get("subject", "")  # type: ignore[assignment]
-            raw_sender = (
-                email.get("sender", "")  # type: ignore[assignment]
-                or email.get("from", "")  # type: ignore[assignment]
-            )
+            raw_sender = email.get(
+                "sender", ""
+            ) or email.get(  # type: ignore[assignment]
+                "from", ""
+            )  # type: ignore[assignment]
         else:
             # Object-like: use attributes; fall back to empty string.
             raw_subject = getattr(email, "subject", "")
@@ -88,10 +87,11 @@ class Categorizer:
         # Safely handle both dict-like objects (with .get) and plain objects (with attributes).
         if hasattr(email, "get"):
             # Dict-like: prefer keys; fall back to empty string.
-            raw_sender = (
-                email.get("sender", "")  # type: ignore[assignment]
-                or email.get("from", "")  # type: ignore[assignment]
-            )
+            raw_sender = email.get(
+                "sender", ""
+            ) or email.get(  # type: ignore[assignment]
+                "from", ""
+            )  # type: ignore[assignment]
             raw_subject = email.get("subject", "")  # type: ignore[assignment]
         else:
             # Object-like: use attributes; fall back to empty string.

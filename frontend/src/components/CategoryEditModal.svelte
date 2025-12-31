@@ -40,7 +40,7 @@
 
 	async function handleSave() {
 		const trimmedCategory = newCategory.trim();
-		
+
 		if (!emailId || !trimmedCategory) {
 			toasts.trigger('Please enter a category', 'error');
 			return;
@@ -76,7 +76,10 @@
 <Modal {isOpen} onClose={handleCancel} title="Edit Category">
 	<div class="space-y-4">
 		<div>
-			<label for="category-input" class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-2">
+			<label
+				for="category-input"
+				class="block text-sm font-medium text-text-main dark:text-text-main-dark mb-2"
+			>
 				Category
 			</label>
 			<input
@@ -90,7 +93,9 @@
 		</div>
 
 		<div class="bg-background-secondary dark:bg-background-secondary-dark p-4 rounded-lg">
-			<h4 class="text-sm font-semibold text-text-main dark:text-text-main-dark mb-3 flex items-center gap-2">
+			<h4
+				class="text-sm font-semibold text-text-main dark:text-text-main-dark mb-3 flex items-center gap-2"
+			>
 				<Tag size={16} />
 				Smart Suggestion
 			</h4>
@@ -99,12 +104,7 @@
 			</p>
 
 			<label class="flex items-start gap-2 cursor-pointer">
-				<input
-					type="checkbox"
-					bind:checked={createRule}
-					class="mt-1"
-					disabled={loading}
-				/>
+				<input type="checkbox" bind:checked={createRule} class="mt-1" disabled={loading} />
 				<div class="flex-1">
 					<span class="text-sm text-text-main dark:text-text-main-dark">
 						Create a rule for future categorization
@@ -118,12 +118,7 @@
 			{#if createRule}
 				<div class="mt-3 pl-6 space-y-2">
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input
-							type="radio"
-							bind:group={matchType}
-							value="sender"
-							disabled={loading}
-						/>
+						<input type="radio" bind:group={matchType} value="sender" disabled={loading} />
 						<div>
 							<span class="text-sm text-text-main dark:text-text-main-dark">Match by sender</span>
 							<p class="text-xs text-text-secondary dark:text-text-secondary-dark">
@@ -133,12 +128,7 @@
 					</label>
 
 					<label class="flex items-center gap-2 cursor-pointer">
-						<input
-							type="radio"
-							bind:group={matchType}
-							value="subject"
-							disabled={loading}
-						/>
+						<input type="radio" bind:group={matchType} value="subject" disabled={loading} />
 						<div>
 							<span class="text-sm text-text-main dark:text-text-main-dark">Match by subject</span>
 							<p class="text-xs text-text-secondary dark:text-text-secondary-dark">
@@ -151,9 +141,7 @@
 		</div>
 
 		<div class="flex gap-3 justify-end pt-4">
-			<button onclick={handleCancel} class="btn btn-secondary" disabled={loading}>
-				Cancel
-			</button>
+			<button onclick={handleCancel} class="btn btn-secondary" disabled={loading}> Cancel </button>
 			<button onclick={handleSave} class="btn btn-primary" disabled={loading}>
 				{loading ? 'Saving...' : 'Save'}
 			</button>

@@ -1,25 +1,22 @@
 <script lang="ts">
 	import PreferenceList from '../components/PreferenceList.svelte';
 	import EmailTemplateEditor from '../components/EmailTemplateEditor.svelte';
-	import AccountList from '../components/AccountList.svelte';
+	import AccountList from '../components/settings/AccountList.svelte';
+	import InboxStatus from '../components/settings/InboxStatus.svelte';
+	import AppearanceSettings from '../components/settings/AppearanceSettings.svelte';
 	import CategoryRulesList from '../components/CategoryRulesList.svelte';
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
 	import { toasts } from '../lib/stores/toast';
-	import { theme as themeStore } from '../lib/stores/theme';
 	import {
 		Play,
 		Settings,
 		Sliders,
-		Mail,
-		CheckCircle,
-		AlertTriangle,
 		Loader2,
 		History as HistoryIcon,
 		User,
-		Moon,
-		Sun,
-		Tag
+		Tag,
+		Mail
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 
@@ -38,11 +35,12 @@
 	let accountToDelete: { id: number; email: string; onComplete: () => void } | null = $state(null);
 
 	// Reactive theme value using $derived
-	const currentTheme = $derived($themeStore);
+	// Moved to AppearanceSettings
+	// const currentTheme = $derived($themeStore);
 
-	function toggleTheme() {
-		themeStore.toggle();
-	}
+	// function toggleTheme() {
+	// 	themeStore.toggle();
+	// }
 
 	function openConfirmDialog() {
 		showConfirmDialog = true;
@@ -152,79 +150,10 @@
 
 <div class="space-y-8">
 	<!-- Theme Toggle Section -->
-	<section>
-		<h3 class="text-lg font-bold text-text-main mb-4 dark:text-text-main-dark">Appearance</h3>
-		<div class="card">
-			<div class="flex items-center justify-between">
-				<div>
-					<p class="font-medium text-text-main dark:text-text-main-dark">Dark Mode</p>
-					<p class="text-sm text-text-secondary dark:text-text-secondary-dark">
-						Toggle between light and dark theme
-					</p>
-				</div>
-				<button
-					onclick={toggleTheme}
-					class="btn btn-secondary flex items-center gap-2"
-					aria-label="Toggle theme"
-				>
-					{#if currentTheme === 'dark'}
-						<Sun size={18} />
-						Light
-					{:else}
-						<Moon size={18} />
-						Dark
-					{/if}
-				</button>
-			</div>
-		</div>
-	</section>
+	<!-- Theme Toggle Section -->
+	<AppearanceSettings />
 	<!-- Connection Status -->
-	<section>
-		<h3 class="text-lg font-bold text-text-main mb-4 dark:text-text-main-dark">Inbox Status</h3>
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-			{#each connectionResults as res (res.account)}
-				<div
-					class="card flex items-center justify-between p-4 {res.success
-						? 'border-l-4 border-l-green-500 dark:border-l-green-400'
-						: 'border-l-4 border-l-red-500 dark:border-l-red-400'}"
-				>
-					<div class="overflow-hidden">
-						<p
-							class="font-medium text-text-main truncate dark:text-text-main-dark"
-							title={res.account}
-						>
-							{res.account}
-						</p>
-						<p
-							class="text-xs {res.success
-								? 'text-green-600 dark:text-green-400'
-								: 'text-red-600 dark:text-red-400'}"
-						>
-							{res.success ? 'Connected' : 'Connection Failed'}
-						</p>
-					</div>
-					<div>
-						{#if res.success}
-							<CheckCircle class="text-green-500 dark:text-green-400" size={20} />
-						{:else}
-							<div class="group relative">
-								<AlertTriangle class="text-red-500 cursor-help dark:text-red-400" size={20} />
-								<div
-									class="absolute right-0 top-6 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 hidden group-hover:block dark:bg-gray-700"
-								>
-									{res.error}
-								</div>
-							</div>
-						{/if}
-					</div>
-				</div>
-			{:else}
-				<div class="text-text-secondary text-sm italic dark:text-text-secondary-dark">
-					No accounts configured or check pending...
-				</div>
-			{/each}
-		</div>
-	</section>
+	<InboxStatus results={connectionResults} />
 
 	<!-- Email Accounts Management Section -->
 	<section>
