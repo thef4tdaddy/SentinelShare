@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 from backend.database import engine
 from backend.models import ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content, get_email_content_hash
+from backend.services.categorizer import Categorizer
 from backend.services.command_service import CommandService
 from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
@@ -235,7 +236,12 @@ def process_emails():
 
                     # Detect (passing session for manual rules/preferences)
                     is_receipt = ReceiptDetector.is_receipt(email_data, session=session)
-                    category = ReceiptDetector.categorize_receipt(email_data)
+
+                    # Use new smart categorization system
+                    category = Categorizer.predict_category(email_data, session=session)
+                    # Fallback to hardcoded logic if no rules matched
+                    if category == "other":
+                        category = Categorizer.get_fallback_category(email_data)
 
                     LearningService.run_shadow_mode(session, email_data)
 
