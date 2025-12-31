@@ -85,10 +85,8 @@ def main():
                 # Strict Red/Green based on threshold
                 if score_val >= required:
                     emoji = "🟢"
-                    status = "PASS"
                 else:
                     emoji = "🔴"
-                    status = f"FAIL (<{required_pct})"
                 
                 print(f"{emoji} {category.get('title', key):<20}: {score_pct:<3} (Req: {required_pct})")
                 
