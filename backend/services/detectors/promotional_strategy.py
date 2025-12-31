@@ -185,11 +185,7 @@ class PromotionalStrategy(DetectionStrategy):
 
         # Check promotional keywords
         if any(keyword in subject for keyword in self.PROMOTIONAL_KEYWORDS):
-            # Check if it's on the allowlist
-            if any(
-                pattern in subject or pattern in body or pattern in sender
-                for pattern in self.PROMO_ALLOWLIST_PATTERNS
-            ):
+            if self._is_allowlisted(subject, body, sender):
                 return DetectionResult(is_match=False)
             return DetectionResult(
                 is_match=True,
@@ -199,10 +195,7 @@ class PromotionalStrategy(DetectionStrategy):
             )
 
         if any(keyword in body for keyword in self.PROMOTIONAL_KEYWORDS):
-            if any(
-                pattern in subject or pattern in body or pattern in sender
-                for pattern in self.PROMO_ALLOWLIST_PATTERNS
-            ):
+            if self._is_allowlisted(subject, body, sender):
                 return DetectionResult(is_match=False)
             return DetectionResult(
                 is_match=True,
@@ -217,10 +210,7 @@ class PromotionalStrategy(DetectionStrategy):
             or re.search(pattern, body, re.IGNORECASE)
             for pattern in self.MARKETING_PATTERNS
         ):
-            if any(
-                pattern in subject or pattern in body or pattern in sender
-                for pattern in self.PROMO_ALLOWLIST_PATTERNS
-            ):
+            if self._is_allowlisted(subject, body, sender):
                 return DetectionResult(is_match=False)
             return DetectionResult(
                 is_match=True,
@@ -257,3 +247,10 @@ class PromotionalStrategy(DetectionStrategy):
             )
 
         return DetectionResult(is_match=False)
+
+    def _is_allowlisted(self, subject: str, body: str, sender: str) -> bool:
+        """Check if email matches promotional allowlist patterns."""
+        return any(
+            pattern in subject or pattern in body or pattern in sender
+            for pattern in self.PROMO_ALLOWLIST_PATTERNS
+        )

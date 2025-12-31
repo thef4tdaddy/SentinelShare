@@ -166,7 +166,7 @@ class ReceiptDetector:
         Check if email is a shipping notification.
         Delegates to ShippingStrategy for consistency.
         """
-        strategy = ShippingStrategy()
+        strategy = ReceiptDetector._shipping_strategy
         email = {"subject": subject, "body": body, "sender": sender}
         result = strategy.detect(email)
         return result.is_match
@@ -188,7 +188,7 @@ class ReceiptDetector:
         Check for strong receipt indicators.
         Delegates to TransactionalStrategy for consistency.
         """
-        strategy = TransactionalStrategy()
+        strategy = ReceiptDetector._transactional_strategy
         return strategy._has_strong_receipt_indicators(subject, body)
 
     @staticmethod
@@ -197,7 +197,7 @@ class ReceiptDetector:
         Calculate transactional score.
         Delegates to TransactionalStrategy for consistency.
         """
-        strategy = TransactionalStrategy()
+        strategy = ReceiptDetector._transactional_strategy
         return strategy._calculate_transactional_score(subject, body, sender)
 
     @staticmethod
@@ -206,7 +206,7 @@ class ReceiptDetector:
         Check if sender is a known receipt provider.
         Delegates to TransactionalStrategy for consistency.
         """
-        strategy = TransactionalStrategy()
+        strategy = ReceiptDetector._transactional_strategy
         return strategy._is_known_receipt_sender(sender)
 
     @staticmethod
@@ -215,7 +215,7 @@ class ReceiptDetector:
         Check for transaction confirmation patterns.
         Delegates to TransactionalStrategy for consistency.
         """
-        strategy = TransactionalStrategy()
+        strategy = ReceiptDetector._transactional_strategy
         return strategy._has_transaction_confirmation(subject, body)
 
     @staticmethod

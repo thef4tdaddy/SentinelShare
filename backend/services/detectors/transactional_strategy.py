@@ -54,8 +54,7 @@ class TransactionalStrategy(DetectionStrategy):
         r"amount:?\s*\$[0-9,]+\.[0-9]{2}",
         r"paid:?\s*\$[0-9,]+\.[0-9]{2}",
         r"view your order",
-        r"arriving (tomorrow|today|monday|tuesday|wednesday|thursday|friday"
-        r"|saturday|sunday)",
+        r"arriving (tomorrow|today|monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
     ]
 
     TRANSACTION_INDICATORS = [
