@@ -255,11 +255,13 @@ class EmailAccountResponse(BaseModel):
 
 @router.get("/accounts", response_model=List[EmailAccountResponse])
 def get_email_accounts(session: Session = Depends(get_session)):
-    """Get all email accounts (without passwords)"""
+    """Get all email accounts (both DB and Env-defined)"""
     from backend.models import EmailAccount
+    from backend.services.email_service import EmailService
 
-    accounts = session.exec(select(EmailAccount)).all()
-    return [
+    # 1. Get DB Accounts
+    db_accounts = session.exec(select(EmailAccount)).all()
+    response_list = [
         EmailAccountResponse(
             id=acc.id,
             email=acc.email,
@@ -270,8 +272,40 @@ def get_email_accounts(session: Session = Depends(get_session)):
             created_at=acc.created_at.isoformat(),
             updated_at=acc.updated_at.isoformat(),
         )
-        for acc in accounts
+        for acc in db_accounts
     ]
+
+    # 2. Get Env Accounts (via EmailService)
+    # EmailService.get_all_accounts returns simple dicts with credentials
+    # We need to filter out ones that match DB accounts to avoid duplicates
+    all_service_accounts = EmailService.get_all_accounts()
+
+    db_emails = {acc.email.lower() for acc in db_accounts}
+
+    # Start fake IDs at -1 and go down
+    fake_id = -1
+
+    now_str = "2024-01-01T00:00:00"  # Placeholder timestamp for env accounts
+
+    for acc in all_service_accounts:
+        email = acc.get("email", "").lower()
+        if email and email not in db_emails:
+            # This is an env-only account
+            response_list.append(
+                EmailAccountResponse(
+                    id=fake_id,
+                    email=email,
+                    host=acc.get("imap_server", "unknown"),
+                    port=993,  # Default assumption for env accounts if not specified
+                    username=email,  # Usually same as email
+                    is_active=True,
+                    created_at=now_str,
+                    updated_at=now_str,
+                )
+            )
+            fake_id -= 1
+
+    return response_list
 
 
 @router.post("/accounts", response_model=EmailAccountResponse)

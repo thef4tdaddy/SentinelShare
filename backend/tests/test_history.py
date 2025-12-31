@@ -677,6 +677,18 @@ class TestHistoryAdvancedFiltering:
         assert "min_amount" in exc_info.value.detail.lower()
         assert "max_amount" in exc_info.value.detail.lower()
 
+    def test_filter_negative_max_amount_rejected(self, session: Session, sample_emails):
+        """Test that negative max_amount is rejected"""
+        from fastapi import HTTPException
+
+        from backend.routers.history import get_email_history
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_email_history(page=1, per_page=50, max_amount=-10.0, session=session)
+
+        assert exc_info.value.status_code == 400
+        assert "non-negative" in exc_info.value.detail.lower()
+
 
 class TestHistoryStatusValidation:
     """Test status parameter validation"""
@@ -1094,6 +1106,19 @@ class TestHistoryReprocess:
 class TestHistoryExport:
     """Test export functionality using TestClient for proper HTTP testing"""
 
+    def _setup_export_client(self, session: Session, monkeypatch):
+        """Helper method to setup TestClient for export endpoint tests"""
+        monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
+
+        from fastapi.testclient import TestClient
+
+        from backend.database import get_session
+        from backend.main import app
+
+        app.dependency_overrides[get_session] = lambda: session
+        client = TestClient(app)
+        return client, app
+
     def test_export_csv_all_emails(self, session: Session, sample_emails, monkeypatch):
         """Test exporting all emails to CSV via HTTP"""
         monkeypatch.delenv("DASHBOARD_PASSWORD", raising=False)
@@ -1328,5 +1353,91 @@ class TestHistoryExport:
 
         # Check category is also sanitized
         assert "'@dangerous" in content
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_status_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with status filter via HTTP"""
+        client, app = self._setup_export_client(session, monkeypatch)
+
+        response = client.get("/api/history/export?format=csv&status=forwarded")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 2 forwarded emails + header
+        assert len(lines) == 3
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_date_to_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with date_to filter via HTTP"""
+        client, app = self._setup_export_client(session, monkeypatch)
+
+        now = datetime.now(timezone.utc)
+        date_to = (now - timedelta(minutes=35)).isoformat().replace("+00:00", "Z")
+
+        response = client.get(f"/api/history/export?format=csv&date_to={date_to}")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 2 emails (email4 and email5) + header
+        assert len(lines) == 3
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_sender_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with sender filter via HTTP"""
+        client, app = self._setup_export_client(session, monkeypatch)
+
+        response = client.get("/api/history/export?format=csv&sender=amazon")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 1 email (amazon) + header
+        assert len(lines) == 2
+        assert "amazon" in content.lower()
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_min_amount_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with min_amount filter via HTTP"""
+        client, app = self._setup_export_client(session, monkeypatch)
+
+        response = client.get("/api/history/export?format=csv&min_amount=30")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 1 email (49.99 >= 30) + header
+        assert len(lines) == 2
+        assert "49.99" in content
+
+        app.dependency_overrides.clear()
+
+    def test_export_csv_with_max_amount_filter(
+        self, session: Session, sample_emails, monkeypatch
+    ):
+        """Test exporting emails with max_amount filter via HTTP"""
+        client, app = self._setup_export_client(session, monkeypatch)
+
+        response = client.get("/api/history/export?format=csv&max_amount=30")
+
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Should have 1 email (25.50 <= 30) + header
+        assert len(lines) == 2
+        assert "25.50" in content
 
         app.dependency_overrides.clear()

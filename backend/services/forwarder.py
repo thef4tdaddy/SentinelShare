@@ -7,12 +7,13 @@ from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
+from sqlmodel import Session, select
+
 from backend.constants import DEFAULT_EMAIL_TEMPLATE
 from backend.database import engine
 from backend.models import GlobalSettings
 from backend.security import generate_dashboard_token, generate_hmac_signature
 from backend.services.email_service import EmailService
-from sqlmodel import Session, select
 
 
 def format_email_date(date_input) -> str:
@@ -96,12 +97,21 @@ class EmailForwarder:
         msg["Subject"] = f"Fwd: {original_email_data.get('subject', 'No Subject')}"
 
         # Helper to extract a simple name for commands (e.g. "Amazon" from "Amazon.com")
+        # Helper to extract a simple name for commands (e.g. "Amazon" from "Amazon.com")
+        from email.utils import parseaddr
+
         from_header = original_email_data.get("from", "")
         simple_name = "Sender"
-        if "@" in from_header:
+
+        # Try to get the real name first (e.g. "Amazon" from "Amazon <no-reply@amazon.com>")
+        real_name, email_addr = parseaddr(from_header)
+
+        if real_name and len(real_name.strip()) > 0:
+            simple_name = real_name.strip()
+        elif "@" in email_addr:
             try:
                 # Extract domain part "amazon.com"
-                domain = from_header.split("@")[1].split(">")[0].strip()
+                domain = email_addr.split("@")[1].strip()
                 # Extract main name "amazon"
                 simple_name = domain.split(".")[0].capitalize()
             except Exception:

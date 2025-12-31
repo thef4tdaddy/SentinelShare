@@ -198,7 +198,7 @@
 					{/each}
 				</div>
 				<button
-					class="p-3 text-gray-400 hover:text-red-500 bg-gray-50 rounded-xl"
+					class="p-3 text-gray-400 hover:text-red-500 bg-gray-50 dark:bg-gray-800 dark:text-gray-500 hover:dark:text-red-400 rounded-xl transition-all duration-200 hover:bg-red-50 hover:dark:bg-red-900/20 active:scale-95 shadow-sm hover:shadow"
 					onclick={() => item.id && deleteItem(item.id)}
 					aria-label="Delete"
 				>

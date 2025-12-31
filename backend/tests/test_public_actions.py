@@ -2,13 +2,51 @@ import hashlib
 import hmac
 import time
 
-from backend.main import app
+import pytest
 from fastapi.testclient import TestClient
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
 
-client = TestClient(app)
+from backend.main import app
 
 
-def test_quick_action_public_access(monkeypatch):
+@pytest.fixture(name="engine")
+def engine_fixture():
+    """Create an in-memory database engine for testing"""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    SQLModel.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture(name="session")
+def session_fixture(engine):
+    """Create an in-memory database session for testing"""
+    with Session(engine) as session:
+        yield session
+
+
+@pytest.fixture(name="client")
+def client_fixture(session):
+    """Create a test client with mocked dependencies"""
+
+    def get_session_override():
+        return session
+
+    from backend.database import get_session
+
+    app.dependency_overrides[get_session] = get_session_override
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+def test_quick_action_public_access(monkeypatch, client, engine):
     """
     Regression test for Public Action Links (STOP, MORE, SETTINGS).
     Ensures that these endpoints can be accessed WITHOUT authentication
@@ -31,12 +69,18 @@ def test_quick_action_public_access(monkeypatch):
     msg = f"{cmd}:{arg}:{ts}"
     sig = hmac.new(secret.encode(), msg.encode(), hashlib.sha256).hexdigest()
 
-    # 3. Request without Auth
+    # 3. Patch the engine used by CommandService to use the test engine
+    # Using monkeypatch for cleaner test setup
+    import backend.services.command_service as cmd_service
+
+    monkeypatch.setattr(cmd_service, "engine", engine)
+
+    # 4. Request without Auth
     # No cookies, no 'token' query param
     url = f"/api/actions/quick?cmd={cmd}&arg={arg}&ts={ts}&sig={sig}"
     response = client.get(url)
 
-    # 4. Verify Success (Not 401)
+    # 5. Verify Success (Not 401)
     # It should return 200 OK because the signature is valid
     assert (
         response.status_code == 200
@@ -44,7 +88,7 @@ def test_quick_action_public_access(monkeypatch):
     assert "Successfully Blocked" in response.text
 
 
-def test_preferences_update_public_access(monkeypatch):
+def test_preferences_update_public_access(monkeypatch, client):
     """
     Ensure /api/actions/update-preferences is also whitelisted.
     This uses a token in the BODY, not query param, so middleware needs to let it through.

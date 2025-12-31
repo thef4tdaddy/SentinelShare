@@ -82,7 +82,7 @@
 								{:else}
 									<Ban size={12} class="mr-1" />
 								{/if}
-								{item.status}
+								{item.status === 'blocked' ? 'ignored' : item.status}
 							</span>
 						</td>
 						<td class="py-3 px-4 font-medium text-text-main dark:text-text-main-dark">

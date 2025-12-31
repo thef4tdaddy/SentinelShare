@@ -187,7 +187,7 @@
 				return 'bg-emerald-100 text-emerald-800 border-emerald-200';
 			case 'blocked':
 			case 'ignored':
-				return 'bg-gray-100 text-gray-600 border-gray-200';
+				return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700';
 			case 'error':
 				return 'bg-red-100 text-red-800 border-red-200';
 			default:
@@ -251,7 +251,7 @@
 		isAnalyzing = true;
 		errorMessage = '';
 		try {
-			selectedAnalysis = await fetchJson(`/api/history/reprocess/${emailId}`, {
+			selectedAnalysis = await fetchJson(`/history/reprocess/${emailId}`, {
 				method: 'POST'
 			});
 		} catch (e) {
@@ -285,7 +285,7 @@
 		if (!selectedEmail) return;
 		isProcessing = true;
 		try {
-			await fetchJson('/api/history/feedback', {
+			await fetchJson('/history/feedback', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email_id: selectedEmail.id, is_receipt: isReceipt })
@@ -313,7 +313,7 @@
 		if (filters.min_amount) params.append('min_amount', filters.min_amount);
 		if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
-		const url = `/api/history/export?${params.toString()}`;
+		const url = `/history/export?${params.toString()}`;
 
 		// Fetch CSV first so we can handle errors and provide user feedback
 		errorMessage = '';
@@ -758,7 +758,9 @@
 								{email.status}
 							</div>
 						{/if}
-						<span class="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded">
+						<span
+							class="text-[10px] font-medium text-gray-400 bg-gray-50 dark:bg-gray-800 dark:text-gray-500 px-2 py-1 rounded"
+						>
 							{formatDate(email.processed_at)}
 						</span>
 					</div>
@@ -921,7 +923,7 @@
 
 		<!-- Modal Content -->
 		<div
-			class="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6 z-10"
+			class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 z-10"
 			role="dialog"
 			aria-modal="true"
 			aria-labelledby="modal-title"
