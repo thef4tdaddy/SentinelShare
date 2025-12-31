@@ -145,14 +145,11 @@ class ReceiptDetector:
         Helper to check if any manual rule matches.
         Delegates to ManualRuleStrategy for consistency.
         """
-        strategy = ManualRuleStrategy()
-        # Create a mock email object for the strategy
-        email = {"subject": subject, "sender": sender}
-        result = strategy.detect(email, session)
-        if result.is_match and result.matched_by == "Manual Rule":
-            # Return the matched rule for backward compatibility
-            return strategy._check_manual_rules(subject, sender, session)
-        return None
+        # Reuse the singleton strategy instance to avoid redundant setup.
+        strategy = ReceiptDetector._manual_rule_strategy
+        # Directly delegate to the strategy's manual rule check, which returns
+        # the matched ManualRule instance (or None) without duplicating work.
+        return strategy._check_manual_rules(subject, sender, session)
 
     @staticmethod
     def is_reply_or_forward(subject: str, sender: str) -> bool:
