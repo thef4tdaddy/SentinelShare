@@ -56,7 +56,9 @@ class AttachmentService:
         """
         try:
             payload = part.get_payload(decode=True)
-            return payload
+            if isinstance(payload, bytes):
+                return payload
+            return None
         except Exception as e:
             logging.error(f"Error extracting attachment data: {e}")
             return None
@@ -75,7 +77,7 @@ class AttachmentService:
             - content_type: MIME type of the attachment
             - size: Size in bytes (if available)
         """
-        attachments = []
+        attachments: list[dict] = []
 
         if not msg.is_multipart():
             return attachments
@@ -85,7 +87,7 @@ class AttachmentService:
                 filename = AttachmentService.get_attachment_filename(part)
                 content_type = part.get_content_type()
 
-                attachment_info = {
+                attachment_info: dict = {
                     "filename": filename,
                     "content_type": content_type,
                 }
@@ -93,7 +95,7 @@ class AttachmentService:
                 # Try to get size
                 try:
                     payload = part.get_payload(decode=True)
-                    if payload:
+                    if payload and isinstance(payload, bytes):
                         attachment_info["size"] = len(payload)
                 except Exception:
                     pass

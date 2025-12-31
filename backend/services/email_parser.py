@@ -76,7 +76,7 @@ class EmailParser:
 
             try:
                 payload = part.get_payload(decode=True)
-                if payload:
+                if payload and isinstance(payload, bytes):
                     decoded = payload.decode("utf-8", errors="ignore")
                     if content_type == "text/plain":
                         body += decoded
@@ -104,7 +104,7 @@ class EmailParser:
 
         try:
             payload = msg.get_payload(decode=True)
-            if payload:
+            if payload and isinstance(payload, bytes):
                 decoded = payload.decode("utf-8", errors="ignore")
                 if msg.get_content_type() == "text/html":
                     html_body = decoded

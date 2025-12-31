@@ -83,7 +83,7 @@ class ImapService:
 
         try:
             mail = imaplib.IMAP4_SSL(imap_server, imap_port)
-            ImapService._imap_login(mail, username, password, auth_method, access_token)
+            ImapService._imap_login(mail, username, password or "", auth_method, access_token)
             return mail
         except Exception as e:
             logging.error(f"IMAP Connection Error: {type(e).__name__}")
@@ -147,13 +147,16 @@ class ImapService:
             Raw email bytes, or None if fetch failed
         """
         try:
-            _, msg_data = mail.fetch(message_id, "(BODY[])")
+            # Convert bytes to string for fetch command
+            msg_id_str = message_id.decode('ascii')
+            _, msg_data = mail.fetch(msg_id_str, "(BODY[])")
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     return response_part[1]
             return None
         except Exception as e:
-            logging.error(f"Error fetching message {message_id}: {e}")
+            # Use repr to properly format bytes in the log message
+            logging.error(f"Error fetching message {message_id!r}: {e}")
             return None
 
     @staticmethod
