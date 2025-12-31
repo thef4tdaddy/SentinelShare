@@ -28,7 +28,7 @@ beforeAll(() => {
 		currentTime: 0,
 		timeline: null,
 		effect: null
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	})) as any;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55,18 +55,18 @@ describe('Toast Component', () => {
 
 	it('renders a success toast with correct theme', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Success message', 'success', 0);
-		
+
 		await tick();
 		await waitFor(() => {
 			expect(screen.getByText('Success message')).toBeTruthy();
 		});
-		
+
 		const toastElement = screen.getByText('Success message').closest('div');
 		expect(toastElement?.className).toContain('bg-emerald-50');
 		expect(toastElement?.className).toContain('border-emerald-100');
-		
+
 		// Verify icon is present
 		const icon = toastElement?.querySelector('svg');
 		expect(icon).toBeTruthy();
@@ -74,18 +74,18 @@ describe('Toast Component', () => {
 
 	it('renders an error toast with correct theme', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Error message', 'error', 0);
-		
+
 		await tick();
 		await waitFor(() => {
 			expect(screen.getByText('Error message')).toBeTruthy();
 		});
-		
+
 		const toastElement = screen.getByText('Error message').closest('div');
 		expect(toastElement?.className).toContain('bg-red-50');
 		expect(toastElement?.className).toContain('border-red-100');
-		
+
 		// Verify icon is present
 		const icon = toastElement?.querySelector('svg');
 		expect(icon).toBeTruthy();
@@ -93,18 +93,18 @@ describe('Toast Component', () => {
 
 	it('renders an info toast with correct theme', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Info message', 'info', 0);
-		
+
 		await tick();
 		await waitFor(() => {
 			expect(screen.getByText('Info message')).toBeTruthy();
 		});
-		
+
 		const toastElement = screen.getByText('Info message').closest('div');
 		expect(toastElement?.className).toContain('bg-blue-50');
 		expect(toastElement?.className).toContain('border-blue-100');
-		
+
 		// Verify icon is present
 		const icon = toastElement?.querySelector('svg');
 		expect(icon).toBeTruthy();
@@ -112,26 +112,29 @@ describe('Toast Component', () => {
 
 	it('renders multiple toasts at once', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('First toast', 'info', 0);
 		await tick();
 		toasts.trigger('Second toast', 'success', 0);
 		await tick();
 		toasts.trigger('Third toast', 'error', 0);
 		await tick();
-		
-		await waitFor(() => {
-			expect(screen.getAllByLabelText('Close notification').length).toBe(3);
-		}, { timeout: 1000 });
+
+		await waitFor(
+			() => {
+				expect(screen.getAllByLabelText('Close notification').length).toBe(3);
+			},
+			{ timeout: 1000 }
+		);
 	});
 
 	it('renders close button with correct aria-label', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test message', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const closeButton = screen.getByLabelText('Close notification');
 			expect(closeButton).toBeTruthy();
@@ -142,45 +145,45 @@ describe('Toast Component', () => {
 	it.skip('auto-removes toast after specified duration', async () => {
 		vi.useFakeTimers();
 		render(Toast);
-		
+
 		toasts.trigger('Auto dismiss', 'info', 1000);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			expect(screen.getByText('Auto dismiss')).toBeTruthy();
 		});
-		
+
 		// Fast-forward time (1000ms for timeout + 200ms for transition)
 		vi.advanceTimersByTime(1200);
 		await tick();
-		
+
 		await waitFor(() => {
 			expect(screen.queryByText('Auto dismiss')).toBeNull();
 		});
-		
+
 		vi.useRealTimers();
 	});
 
 	it('does not auto-remove toast when duration is 0', async () => {
 		vi.useFakeTimers();
 		render(Toast);
-		
+
 		toasts.trigger('No auto dismiss', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			expect(screen.getByText('No auto dismiss')).toBeTruthy();
 		});
-		
+
 		// Fast-forward time
 		vi.advanceTimersByTime(5000);
 		await tick();
-		
+
 		// Should still be visible
 		expect(screen.getByText('No auto dismiss')).toBeTruthy();
-		
+
 		vi.useRealTimers();
 	});
 
@@ -196,11 +199,11 @@ describe('Toast Component', () => {
 
 	it('applies pointer-events-auto to individual toasts', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const toastElement = screen.getByText('Test').closest('div');
 			expect(toastElement?.className).toContain('pointer-events-auto');
@@ -209,11 +212,11 @@ describe('Toast Component', () => {
 
 	it('applies correct styling classes to toast container', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const toastElement = screen.getByText('Test').closest('div');
 			expect(toastElement?.className).toContain('rounded-xl');
@@ -227,11 +230,11 @@ describe('Toast Component', () => {
 
 	it('renders X icon in close button', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const closeButton = screen.getByLabelText('Close notification');
 			const xIcon = closeButton.querySelector('svg');
@@ -241,11 +244,11 @@ describe('Toast Component', () => {
 
 	it('applies hover styles to close button', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const closeButton = screen.getByLabelText('Close notification');
 			expect(closeButton.className).toContain('hover:bg-black/5');
@@ -256,11 +259,11 @@ describe('Toast Component', () => {
 
 	it('applies text styling classes correctly', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test message', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const messageElement = screen.getByText('Test message');
 			expect(messageElement.className).toContain('text-sm');
@@ -300,11 +303,11 @@ describe('Toast Component', () => {
 
 	it('handles empty message gracefully', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('', 'info', 0);
-		
+
 		await tick();
-		
+
 		// Should render with empty text
 		await waitFor(() => {
 			const toastElements = screen.queryAllByLabelText('Close notification');
@@ -314,11 +317,11 @@ describe('Toast Component', () => {
 
 	it('applies shrink-0 class to icon container', async () => {
 		render(Toast);
-		
+
 		toasts.trigger('Test', 'info', 0);
-		
+
 		await tick();
-		
+
 		await waitFor(() => {
 			const toastElement = screen.getByText('Test').closest('div');
 			const iconContainer = toastElement?.querySelector('.shrink-0');
