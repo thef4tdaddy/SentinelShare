@@ -26,4 +26,4 @@
 
 # Exclude zip artifacts
 ^\Qartifact.zip\E$
-**/*.png
+

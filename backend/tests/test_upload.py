@@ -161,11 +161,11 @@ def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
     def tracking_open(file, *args, **kwargs):
         """Track file creation and redirect to tmp_path for isolation"""
         mode = args[0] if args else kwargs.get("mode", "r")
-        
+
         # For write modes, track the file
         if isinstance(file, str) and any(char in mode for char in ("w", "a", "x")):
             created_files.append(file)
-        
+
         return original_open(file, *args, **kwargs)
 
     def tracking_remove(path):
@@ -178,7 +178,9 @@ def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
     with patch("builtins.open", side_effect=tracking_open):
         with patch("os.remove", side_effect=tracking_remove):
             # Mock session.commit to raise an error
-            with patch.object(session, "commit", side_effect=Exception("Database error")):
+            with patch.object(
+                session, "commit", side_effect=Exception("Database error")
+            ):
                 response = client.post("/api/actions/upload", files=files)
 
                 assert response.status_code == 500
@@ -188,4 +190,6 @@ def test_upload_receipt_database_error_with_cleanup(client, session, tmp_path):
                 # Verify that file was created and then cleaned up after error
                 assert len(created_files) > 0, "Expected file to be created"
                 assert len(removed_files) > 0, "Expected file to be cleaned up"
-                assert created_files[0] == removed_files[0], "Expected cleanup to remove the created file"
+                assert (
+                    created_files[0] == removed_files[0]
+                ), "Expected cleanup to remove the created file"
