@@ -251,7 +251,7 @@
 		isAnalyzing = true;
 		errorMessage = '';
 		try {
-			selectedAnalysis = await fetchJson(`/api/history/reprocess/${emailId}`, {
+			selectedAnalysis = await fetchJson(`/history/reprocess/${emailId}`, {
 				method: 'POST'
 			});
 		} catch (e) {
@@ -285,7 +285,7 @@
 		if (!selectedEmail) return;
 		isProcessing = true;
 		try {
-			await fetchJson('/api/history/feedback', {
+			await fetchJson('/history/feedback', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email_id: selectedEmail.id, is_receipt: isReceipt })
@@ -313,7 +313,7 @@
 		if (filters.min_amount) params.append('min_amount', filters.min_amount);
 		if (filters.max_amount) params.append('max_amount', filters.max_amount);
 
-		const url = `/api/history/export?${params.toString()}`;
+		const url = `/history/export?${params.toString()}`;
 
 		// Fetch CSV first so we can handle errors and provide user feedback
 		errorMessage = '';

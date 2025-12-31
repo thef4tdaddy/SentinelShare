@@ -254,17 +254,24 @@
 						<div class="flex items-center gap-2">
 							<p class="font-medium text-text-main truncate">{account.email}</p>
 							{#if account.is_active}
-								<CheckCircle class="text-green-500 flex-shrink-0" size={16} />
+								<CheckCircle class="text-green-500 shrink-0" size={16} />
 							{:else}
-								<XCircle class="text-gray-400 flex-shrink-0" size={16} />
+								<XCircle class="text-gray-400 shrink-0" size={16} />
 							{/if}
 						</div>
-						<p class="text-xs text-text-secondary">
+						<p class="text-xs text-text-secondary flex items-center gap-2">
 							{account.host}:{account.port}
+							{#if account.id < 0}
+								<span
+									class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+								>
+									Defined in Env
+								</span>
+							{/if}
 						</p>
 					</div>
 
-					<div class="flex gap-2 flex-shrink-0">
+					<div class="flex gap-2 shrink-0">
 						<button
 							onclick={() => testAccount(account.id)}
 							class="btn btn-secondary btn-sm"
@@ -279,8 +286,11 @@
 						</button>
 						<button
 							onclick={() => deleteAccount(account.id, account.email)}
-							class="btn btn-sm bg-red-600 hover:bg-red-700 text-white"
-							disabled={deletingAccountId === account.id}
+							class="btn btn-sm bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+							disabled={deletingAccountId === account.id || account.id < 0}
+							title={account.id < 0
+								? 'Cannot delete environment variable account'
+								: 'Delete account'}
 						>
 							{#if deletingAccountId === account.id}
 								<Loader2 size={14} class="animate-spin" />

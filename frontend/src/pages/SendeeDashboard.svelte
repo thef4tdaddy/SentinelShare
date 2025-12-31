@@ -85,7 +85,7 @@
 
 <div class="container-custom max-w-2xl">
 	<div class="mb-8">
-		<h1 class="text-3xl font-bold text-primary mb-2">Forwarding Preferences</h1>
+		<h1 class="text-3xl font-bold text-primary mb-2">Sendee Set Preferences</h1>
 		<p class="text-text-secondary dark:text-text-secondary-dark">
 			{#if isAdmin}
 				Manage global forwarding preferences.
@@ -112,14 +112,16 @@
 	{:else}
 		<div class="space-y-6">
 			<!-- Always Forward Section -->
-			<div class="card border-emerald-100 bg-linear-to-br from-emerald-50/50 to-white">
+			<div
+				class="card border-emerald-100 bg-linear-to-br from-emerald-50/50 to-white dark:from-emerald-900/10 dark:to-gray-900 dark:border-emerald-900/50"
+			>
 				<div class="flex items-center gap-3 mb-4">
 					<div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
 						<ShieldCheck size={20} />
 					</div>
 					<div>
-						<h3 class="font-bold text-emerald-900 m-0">Always Forward</h3>
-						<p class="text-xs text-emerald-700/70">
+						<h3 class="font-bold text-emerald-900 dark:text-emerald-400 m-0">Always Forward</h3>
+						<p class="text-xs text-emerald-700/70 dark:text-emerald-500/70">
 							Receipts from these senders are always allowed.
 						</p>
 					</div>
@@ -133,7 +135,7 @@
 					<div class="flex flex-wrap gap-2">
 						{#each allowed as item (item)}
 							<div
-								class="badge bg-emerald-100 text-emerald-700 border border-emerald-200 pl-3 pr-1 py-1 flex items-center gap-2"
+								class="badge bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800 pl-3 pr-1 py-1 flex items-center gap-2"
 							>
 								{item}
 								<button
@@ -149,31 +151,35 @@
 			</div>
 
 			<!-- Blocked Section -->
-			<div class="card border-danger-100 bg-linear-to-br from-red-50/50 to-white">
+			<div
+				class="card border-red-100 bg-linear-to-br from-red-50/50 to-white dark:from-red-900/10 dark:to-gray-900 dark:border-red-900/50"
+			>
 				<div class="flex items-center gap-3 mb-4">
-					<div class="p-2 bg-danger/10 text-danger rounded-lg">
+					<div class="p-2 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg">
 						<Shield size={20} />
 					</div>
 					<div>
-						<h3 class="font-bold text-danger-900 m-0">Blocked Senders</h3>
-						<p class="text-xs text-danger-700/70">
+						<h3 class="font-bold text-red-900 dark:text-red-400 m-0">Ignored Senders</h3>
+						<p class="text-xs text-red-700/70 dark:text-red-500/70">
 							SentinelShare will ignore all emails from these senders.
 						</p>
 					</div>
 				</div>
 
 				{#if blocked.length === 0}
-					<p class="text-sm text-center py-4 text-danger/40 italic">No blocked senders yet.</p>
+					<p class="text-sm text-center py-4 text-red-600/50 dark:text-red-400/50 italic">
+						No ignored senders yet.
+					</p>
 				{:else}
 					<div class="flex flex-wrap gap-2">
 						{#each blocked as item (item)}
 							<div
-								class="badge bg-danger/10 text-danger border border-danger/10 pl-3 pr-1 py-1 flex items-center gap-2"
+								class="badge bg-red-100 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800 pl-3 pr-1 py-1 flex items-center gap-2"
 							>
 								{item}
 								<button
 									onclick={() => toggleBlock(item)}
-									class="hover:bg-danger/20 rounded-full p-0.5 transition-colors"
+									class="hover:bg-red-200 dark:hover:bg-red-800 rounded-full p-0.5 transition-colors"
 								>
 									<X size={14} />
 								</button>
