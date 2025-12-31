@@ -33,42 +33,21 @@ describe('toast store', () => {
 			expect(typeof updatedToasts[0].id).toBe('number');
 		});
 
-		it('adds a toast with custom type - success', () => {
-			toasts.trigger('Success message', 'success');
+		it.each<{ type: ToastType; message: string }>([
+			{ type: 'success', message: 'Success message' },
+			{ type: 'error', message: 'Error message' },
+			{ type: 'info', message: 'Info message' }
+		])('adds a toast with custom type - $type', ({ type, message }) => {
+			toasts.trigger(message, type);
 
 			const currentToasts = get(toasts);
 			expect(currentToasts).toHaveLength(1);
 			expect(currentToasts[0]).toMatchObject({
-				message: 'Success message',
-				type: 'success',
+				message,
+				type,
 				duration: 3000
 			});
 		});
-
-		it('adds a toast with custom type - error', () => {
-			toasts.trigger('Error message', 'error');
-
-			const currentToasts = get(toasts);
-			expect(currentToasts).toHaveLength(1);
-			expect(currentToasts[0]).toMatchObject({
-				message: 'Error message',
-				type: 'error',
-				duration: 3000
-			});
-		});
-
-		it('adds a toast with custom type - info', () => {
-			toasts.trigger('Info message', 'info');
-
-			const currentToasts = get(toasts);
-			expect(currentToasts).toHaveLength(1);
-			expect(currentToasts[0]).toMatchObject({
-				message: 'Info message',
-				type: 'info',
-				duration: 3000
-			});
-		});
-
 		it('adds a toast with custom duration', () => {
 			toasts.trigger('Custom duration', 'info', 5000);
 
