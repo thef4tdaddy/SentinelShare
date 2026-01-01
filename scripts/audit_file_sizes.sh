@@ -9,7 +9,7 @@ LOG_FILE="file_sizes.log"
 echo "🔍 Auditing file sizes (Threshold: $THRESHOLD lines)..." > "$LOG_FILE"
 echo "------------------------------------------------" >> "$LOG_FILE"
 
-# Find files, excluding common non-source directories
+# Find files, excluding common non-source directories and tests
 # Target: .py, .svelte, .ts, .js
 find . -type f \( -name "*.py" -o -name "*.svelte" -o -name "*.ts" -o -name "*.js" \) \
     -not -path "*/node_modules/*" \
@@ -18,7 +18,11 @@ find . -type f \( -name "*.py" -o -name "*.svelte" -o -name "*.ts" -o -name "*.j
     -not -path "*/dist/*" \
     -not -path "*/.svelte-kit/*" \
     -not -path "*/package-lock.json" \
-    -not -path "*/public/*" | while read -r file; do
+    -not -path "*/public/*" \
+    -not -path "*/tests/*" \
+    -not -name "*.test.*" \
+    -not -name "*.spec.*" \
+    -not -name "*_test.py" | while read -r file; do
     
     # Count lines
     LINES=$(wc -l < "$file" | tr -d ' ')
@@ -36,9 +40,10 @@ if grep -q "OVERSIZED_FILE" "$LOG_FILE"; then
     COUNT=$(grep -c "OVERSIZED_FILE" "$LOG_FILE")
     echo "------------------------------------------------" >> "$LOG_FILE"
     echo "❌ Audit failed: Found $COUNT oversized files." >> "$LOG_FILE"
-    # Don't exit with non-zero yet, we want the health check to continue and report it
+    echo "STATUS_FILE_SIZE:1" >> "$LOG_FILE"
 else
     echo "✅ Audit passed: No files exceed the threshold." >> "$LOG_FILE"
+    echo "STATUS_FILE_SIZE:0" >> "$LOG_FILE"
 fi
 
 cat "$LOG_FILE"
