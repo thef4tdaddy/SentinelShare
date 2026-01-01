@@ -71,9 +71,7 @@
 		{:else if selectedAnalysis}
 			<div class="mb-4">
 				<h4 class="text-sm font-bold text-text-main mb-2">Detection Trace</h4>
-				<div
-					class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto"
-				>
+				<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
 					{#each selectedAnalysis.analysis.steps as step (step.step)}
 						<div class="flex items-center justify-between text-xs">
 							<span class="text-text-secondary dark:text-text-secondary-dark">{step.step}:</span>
@@ -133,9 +131,7 @@
 			</div>
 
 			<div class="flex gap-2">
-				<button onclick={onClose} class="btn btn-secondary" disabled={isProcessing}>
-					Close
-				</button>
+				<button onclick={onClose} class="btn btn-secondary" disabled={isProcessing}> Close </button>
 				{#if selectedEmail.status === 'ignored'}
 					<button onclick={onConfirmToggle} class="btn btn-primary" disabled={isProcessing}>
 						{#if isProcessing}
@@ -146,7 +142,11 @@
 						{/if}
 					</button>
 				{:else if selectedEmail.status === 'forwarded' || selectedEmail.status === 'blocked'}
-					<button onclick={onConfirmToggleToIgnored} class="btn btn-primary" disabled={isProcessing}>
+					<button
+						onclick={onConfirmToggleToIgnored}
+						class="btn btn-primary"
+						disabled={isProcessing}
+					>
 						{#if isProcessing}
 							<RefreshCw size={16} class="animate-spin" />
 						{:else}

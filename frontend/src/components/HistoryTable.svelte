@@ -83,9 +83,7 @@
 				{:else}
 					{#each emails ?? [] as email (email.id)}
 						{@const StatusIcon = getStatusIcon(email.status)}
-						<tr
-							class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors"
-						>
+						<tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50/80 transition-colors">
 							<td class="py-3 px-4">
 								{#if email.status === 'ignored'}
 									<button

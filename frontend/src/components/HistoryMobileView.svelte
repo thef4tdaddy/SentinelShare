@@ -46,7 +46,9 @@
 					{#if email.status === 'ignored'}
 						<button
 							onclick={() => onEmailClick(email)}
-							class="badge {getStatusColor(email.status)} flex items-center gap-1 py-1 px-3 shadow-sm"
+							class="badge {getStatusColor(
+								email.status
+							)} flex items-center gap-1 py-1 px-3 shadow-sm"
 						>
 							<StatusIcon size={12} />
 							{email.status}
@@ -54,14 +56,18 @@
 					{:else if email.status === 'forwarded' || email.status === 'blocked'}
 						<button
 							onclick={() => onEmailClick(email)}
-							class="badge {getStatusColor(email.status)} flex items-center gap-1 py-1 px-3 shadow-sm"
+							class="badge {getStatusColor(
+								email.status
+							)} flex items-center gap-1 py-1 px-3 shadow-sm"
 						>
 							<StatusIcon size={12} />
 							{email.status}
 						</button>
 					{:else}
 						<div
-							class="badge {getStatusColor(email.status)} flex items-center gap-1 py-1 px-3 shadow-sm"
+							class="badge {getStatusColor(
+								email.status
+							)} flex items-center gap-1 py-1 px-3 shadow-sm"
 						>
 							<StatusIcon size={12} />
 							{email.status}
