@@ -14,6 +14,7 @@ from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from backend.services.learning_service import LearningService
+from backend.services.notification_service import NotificationService
 
 scheduler = BackgroundScheduler()
 
@@ -333,6 +334,43 @@ def process_emails():
                         reason = "Detected as receipt" if success else "SMTP Error"
                         if success:
                             emails_forwarded_count += 1
+                            
+                            # Send notification on successful receipt capture
+                            try:
+                                from email.utils import parseaddr
+                                
+                                # Extract vendor name from sender
+                                from_header = email_data.get("from", "")
+                                real_name, email_addr = parseaddr(from_header)
+                                vendor = real_name.strip() if real_name and real_name.strip() else (
+                                    email_addr.split("@")[1].split(".")[0].capitalize() 
+                                    if "@" in email_addr 
+                                    else "Unknown"
+                                )
+                                
+                                # Get dashboard URL if APP_URL is set
+                                app_url = os.environ.get("APP_URL", "").rstrip("/")
+                                dashboard_url = f"{app_url}/" if app_url else None
+                                
+                                NotificationService.send_receipt_notification(
+                                    vendor=vendor,
+                                    amount=None,  # Amount parsing can be added later
+                                    subject=email_data.get("subject"),
+                                    dashboard_url=dashboard_url,
+                                )
+                            except Exception as notif_error:
+                                # Don't fail the email processing if notification fails
+                                print(f"⚠️ Failed to send notification: {type(notif_error).__name__}")
+                        else:
+                            # Send error notification on forwarding failure
+                            try:
+                                NotificationService.send_error_notification(
+                                    error_type="SMTP Error",
+                                    error_message="Failed to forward receipt email",
+                                    context=f"Subject: {email_data.get('subject', 'unknown')}",
+                                )
+                            except Exception as notif_error:
+                                print(f"⚠️ Failed to send error notification: {type(notif_error).__name__}")
 
                     # Save to DB
                     processed = ProcessedEmail(
@@ -368,6 +406,16 @@ def process_emails():
                         error_msg += f"; error processing email '{subject}'"
                     else:
                         error_msg = f"Error processing email '{subject}'"
+                    
+                    # Send error notification
+                    try:
+                        NotificationService.send_error_notification(
+                            error_type="Processing Error",
+                            error_message=f"{type(e).__name__}",
+                            context=f"Subject: {subject}",
+                        )
+                    except Exception:
+                        pass  # Don't fail if notification fails
                     # Continue to next email
 
             # Update the processing run with final counts
