@@ -1,6 +1,7 @@
 import os
 import traceback
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
 
 from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
 from sqlmodel import Session, select
@@ -14,6 +15,7 @@ from backend.services.detector import ReceiptDetector
 from backend.services.email_service import EmailService
 from backend.services.forwarder import EmailForwarder
 from backend.services.learning_service import LearningService
+from backend.services.notification_service import NotificationService
 
 scheduler = BackgroundScheduler()
 
@@ -30,6 +32,36 @@ def redact_email(email):
     else:
         redacted = name[0] + "*" * (len(name) - 2) + name[-1]
     return f"{redacted}@{domain}"
+
+
+def _extract_vendor_name(email_data: dict) -> str:
+    """
+    Extract vendor name from email sender.
+    
+    Args:
+        email_data: Email data dictionary containing 'from' field
+    
+    Returns:
+        Vendor name as a string, or "Unknown" if extraction fails
+    """
+    try:
+        from_header = email_data.get("from", "")
+        real_name, email_addr = parseaddr(from_header)
+        
+        # Try to get vendor from real_name first
+        if real_name and real_name.strip():
+            return real_name.strip()
+        
+        # Fall back to extracting from email domain
+        if "@" in email_addr:
+            domain_parts = email_addr.split("@", 1)
+            if domain_parts[1]:  # Has domain part
+                domain = domain_parts[1]
+                return domain.split(".")[0].capitalize()
+        
+        return "Unknown"
+    except (IndexError, AttributeError):
+        return "Unknown"
 
 
 def process_emails():
@@ -333,6 +365,34 @@ def process_emails():
                         reason = "Detected as receipt" if success else "SMTP Error"
                         if success:
                             emails_forwarded_count += 1
+                            
+                            # Send notification on successful receipt capture
+                            try:
+                                vendor = _extract_vendor_name(email_data)
+                                
+                                # Get dashboard URL if APP_URL is set
+                                app_url = os.environ.get("APP_URL", "").rstrip("/")
+                                dashboard_url = f"{app_url}/" if app_url else None
+                                
+                                NotificationService.send_receipt_notification(
+                                    vendor=vendor,
+                                    amount=None,  # Amount parsing can be added later
+                                    subject=email_data.get("subject"),
+                                    dashboard_url=dashboard_url,
+                                )
+                            except Exception as notif_error:
+                                # Don't fail the email processing if notification fails
+                                print(f"⚠️ Failed to send notification: {notif_error}")
+                        else:
+                            # Send error notification on forwarding failure
+                            try:
+                                NotificationService.send_error_notification(
+                                    error_type="SMTP Error",
+                                    error_message="Failed to forward receipt email",
+                                    context=f"Subject: {email_data.get('subject', 'unknown')}",
+                                )
+                            except Exception as notif_error:
+                                print(f"⚠️ Failed to send error notification: {notif_error}")
 
                     # Save to DB
                     processed = ProcessedEmail(
@@ -368,6 +428,16 @@ def process_emails():
                         error_msg += f"; error processing email '{subject}'"
                     else:
                         error_msg = f"Error processing email '{subject}'"
+                    
+                    # Send error notification
+                    try:
+                        NotificationService.send_error_notification(
+                            error_type="Processing Error",
+                            error_message=f"{type(e).__name__}",
+                            context=f"Subject: {subject}",
+                        )
+                    except Exception:
+                        pass  # Don't fail if notification fails
                     # Continue to next email
 
             # Update the processing run with final counts
