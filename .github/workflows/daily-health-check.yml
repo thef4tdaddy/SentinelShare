@@ -162,11 +162,11 @@ jobs:
 
           # Run Playwright
           cd ../frontend
-          {
-             npx playwright test && PW_RES=0 || PW_RES=$?
-             echo "STATUS_PLAYWRIGHT:$PW_RES"
-             exit $PW_RES
-          } 2>&1 | tee ../e2e_test.log
+             {
+                npx playwright test && PW_RES=0 || PW_RES=$?
+                echo "STATUS_PLAYWRIGHT:$PW_RES"
+                exit $PW_RES
+             } 2>&1 | tee ../e2e.log
         continue-on-error: true
 
       - name: File Size Audit
@@ -224,9 +224,9 @@ jobs:
                 { key: 'STATUS_PRETTIER', name: 'Prettier (Format)', log: logs.frontend_lint, type: 'warning' },
                 { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint, type: 'critical' },
                 { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint, type: 'critical' },
-                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical' },
-                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' },
-                { key: 'OVERSIZED_FILE', name: 'File Size Audit', log: logs.file_sizes, type: 'warning' }
+                { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical', outcome: process.env.OUTCOME_FRONTEND_TEST },
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical', outcome: process.env.OUTCOME_E2E },
+                { key: 'STATUS_FILE_SIZE', name: 'File Size Audit', log: logs.file_sizes, type: 'warning', outcome: process.env.OUTCOME_FILE_SIZES }
             ];
 
             let toolRows = [];
@@ -256,8 +256,17 @@ jobs:
                         outcome = 'FAIL';
                         failures.push(tool.name);
                     }
+                } else if (tool.outcome === 'success') {
+                     // Fallback to Actions outcome if log marker missing but step succeeded
+                     statusIcon = '✅';
+                     outcome = 'PASS';
+                } else if (tool.outcome === 'failure') {
+                     statusIcon = (tool.type === 'critical') ? '❌' : '⚠️';
+                     outcome = 'FAIL';
+                     if (tool.type === 'critical') hasCriticalFailure = true; else hasWarningFailure = true;
+                     failures.push(tool.name);
                 } else if (!tool.log.includes('Log file not found')) {
-                     // If log exists but marker missing, it likely crashed hard
+                     // If log exists but marker missing and step didn't succeed
                      statusIcon = '❌';
                      outcome = 'CRASH';
                      hasCriticalFailure = true;
@@ -304,18 +313,27 @@ jobs:
 
             // Build Detailed Body
             let details = '';
+
+            // Add Oversized File Details
+            const oversizedFileMatches = logs.file_sizes.match(/OVERSIZED_FILE:(.*):(\d+)/g);
+            if (oversizedFileMatches) {
+                details += `### 📏 Oversized Files\n`;
+                details += `| File | Lines | Threshold |\n|---|---|---|\n`;
+                for (const line of oversizedFileMatches) {
+                    const parts = line.split(':');
+                    details += `| \`${parts[1]}\` | **${parts[2]}** | 500 |\n`;
+                }
+                details += `\n`;
+            }
+
             // Only show logs for steps that had a failure
              if (failures.length > 0) {
                  details += `### ❌ Failure Details\n`;
-                 // Naive mapping of tool failure to log file (could be duplicate if multiple tools in one step fail)
+                 // Naive mapping of tool failure to log file
                  const failedLogs = new Set();
                  
-                 // Map tool names back to their log keys
-                 // (Simple heuristic for now)
                   for (const tool of tools) {
                       if (toolRows.find(r => r.includes(tool.name) && r.includes('FAIL'))) {
-                          // Find key for this tool
-                           // logs is defined in scope
                            if (tool.name.includes('Black') || tool.name.includes('Ruff') || tool.name.includes('Mypy')) failedLogs.add({ name: 'Backend Lint Log', log: logs.backend_lint });
                            if (tool.name.includes('Pytest')) failedLogs.add({ name: 'Backend Test Log', log: logs.backend_test });
                            if (tool.name.includes('Prettier') || tool.name.includes('ESLint') || tool.name.includes('Svelte')) failedLogs.add({ name: 'Frontend Lint Log', log: logs.frontend_lint });
@@ -328,23 +346,6 @@ jobs:
                       details += `#### ${item.name}\n\`\`\`\n${getBriefLog(item.log)}\n\`\`\`\n\n`;
                   }
              }
-
-            // Add Coverage Summaries (even on success)
-            function getCoverageTable(log) {
-               // Simple extraction of the table part
-               const lines = log.split('\n');
-               let table = [];
-               let capture = false;
-               for (const line of lines) {
-                  if (line.includes('Name') && line.includes('Stmts') || line.includes('File') && line.includes('Stmts')) capture = true;
-                  if (capture) {
-                      table.push(line);
-                      if ((line.includes('TOTAL') || line.includes('All files')) && table.length > 5) break;
-                      if (table.length > 20) { table.push('... (truncated)'); break; }
-                  }
-               }
-               return table.length > 0 ? table.join('\n') : '';
-            }
 
             const backendCov = getCoverageTable(logs.backend_test);
             const frontendCov = getCoverageTable(logs.frontend_test);
@@ -361,17 +362,26 @@ jobs:
 
             [View Full Actions Log](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
 
-             // --- Issue Splitting & Creation ---
+              // --- Issue Splitting & Creation ---
+              // GitHub limits issue bodies to ~65,535 chars.
               const MAX_CHAR = 60000;
               let issueBody = fullBody;
               let remainingParts = [];
 
               if (fullBody.length > MAX_CHAR) {
-                  issueBody = fullBody.substring(0, MAX_CHAR) + '\n\n**(Continued in comments)**';
-                  let remaining = fullBody.substring(MAX_CHAR);
+                  // Find a good place to split (e.g., end of a section)
+                  let splitIndex = fullBody.lastIndexOf('\n\n', MAX_CHAR);
+                  if (splitIndex < 40000) splitIndex = MAX_CHAR; // Fallback if no clean break
+                  
+                  issueBody = fullBody.substring(0, splitIndex) + '\n\n**(Continued in comments...)**';
+                  let remaining = fullBody.substring(splitIndex).trim();
+                  
                   while (remaining.length > 0) {
-                      remainingParts.push(remaining.substring(0, MAX_CHAR));
-                      remaining = remaining.substring(MAX_CHAR);
+                      let nextSplit = (remaining.length > MAX_CHAR) ? remaining.lastIndexOf('\n\n', MAX_CHAR) : remaining.length;
+                      if (nextSplit < 40000 && remaining.length > MAX_CHAR) nextSplit = MAX_CHAR;
+                      
+                      remainingParts.push(remaining.substring(0, nextSplit).trim());
+                      remaining = remaining.substring(nextSplit).trim();
                   }
               }
 
@@ -394,7 +404,8 @@ jobs:
 
               // --- Auto-Create Coverage Tasks ---
               async function manageCoverageIssues(type, logSummary) {
-                // ... (Existing Logic Preserved) ...
+                if (!logSummary || logSummary.includes('Log file not found')) return;
+                
                 const lines = logSummary.split('\n');
                 const lowCoverageFiles = [];
                 for (const line of lines) {
@@ -416,14 +427,11 @@ jobs:
                 lowCoverageFiles.sort((a, b) => a.coverage - b.coverage);
                 const candidates = lowCoverageFiles.slice(0, 3);
                 for (const item of candidates) {
-                    // Extract component/module name for scope (e.g. backend/auth.py -> auth)
-                    const parts = item.file.split('/');
-                    const basename = parts[parts.length - 1].split('.')[0];
+                    constParts = item.file.split('/');
+                    const basename = constParts[constParts.length - 1].split('.')[0];
                     
                     const issueTitle = `test(${basename}): Improve coverage for ${item.file}`;
                     
-                    // Search for existing issues using a broader query to catch duplicates
-                    // Matches both old "test(coverage): Improve coverage for file" and new format
                     const existing = await github.rest.search.issuesAndPullRequests({
                         q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "Improve coverage" "${item.file}"`
                     });
@@ -441,11 +449,13 @@ jobs:
                 }
             }
 
-            try { await manageCoverageIssues('Backend', logs.backend_test); } catch(e) {}
-            try { await manageCoverageIssues('Frontend', logs.frontend_test); } catch(e) {}
+            try { await manageCoverageIssues('Backend', logs.backend_test); } catch(e) { console.error("Error managing backend coverage:", e); }
+            try { await manageCoverageIssues('Frontend', logs.frontend_test); } catch(e) { console.error("Error managing frontend coverage:", e); }
 
             // --- Auto-Create Componentization Tasks (File Sizes) ---
             async function manageSizeIssues(log) {
+                if (!log || log.includes('Log file not found')) return;
+                
                 const lines = log.split('\n');
                 const oversizedFiles = [];
                 for (const line of lines) {
@@ -460,7 +470,6 @@ jobs:
                     const basename = parts[parts.length - 1];
                     const issueTitle = `refactor: Decomposition of ${basename}`;
 
-                    // Search for existing issues for this specific file
                     const existing = await github.rest.search.issuesAndPullRequests({
                         q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "Decomposition of" "${item.file}"`
                     });
