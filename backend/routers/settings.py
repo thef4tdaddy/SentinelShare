@@ -4,8 +4,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import Session, select
 
+from backend.auth_utils import get_current_user
 from backend.database import get_session
-from backend.models import CategoryRule, ManualRule, Preference
+from backend.models import CategoryRule, ManualRule, Preference, User
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
 from backend.services.settings_service import SettingsService
@@ -14,12 +15,24 @@ router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 @router.get("/preferences", response_model=List[Preference])
-def get_preferences(session: Session = Depends(get_session)):
-    return session.exec(select(Preference)).all()
+def get_preferences(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Get preferences for the current user."""
+    return session.exec(
+        select(Preference).where(Preference.user_id == current_user.id)
+    ).all()
 
 
 @router.post("/preferences", response_model=Preference)
-def create_preference(pref: Preference, session: Session = Depends(get_session)):
+def create_preference(
+    pref: Preference,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Create a new preference for the current user."""
+    pref.user_id = current_user.id
     session.add(pref)
     session.commit()
     session.refresh(pref)
@@ -27,22 +40,41 @@ def create_preference(pref: Preference, session: Session = Depends(get_session))
 
 
 @router.delete("/preferences/{pref_id}")
-def delete_preference(pref_id: int, session: Session = Depends(get_session)):
+def delete_preference(
+    pref_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a preference (only if owned by current user)."""
     pref = session.get(Preference, pref_id)
     if not pref:
         raise HTTPException(status_code=404, detail="Preference not found")
+    if pref.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     session.delete(pref)
     session.commit()
     return {"ok": True}
 
 
 @router.get("/rules", response_model=List[ManualRule])
-def get_rules(session: Session = Depends(get_session)):
-    return session.exec(select(ManualRule)).all()
+def get_rules(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Get rules for the current user."""
+    return session.exec(
+        select(ManualRule).where(ManualRule.user_id == current_user.id)
+    ).all()
 
 
 @router.post("/rules", response_model=ManualRule)
-def create_rule(rule: ManualRule, session: Session = Depends(get_session)):
+def create_rule(
+    rule: ManualRule,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Create a new rule for the current user."""
+    rule.user_id = current_user.id
     session.add(rule)
     session.commit()
     session.refresh(rule)
@@ -50,10 +82,17 @@ def create_rule(rule: ManualRule, session: Session = Depends(get_session)):
 
 
 @router.delete("/rules/{rule_id}")
-def delete_rule(rule_id: int, session: Session = Depends(get_session)):
+def delete_rule(
+    rule_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a rule (only if owned by current user)."""
     rule = session.get(ManualRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Rule not found")
+    if rule.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     session.delete(rule)
     session.commit()
     return {"ok": True}
@@ -63,34 +102,59 @@ def delete_rule(rule_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/category-rules", response_model=List[CategoryRule])
-def get_category_rules(session: Session = Depends(get_session)):
-    """Get all category rules ordered by priority"""
+def get_category_rules(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Get all category rules ordered by priority for the current user."""
     return session.exec(
-        select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
+        select(CategoryRule)
+        .where(CategoryRule.user_id == current_user.id)
+        .order_by(CategoryRule.priority.desc())  # type: ignore
     ).all()
 
 
 @router.post("/category-rules", response_model=CategoryRule)
-def create_category_rule(rule: CategoryRule, session: Session = Depends(get_session)):
-    """Create a new category rule"""
+def create_category_rule(
+    rule: CategoryRule,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Create a new category rule for the current user."""
     try:
-        return SettingsService.create_category_rule(
+        created_rule = SettingsService.create_category_rule(
             match_type=rule.match_type,
             pattern=rule.pattern,
             assigned_category=rule.assigned_category,
             priority=rule.priority,
             session=session,
         )
+        # Set user_id after creation
+        created_rule.user_id = current_user.id
+        session.add(created_rule)
+        session.commit()
+        session.refresh(created_rule)
+        return created_rule
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.put("/category-rules/{rule_id}", response_model=CategoryRule)
 def update_category_rule(
-    rule_id: int, updated_rule: CategoryRule, session: Session = Depends(get_session)
+    rule_id: int,
+    updated_rule: CategoryRule,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
-    """Update an existing category rule"""
+    """Update an existing category rule (only if owned by current user)."""
     try:
+        # Check ownership before updating
+        existing = session.get(CategoryRule, rule_id)
+        if not existing:
+            raise ValueError("Category rule not found")
+        if existing.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+        
         return SettingsService.update_category_rule(
             rule_id=rule_id,
             match_type=updated_rule.match_type,
@@ -105,11 +169,17 @@ def update_category_rule(
 
 
 @router.delete("/category-rules/{rule_id}")
-def delete_category_rule(rule_id: int, session: Session = Depends(get_session)):
-    """Delete a category rule"""
+def delete_category_rule(
+    rule_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete a category rule (only if owned by current user)."""
     rule = session.get(CategoryRule, rule_id)
     if not rule:
         raise HTTPException(status_code=404, detail="Category rule not found")
+    if rule.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     session.delete(rule)
     session.commit()
     return {"ok": True}
@@ -194,13 +264,17 @@ class EmailAccountResponse(BaseModel):
 
 
 @router.get("/accounts", response_model=List[EmailAccountResponse])
-def get_email_accounts(session: Session = Depends(get_session)):
-    """Get all email accounts (both DB and Env-defined)"""
+def get_email_accounts(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Get all email accounts for the current user (both DB and Env-defined)."""
     from backend.models import EmailAccount
-    from backend.services.email_service import EmailService
 
-    # 1. Get DB Accounts
-    db_accounts = session.exec(select(EmailAccount)).all()
+    # Get DB Accounts for current user only
+    db_accounts = session.exec(
+        select(EmailAccount).where(EmailAccount.user_id == current_user.id)
+    ).all()
     response_list = [
         EmailAccountResponse(
             id=acc.id,
@@ -217,44 +291,20 @@ def get_email_accounts(session: Session = Depends(get_session)):
         for acc in db_accounts
     ]
 
-    # 2. Get Env Accounts (via EmailService)
-    # EmailService.get_all_accounts returns simple dicts with credentials
-    # We need to filter out ones that match DB accounts to avoid duplicates
-    all_service_accounts = EmailService.get_all_accounts()
-
-    db_emails = {acc.email.lower() for acc in db_accounts}
-
-    # Start fake IDs at -1 and go down
-    fake_id = -1
-
-    now_str = "2024-01-01T00:00:00"  # Placeholder timestamp for env accounts
-
-    for acc in all_service_accounts:
-        email = acc.get("email", "").lower()
-        if email and email not in db_emails:
-            # This is an env-only account
-            response_list.append(
-                EmailAccountResponse(
-                    id=fake_id,
-                    email=email,
-                    host=acc.get("imap_server", "unknown"),
-                    port=993,  # Default assumption for env accounts if not specified
-                    username=email,  # Usually same as email
-                    is_active=True,
-                    created_at=now_str,
-                    updated_at=now_str,
-                )
-            )
-            fake_id -= 1
+    # Note: Env accounts (EMAIL_ACCOUNTS) are global and not user-specific
+    # In multi-user mode, they should be migrated to database accounts
+    # For backward compatibility, we could show them to admins only or skip them
 
     return response_list
 
 
 @router.post("/accounts", response_model=EmailAccountResponse)
 def create_email_account(
-    account: EmailAccountCreate, session: Session = Depends(get_session)
+    account: EmailAccountCreate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
 ):
-    """Create a new email account"""
+    """Create a new email account for the current user."""
     import logging
     from datetime import datetime, timezone
 
@@ -264,13 +314,15 @@ def create_email_account(
     # Normalize email to lowercase for case-insensitive comparison
     normalized_email = str(account.email).lower()
 
-    # Check if account already exists (case-insensitive)
+    # Check if account already exists for this user
     existing = session.exec(
-        select(EmailAccount).where(EmailAccount.email == normalized_email)
+        select(EmailAccount)
+        .where(EmailAccount.email == normalized_email)
+        .where(EmailAccount.user_id == current_user.id)
     ).first()
     if existing:
         raise HTTPException(
-            status_code=400, detail="Account with this email already exists"
+            status_code=400, detail="You already have an account with this email"
         )
 
     # Encrypt the password
@@ -289,6 +341,7 @@ def create_email_account(
         username=account.username,
         encrypted_password=encrypted_password,
         is_active=True,
+        user_id=current_user.id,
         created_at=now,
         updated_at=now,
     )
@@ -312,13 +365,19 @@ def create_email_account(
 
 
 @router.delete("/accounts/{account_id}")
-def delete_email_account(account_id: int, session: Session = Depends(get_session)):
-    """Delete an email account"""
+def delete_email_account(
+    account_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Delete an email account (only if owned by current user)."""
     from backend.models import EmailAccount
 
     account = session.get(EmailAccount, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     session.delete(account)
     session.commit()
@@ -326,8 +385,12 @@ def delete_email_account(account_id: int, session: Session = Depends(get_session
 
 
 @router.post("/accounts/{account_id}/test")
-async def test_email_account(account_id: int, session: Session = Depends(get_session)):
-    """Test connection for a specific email account"""
+async def test_email_account(
+    account_id: int,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    """Test connection for a specific email account (only if owned by current user)."""
     import logging
 
     from backend.models import EmailAccount
@@ -337,6 +400,8 @@ async def test_email_account(account_id: int, session: Session = Depends(get_ses
     account = session.get(EmailAccount, account_id)
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
+    if account.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     try:
         if account.auth_method == "oauth2":
