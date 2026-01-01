@@ -169,6 +169,13 @@ jobs:
           } 2>&1 | tee ../e2e_test.log
         continue-on-error: true
 
+      - name: File Size Audit
+        id: file_sizes
+        run: |
+          chmod +x scripts/audit_file_sizes.sh
+          ./scripts/audit_file_sizes.sh 500 2>&1 | tee file_sizes.log
+        continue-on-error: true
+
       # --- Reporting ---
       - name: Generate Daily Health Report
         if: always()
@@ -179,6 +186,7 @@ jobs:
           OUTCOME_FRONTEND_LINT: ${{ steps.frontend_lint.outcome }}
           OUTCOME_FRONTEND_TEST: ${{ steps.frontend_test.outcome }}
           OUTCOME_E2E: ${{ steps.e2e.outcome }}
+          OUTCOME_FILE_SIZES: ${{ steps.file_sizes.outcome }}
         with:
           script: |
             const fs = require('fs');
@@ -195,7 +203,8 @@ jobs:
               backend_test: '',
               frontend_lint: '',
               frontend_test: '',
-              e2e: ''
+              e2e: '',
+              file_sizes: ''
             };
 
             for (const key of Object.keys(logs)) {
@@ -216,7 +225,8 @@ jobs:
                 { key: 'STATUS_ESLINT', name: 'ESLint (Lint)', log: logs.frontend_lint, type: 'critical' },
                 { key: 'STATUS_SVELTE', name: 'Svelte Check (Types)', log: logs.frontend_lint, type: 'critical' },
                 { key: 'STATUS_VITEST', name: 'Vitest (Unit)', log: logs.frontend_test, type: 'critical' },
-                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' }
+                { key: 'STATUS_PLAYWRIGHT', name: 'Playwright (E2E)', log: logs.e2e, type: 'critical' },
+                { key: 'OVERSIZED_FILE', name: 'File Size Audit', log: logs.file_sizes, type: 'warning' }
             ];
 
             let toolRows = [];
@@ -433,6 +443,42 @@ jobs:
 
             try { await manageCoverageIssues('Backend', logs.backend_test); } catch(e) {}
             try { await manageCoverageIssues('Frontend', logs.frontend_test); } catch(e) {}
+
+            // --- Auto-Create Componentization Tasks (File Sizes) ---
+            async function manageSizeIssues(log) {
+                const lines = log.split('\n');
+                const oversizedFiles = [];
+                for (const line of lines) {
+                    if (line.startsWith('OVERSIZED_FILE:')) {
+                        const parts = line.split(':');
+                        oversizedFiles.push({ file: parts[1], lines: parseInt(parts[2]) });
+                    }
+                }
+
+                for (const item of oversizedFiles) {
+                    const parts = item.file.split('/');
+                    const basename = parts[parts.length - 1];
+                    const issueTitle = `refactor: Decomposition of ${basename}`;
+
+                    // Search for existing issues for this specific file
+                    const existing = await github.rest.search.issuesAndPullRequests({
+                        q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open "Decomposition of" "${item.file}"`
+                    });
+
+                    if (existing.data.total_count === 0) {
+                        await github.rest.issues.create({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            title: issueTitle,
+                            body: `Automated Refactoring Task\n\nFile: \`${item.file}\` exceeds the recommended length threshold.\nCurrent Length: **${item.lines} lines** (Threshold: 500)\n\nThis file should be broken down into smaller, modular components or services to improve maintainability and testability.\n\nRun \`daily-health-check\` to see progress.`,
+                            labels: ['refactoring', 'componentization', 'tech-debt']
+                        });
+                        console.log(`Created refactoring task for ${item.file}`);
+                    }
+                }
+            }
+
+            try { await manageSizeIssues(logs.file_sizes); } catch(e) { console.error("Error managing size issues:", e); }
 
             // Mark Run as Failed if Overall Status is failure
             if (overallStatus === 'failure') {
