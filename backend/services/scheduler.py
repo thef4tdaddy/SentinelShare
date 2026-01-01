@@ -1,6 +1,7 @@
 import os
 import traceback
 from datetime import datetime, timedelta, timezone
+from email.utils import parseaddr
 
 from apscheduler.schedulers.background import BackgroundScheduler  # type: ignore
 from sqlmodel import Session, select
@@ -337,8 +338,6 @@ def process_emails():
                             
                             # Send notification on successful receipt capture
                             try:
-                                from email.utils import parseaddr
-                                
                                 # Extract vendor name from sender
                                 from_header = email_data.get("from", "")
                                 real_name, email_addr = parseaddr(from_header)
