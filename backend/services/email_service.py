@@ -1,11 +1,11 @@
-import email
-import imaplib
 import json
 import logging
 import os
 from datetime import datetime, timedelta
-from email.header import decode_header
 from typing import Optional
+
+from backend.services.email_parser import EmailParser
+from backend.services.imap_service import ImapService
 
 
 class EmailService:
@@ -37,43 +37,6 @@ class EmailService:
         except Exception as e:
             logging.error(f"Failed to get OAuth2 token for account {account_id}: {e}")
             return None
-
-    @staticmethod
-    def _imap_login(
-        mail: imaplib.IMAP4_SSL,
-        username: str,
-        password: str,
-        auth_method: str = "password",
-        access_token: Optional[str] = None,
-    ) -> None:
-        """
-        Perform IMAP login using either password or OAuth2.
-
-        Args:
-            mail: IMAP connection object
-            username: Username/email for authentication
-            password: Password (for password auth)
-            auth_method: "password" or "oauth2"
-            access_token: OAuth2 access token (for oauth2 auth)
-
-        Raises:
-            Exception: If login fails
-        """
-        if auth_method == "oauth2":
-            if not access_token:
-                raise ValueError("OAuth2 access token required for oauth2 auth_method")
-
-            from backend.services.oauth2_service import OAuth2Service
-
-            auth_string = OAuth2Service.generate_xoauth2_string(username, access_token)
-            mail.authenticate("XOAUTH2", lambda x: auth_string.encode())  # type: ignore[arg-type]
-        elif auth_method == "password":
-            # Standard password authentication
-            if not password:
-                raise ValueError("Password is required for password auth_method")
-            mail.login(username, password)
-        else:
-            raise ValueError(f"Unsupported auth_method: {auth_method}")
 
     @staticmethod
     def get_all_accounts() -> list:
@@ -257,12 +220,17 @@ class EmailService:
                 }
 
         try:
-            mail = imaplib.IMAP4_SSL(imap_server)
-            EmailService._imap_login(
-                mail, email_user, email_pass, auth_method, access_token
+            mail = ImapService.connect(
+                email_user, email_pass, imap_server, 993, auth_method, access_token
             )
-            mail.logout()
-            return {"success": True, "error": None}
+            if mail:
+                ImapService.close_and_logout(mail)
+                return {"success": True, "error": None}
+            else:
+                return {
+                    "success": False,
+                    "error": "Unable to connect to email server",
+                }
         except Exception:
             logging.exception("Error when testing email connection")
             # Return a generic error message to avoid exposing internal exception details
@@ -303,7 +271,7 @@ class EmailService:
             Returns empty list on error or if no credentials provided.
         Environment Variables:
             EMAIL_LOOKBACK_DAYS: Number of days to look back for emails (default: 3).
-                               Must be a positive integer.
+                                Must be a positive integer.
             EMAIL_BATCH_LIMIT: Maximum number of emails to fetch (default: 100).
                              Prevents timeouts with large inboxes.
         """
@@ -330,23 +298,18 @@ class EmailService:
                 )
                 lookback_days = default_lookback_days
 
-        # Validate credentials based on auth method
-        if auth_method == "password":
-            if not username or not password:
-                print("❌ IMAP Credentials missing")
-                return []
-        elif auth_method == "oauth2":
-            if not username or not access_token:
-                print("❌ OAuth2 credentials missing")
+        try:
+            # Connect to the server using ImapService
+            mail = ImapService.connect(
+                username, password, imap_server, imap_port, auth_method, access_token
+            )
+            if not mail:
                 return []
 
-        try:
-            # Connect to the server
-            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
-            EmailService._imap_login(
-                mail, username, password, auth_method, access_token
-            )
-            mail.select("inbox")
+            # Select inbox folder
+            if not ImapService.select_folder(mail, "inbox"):
+                ImapService.close_and_logout(mail)
+                return []
 
             custom_criterion_provided = search_criterion is not None
             if search_criterion is None:
@@ -357,13 +320,14 @@ class EmailService:
                 search_criterion = f'(SINCE "{since_date}")'
 
             print(f"🔍 IMAP Search: {search_criterion}")
-            status, messages = mail.search(None, search_criterion)
 
-            if status != "OK":
+            # Search for messages
+            email_ids = ImapService.search_messages(mail, search_criterion)
+            if email_ids is None:
                 print("❌ No messages found!")
+                ImapService.close_and_logout(mail)
                 return []
 
-            email_ids = messages[0].split()
             total_emails = len(email_ids)
 
             # Apply batch limit to prevent timeouts with validation
@@ -404,89 +368,21 @@ class EmailService:
 
             for e_id in email_ids:
                 try:
-                    # Fetch the email body (BODY[])
-                    _, msg_data = mail.fetch(e_id, "(BODY[])")
-                    for response_part in msg_data:
-                        if isinstance(response_part, tuple):
-                            msg = email.message_from_bytes(response_part[1])
-
-                            # Parse subject
-                            subject, encoding = decode_header(msg["Subject"])[0]
-                            if isinstance(subject, bytes):
-                                subject = subject.decode(
-                                    encoding or "utf-8", errors="ignore"
-                                )
-
-                            # Extract body (plain text & HTML)
-                            body = ""
-                            html_body = ""
-
-                            if msg.is_multipart():
-                                for part in msg.walk():
-                                    content_type = part.get_content_type()
-                                    content_disposition = str(
-                                        part.get("Content-Disposition")
-                                    )
-
-                                    if "attachment" in content_disposition:
-                                        continue
-
-                                    try:
-                                        payload = part.get_payload(decode=True)
-                                        if payload:
-                                            decoded = payload.decode(
-                                                "utf-8", errors="ignore"
-                                            )
-                                            if content_type == "text/plain":
-                                                body += decoded
-                                            elif content_type == "text/html":
-                                                html_body += decoded
-                                    except Exception:
-                                        continue
-                            else:
-                                # Not multipart
-                                try:
-                                    payload = msg.get_payload(decode=True)
-                                    if payload:
-                                        decoded = payload.decode(
-                                            "utf-8", errors="ignore"
-                                        )
-                                        if msg.get_content_type() == "text/html":
-                                            html_body = decoded
-                                        else:
-                                            body = decoded
-                                except Exception:
-                                    logging.exception(
-                                        "Failed to decode non-multipart email payload"
-                                    )
-
-                            # Fallback: If no plain text body, use HTML strip or just raw HTML (simplified)
-                            if not body and html_body:
-                                from bs4 import BeautifulSoup
-
-                                soup = BeautifulSoup(html_body, "html.parser")
-                                body = soup.get_text(separator=" ", strip=True)
-
-                            from backend.services.email_utils import normalize_sender
-
-                            fetched_emails.append(
-                                {
-                                    "message_id": msg.get("Message-ID"),
-                                    "reply_to": msg.get("Reply-To"),
-                                    "from": normalize_sender(msg.get("From")),
-                                    "subject": subject,
-                                    "body": body,
-                                    "html_body": html_body,
-                                    "date": msg.get("Date"),
-                                    "account_email": username,  # Fixed: was email_user
-                                }
-                            )
+                    # Fetch the raw email using ImapService
+                    raw_email = ImapService.fetch_message(mail, e_id)
+                    if raw_email:
+                        # Parse the email using EmailParser
+                        parsed_email = EmailParser.parse_email_message(
+                            raw_email, username
+                        )
+                        # Remove the 'raw' field from fetched emails (only needed for forwarding)
+                        parsed_email.pop("raw", None)
+                        fetched_emails.append(parsed_email)
                 except Exception as e:
                     print(f"❌ Error fetching email {e_id}: {e}")
                     continue
 
-            mail.close()
-            mail.logout()
+            ImapService.close_and_logout(mail)
             return fetched_emails
 
         except Exception as e:
@@ -525,93 +421,40 @@ class EmailService:
             return None
 
         try:
-            mail = imaplib.IMAP4_SSL(imap_server)
-            EmailService._imap_login(
-                mail, email_user, email_pass, auth_method, access_token
+            # Connect to the server using ImapService
+            mail = ImapService.connect(
+                email_user, email_pass, imap_server, 993, auth_method, access_token
             )
-            mail.select("inbox")
+            if not mail:
+                return None
+
+            # Select inbox folder
+            if not ImapService.select_folder(mail, "inbox"):
+                ImapService.close_and_logout(mail)
+                return None
 
             # Search by Message-ID
-            # Message-ID usually contains <...>, verify if stored ID has them or not.
-            # Stored ID usually is the raw header value.
-            # IMAP search uses "HEADER Message-ID <val>"
-
-            # Escape quotes in message_id just in case
-            safe_id = message_id.replace('"', '\\"')
-            search_criterion = f'(HEADER Message-ID "{safe_id}")'
-
-            status, messages = mail.search(None, search_criterion)
-
-            if status != "OK" or not messages[0]:
-                # Try without surrounding brackets if the stored ID has/hasn't them
-                # (Some servers are picky or ID format varies)
-                logging.info(
-                    f"Email not found by exact ID: {message_id}, trying loose search"
-                )
+            imap_email_id = ImapService.search_by_message_id(mail, message_id)
+            if not imap_email_id:
+                ImapService.close_and_logout(mail)
                 return None
 
-            email_ids = messages[0].split()
-            # Fetch the most recent match (should be unique usually)
-            latest_email_id = email_ids[-1]
-
-            typ, data = mail.fetch(latest_email_id, "(BODY[])")
-            if typ != "OK":
-                return None
-
-            raw_email = None
-            for response_part in data:
-                if isinstance(response_part, tuple):
-                    raw_email = response_part[1]
-                    break
+            # Fetch the raw email
+            raw_email = ImapService.fetch_message(mail, imap_email_id)
+            ImapService.close_and_logout(mail)
 
             if raw_email:
-                msg = email.message_from_bytes(raw_email)
-
-                # Extract body (similar logic to fetch_recent_emails)
-                body = ""
-                html_body = ""
-
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        content_type = part.get_content_type()
-                        content_disposition = str(part.get("Content-Disposition"))
-                        if "attachment" in content_disposition:
-                            continue
-                        if content_type == "text/plain":
-                            try:
-                                body = part.get_payload(decode=True).decode()
-                            except Exception:
-                                pass
-                        elif content_type == "text/html":
-                            try:
-                                html_body = part.get_payload(decode=True).decode()
-                            except Exception:
-                                pass
-                else:
-                    payload = msg.get_payload(decode=True).decode()
-                    if msg.get_content_type() == "text/html":
-                        html_body = payload
-                    else:
-                        body = payload
-
-                # Fallback to HTML if needed
-                if not body and html_body:
-                    from bs4 import BeautifulSoup
-
-                    soup = BeautifulSoup(html_body, "html.parser")
-                    body = soup.get_text(separator=" ", strip=True)
+                # Parse the email using EmailParser
+                parsed_email = EmailParser.parse_email_message(raw_email, email_user)
 
                 # Return dictionary with body and raw content (if needed for forwarding as attachment/original)
                 return {
-                    "subject": msg.get(
-                        "Subject"
-                    ),  # Should decode? Caller usually has subject.
-                    "body": body,
-                    "html_body": html_body,
+                    "subject": parsed_email.get("subject"),
+                    "body": parsed_email.get("body"),
+                    "html_body": parsed_email.get("html_body"),
                     "raw": raw_email,
                 }
 
-            mail.logout()
             return None
         except Exception as e:
             logging.error(f"Error fetching email by ID {message_id}: {e}")

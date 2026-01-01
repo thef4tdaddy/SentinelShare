@@ -1,6 +1,10 @@
 """Tests for individual detection strategies."""
 
 import pytest
+from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, Preference
 from backend.services.detectors import (
     DetectionResult,
     ManualRuleStrategy,
@@ -8,9 +12,6 @@ from backend.services.detectors import (
     ShippingStrategy,
     TransactionalStrategy,
 )
-from backend.models import ManualRule, Preference
-from sqlmodel import Session, SQLModel, create_engine
-from sqlmodel.pool import StaticPool
 
 
 @pytest.fixture(name="session")

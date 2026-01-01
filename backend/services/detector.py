@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 
-
 from ..models import ManualRule
 from .detectors import (
     ManualRuleStrategy,
