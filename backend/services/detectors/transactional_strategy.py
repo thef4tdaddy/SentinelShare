@@ -168,8 +168,7 @@ class TransactionalStrategy(DetectionStrategy):
     def _is_reply_or_forward(self, subject: str, sender: str) -> bool:
         """Check if email is a reply or forward."""
         is_reply_pattern = any(
-            re.match(pattern, subject, re.IGNORECASE)
-            for pattern in self.REPLY_PATTERNS
+            re.match(pattern, subject, re.IGNORECASE) for pattern in self.REPLY_PATTERNS
         )
         if is_reply_pattern:
             return True
