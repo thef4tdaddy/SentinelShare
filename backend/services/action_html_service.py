@@ -16,7 +16,7 @@ class ActionHtmlService:
 
         Args:
             message: The success message to display
-            emoji: The emoji to show (extracted from message first word)
+            emoji: The emoji to show, already extracted by the caller (only the emoji character/string)
 
         Returns:
             HTML string
