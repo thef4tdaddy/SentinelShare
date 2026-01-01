@@ -1,16 +1,17 @@
 import hmac
-import html
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from sqlmodel import Session, col, select
+from sqlmodel import Session, select
 
 from backend.database import engine, get_session
 from backend.models import Preference
 from backend.security import generate_hmac_signature, verify_dashboard_token
+from backend.services.action_html_service import ActionHtmlService
 from backend.services.command_service import CommandService
+from backend.services.preference_service import PreferenceService
 from backend.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/api/actions", tags=["actions"])
@@ -31,152 +32,50 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
     if not verify_signature(cmd, arg, ts, sig):
         raise HTTPException(status_code=403, detail="Invalid signature")
 
-    # Escape user input for safe HTML rendering
-    safe_arg = html.escape(arg)
-
     # Check timestamp expiration (e.g. 7 days link validity)
     try:
         link_ts = float(ts)
         now_ts = datetime.now(timezone.utc).timestamp()
         if now_ts - link_ts > 7 * 24 * 3600:  # 7 days
-            return "<h1>❌ Link Expired</h1><p>This action link is too old.</p>"
+            return ActionHtmlService.render_error(
+                "Link Expired", "This action link is too old."
+            )
     except Exception:
-        return "<h1>❌ Invalid Timestamp</h1>"
+        return ActionHtmlService.render_error(
+            "Invalid Timestamp",
+            "The timestamp format is invalid or could not be parsed.",
+        )
 
     # Execute Command
-    # We fake an 'email_data' dict for CommandService or use separate logic.
-    # CommandService.process_command expects a dict.
-    # Let's adapt CommandService to handle direct calls if possible.
-
     success = False
     message = ""
 
     # Map CMD to Preference Type
     if cmd.upper() == "STOP":
-        CommandService._add_preference(
-            arg, "Blocked Sender"
-        )  # Could be category too based on arg logic
-        # If arg implies category (e.g. 'restaurants'), we should handle that.
-        # But for 'STOP amazon', it handles as blocked sender.
-        # Ideally we differentiate STOP_SENDER vs STOP_CATEGORY in the link generation.
+        CommandService._add_preference(arg, "Blocked Sender")
         success = True
-        message = f"🚫 Successfully Blocked: {safe_arg}"
+        message = f"🚫 Successfully Blocked: {arg}"
 
     elif cmd.upper() == "MORE":
         CommandService._add_preference(arg, "Always Forward")
         success = True
-        message = f"✅ Always Forwarding: {safe_arg}"
+        message = f"✅ Always Forwarding: {arg}"
 
     elif cmd.upper() == "BLOCK_CATEGORY":
         CommandService._add_preference(arg, "Blocked Category")
         success = True
-        message = f"🚫 Blocked Category: {safe_arg}"
+        message = f"🚫 Blocked Category: {arg}"
 
     elif cmd.upper() == "SETTINGS":
         with Session(engine) as session:
-            prefs = session.exec(select(Preference)).all()
-
-        blocked = [p for p in prefs if "Blocked" in p.type]
-        allowed = [p for p in prefs if "Forward" in p.type]  # "Always Forward"
-
-        html_list = ""
-
-        if allowed:
-            html_list += """
-            <div style="margin-bottom: 24px;">
-                <h3 style="color: #15803d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                    ✅ Always Forwarding
-                </h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            """
-            for p in allowed:
-                html_list += f"""
-                <span style="background: #dcfce7; color: #166534; padding: 6px 12px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #bbf7d0;">
-                    {p.item}
-                </span>
-                """
-            html_list += "</div></div>"
-
-        if blocked:
-            html_list += """
-            <div style="margin-bottom: 24px;">
-                <h3 style="color: #b91c1c; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                    🚫 Blocked
-                </h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            """
-            for p in blocked:
-                html_list += f"""
-                <span style="background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #fecaca;">
-                    {p.item}
-                </span>
-                """
-            html_list += "</div></div>"
-
-        if not blocked and not allowed:
-            html_list = """
-            <div style="text-align: center; padding: 40px 20px; color: #71717a;">
-                <p>No active preferences found yet.</p>
-                <p style="font-size: 13px;">Use the action buttons in forwarded emails to build your list.</p>
-            </div>
-            """
-
-        return f"""
-         <!DOCTYPE html>
-         <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px; color: #18181b; }}
-                    .container {{ max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; }}
-                    .header {{ background: #fafafa; padding: 20px; border-bottom: 1px solid #e4e4e7; text-align: center; }}
-                    .logo {{ font-size: 24px; margin-bottom: 8px; display: block; }}
-                    .title {{ font-weight: 600; font-size: 18px; margin: 0; color: #18181b; }}
-                    .content {{ padding: 24px; }}
-                    .footer {{ padding: 16px; text-align: center; background: #fafafa; border-top: 1px solid #e4e4e7; }}
-                    .btn {{ display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; font-size: 14px; transition: background 0.2s; }}
-                    .btn:hover {{ background: #1d4ed8; }}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <span class="logo">⚙️</span>
-                        <h1 class="title">Current Settings</h1>
-                    </div>
-                    <div class="content">
-                        {html_list}
-                    </div>
-                    <div class="footer">
-                        <a href="/history" class="btn">Go to Dashboard</a>
-                    </div>
-                </div>
-            </body>
-         </html>
-         """
+            prefs = list(session.exec(select(Preference)).all())
+        return ActionHtmlService.render_settings_view(prefs)
 
     if success:
-        return f"""
-         <html>
-            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-                <div style="font-size: 50px;">{message.split()[0]}</div>
-                <h1>Action Confirmed</h1>
-                <p style="font-size: 18px; color: #555;">{message}</p>
-                <p><a href="/history">Go to Dashboard</a></p>
-            </body>
-         </html>
-         """
+        emoji = message.split()[0]
+        return ActionHtmlService.render_success(message, emoji)
 
-    return """
-     <html>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-            <div style="font-size: 50px;">❓</div>
-            <h1>Unknown Command</h1>
-            <p style="font-size: 18px; color: #555;">The requested action is not recognized.</p>
-            <p><a href="/history">Go to Dashboard</a></p>
-        </body>
-     </html>
-     """
+    return ActionHtmlService.render_unknown_command()
 
 
 @router.get("/verify-dashboard")
@@ -217,16 +116,13 @@ def get_preferences_for_sendee(
             raise HTTPException(status_code=401, detail="Unauthorized")
         email = "Admin"  # Placeholder for admin view
 
-    prefs = session.exec(
-        select(Preference).where(
-            col(Preference.type).in_(["Blocked Sender", "Always Forward"])
-        )
-    ).all()
+    prefs_dict = PreferenceService.get_preferences_dict(session)
+
     return {
         "success": True,
         "email": email,
-        "blocked": [p.item for p in prefs if p.type == "Blocked Sender"],
-        "allowed": [p.item for p in prefs if p.type == "Always Forward"],
+        "blocked": prefs_dict["blocked"],
+        "allowed": prefs_dict["allowed"],
     }
 
 
