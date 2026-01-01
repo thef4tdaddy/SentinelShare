@@ -2,6 +2,7 @@
 
 import asyncio
 import os
+import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -133,7 +134,6 @@ class NotificationService:
             )
         except RuntimeError:
             # No event loop running - use thread pool to avoid blocking
-            import threading
             thread = threading.Thread(
                 target=lambda: asyncio.run(
                     NotificationService._send_webhook_async(webhook_url, payload)
@@ -189,7 +189,6 @@ class NotificationService:
             )
         except RuntimeError:
             # No event loop running - use thread pool to avoid blocking
-            import threading
             thread = threading.Thread(
                 target=lambda: asyncio.run(
                     NotificationService._send_webhook_async(webhook_url, payload)

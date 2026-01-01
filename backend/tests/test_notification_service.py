@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from backend.services.notification_service import NotificationService
 
@@ -87,8 +87,8 @@ class TestNotificationService:
     @patch("asyncio.get_running_loop")
     def test_send_receipt_notification_with_webhook(self, mock_get_loop):
         """Test sending receipt notification when webhook is configured"""
-        mock_loop = patch("asyncio.AbstractEventLoop").start()
-        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_loop = MagicMock()
+        mock_loop.create_task = MagicMock()
         mock_get_loop.return_value = mock_loop
         
         NotificationService.send_receipt_notification(
@@ -107,8 +107,8 @@ class TestNotificationService:
     @patch("asyncio.get_running_loop")
     def test_send_receipt_notification_no_amount(self, mock_get_loop):
         """Test sending receipt notification without amount"""
-        mock_loop = patch("asyncio.AbstractEventLoop").start()
-        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_loop = MagicMock()
+        mock_loop.create_task = MagicMock()
         mock_get_loop.return_value = mock_loop
         
         NotificationService.send_receipt_notification(
@@ -135,8 +135,8 @@ class TestNotificationService:
     @patch("asyncio.get_running_loop")
     def test_send_error_notification_with_webhook(self, mock_get_loop):
         """Test sending error notification when webhook is configured"""
-        mock_loop = patch("asyncio.AbstractEventLoop").start()
-        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_loop = MagicMock()
+        mock_loop.create_task = MagicMock()
         mock_get_loop.return_value = mock_loop
         
         NotificationService.send_error_notification(
@@ -153,8 +153,8 @@ class TestNotificationService:
     @patch("asyncio.get_running_loop")
     def test_send_error_notification_no_context(self, mock_get_loop):
         """Test sending error notification without context"""
-        mock_loop = patch("asyncio.AbstractEventLoop").start()
-        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_loop = MagicMock()
+        mock_loop.create_task = MagicMock()
         mock_get_loop.return_value = mock_loop
         
         NotificationService.send_error_notification(
