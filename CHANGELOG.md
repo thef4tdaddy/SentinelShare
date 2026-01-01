@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.6.0...sentinel-share-v1.6.1) (2026-01-01)
+
+
+### Bug Fixes
+
+* resolve daily health check reporting issues and improve diagnostic detail ([1ce5bd2](https://github.com/thef4tdaddy/SentinelShare/commit/1ce5bd221a8c599379c4427ba6a96a779542c9b9))
+
 ## [1.6.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.5.0...sentinel-share-v1.6.0) (2025-12-31)
 
 
