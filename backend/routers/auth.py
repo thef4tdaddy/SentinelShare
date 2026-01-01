@@ -4,11 +4,19 @@ import secrets
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlmodel import Session
 from starlette.responses import JSONResponse, RedirectResponse
 
+from backend.auth_utils import (
+    authenticate_user,
+    create_user,
+    get_current_user,
+    get_current_user_optional,
+    get_or_create_legacy_user,
+)
 from backend.database import get_session
+from backend.models import User
 from backend.services.oauth2_service import OAuth2Service
 
 logger = logging.getLogger(__name__)
@@ -16,20 +24,118 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 class LoginRequest(BaseModel):
+    username: str | None = None  # For new multi-user auth
     password: str
 
 
+class RegisterRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+    forwarding_target_email: EmailStr | None = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: str
+    is_admin: bool
+    forwarding_target_email: str | None
+
+
 @router.post("/login")
-def login(request: Request, login_data: LoginRequest):
+def login(
+    request: Request, login_data: LoginRequest, session: Session = Depends(get_session)
+):
+    """
+    Login endpoint supporting both legacy single-password mode and new multi-user mode.
+    
+    - If username is provided, use multi-user authentication
+    - Otherwise, fall back to legacy DASHBOARD_PASSWORD mode
+    """
+    # Try multi-user authentication first if username is provided
+    if login_data.username:
+        user = authenticate_user(session, login_data.username, login_data.password)
+        if user:
+            request.session["authenticated"] = True
+            request.session["user_id"] = user.id
+            return {
+                "status": "success",
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "is_admin": user.is_admin,
+                },
+            }
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Legacy mode: check against DASHBOARD_PASSWORD
     expected_password = os.environ.get("DASHBOARD_PASSWORD")
     if not expected_password:
-        return JSONResponse({"error": "Auth not configured"}, status_code=500)
-
+        # If no DASHBOARD_PASSWORD and no username, require multi-user auth
+        raise HTTPException(
+            status_code=400,
+            detail="Username required. Please use multi-user authentication.",
+        )
+    
     if login_data.password == expected_password:
-        request.session["authenticated"] = True
-        return {"status": "success"}
-
+        # In legacy mode, get or create an admin user
+        legacy_user = get_or_create_legacy_user(session)
+        if legacy_user:
+            request.session["authenticated"] = True
+            request.session["user_id"] = legacy_user.id
+            return {
+                "status": "success",
+                "user": {
+                    "id": legacy_user.id,
+                    "username": legacy_user.username,
+                    "email": legacy_user.email,
+                    "is_admin": legacy_user.is_admin,
+                },
+            }
+        else:
+            # Legacy mode without user records
+            request.session["authenticated"] = True
+            return {"status": "success"}
+    
     raise HTTPException(status_code=401, detail="Invalid password")
+
+
+@router.post("/register", response_model=UserResponse)
+def register(
+    register_data: RegisterRequest,
+    session: Session = Depends(get_session),
+):
+    """
+    Register a new user.
+    
+    Note: In production, you may want to restrict registration or require admin approval.
+    Set ALLOW_REGISTRATION=false in environment to disable this endpoint.
+    """
+    # Check if registration is allowed
+    if os.environ.get("ALLOW_REGISTRATION", "true").lower() == "false":
+        raise HTTPException(status_code=403, detail="Registration is disabled")
+    
+    try:
+        user = create_user(
+            session=session,
+            username=register_data.username,
+            email=register_data.email,
+            password=register_data.password,
+            is_admin=False,  # New users are not admins by default
+            forwarding_target_email=register_data.forwarding_target_email,
+        )
+        
+        return UserResponse(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            is_admin=user.is_admin,
+            forwarding_target_email=user.forwarding_target_email,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/logout")
@@ -39,10 +145,35 @@ def logout(request: Request):
 
 
 @router.get("/me")
-def check_auth(request: Request):
-    # Allow access if authenticated OR if running in No-Auth Dev Mode
-    if request.session.get("authenticated") or not os.environ.get("DASHBOARD_PASSWORD"):
-        return {"authenticated": True}
+def check_auth(
+    request: Request,
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    """
+    Check authentication status and return current user info.
+    Supports both legacy mode and multi-user mode.
+    """
+    # Multi-user mode: return user info
+    if current_user:
+        return {
+            "authenticated": True,
+            "user": {
+                "id": current_user.id,
+                "username": current_user.username,
+                "email": current_user.email,
+                "is_admin": current_user.is_admin,
+                "forwarding_target_email": current_user.forwarding_target_email,
+            },
+        }
+    
+    # Legacy mode: check old session flag
+    if request.session.get("authenticated"):
+        return {"authenticated": True, "legacy_mode": True}
+    
+    # No-auth dev mode
+    if not os.environ.get("DASHBOARD_PASSWORD"):
+        return {"authenticated": True, "dev_mode": True}
+    
     raise HTTPException(status_code=401, detail="Not authenticated")
 
 
@@ -114,6 +245,9 @@ async def oauth2_callback(
     base_url = str(request.base_url).rstrip("/")
     redirect_uri = f"{base_url}/api/auth/{provider.lower()}/callback"
 
+    # Get current user ID from session (if authenticated)
+    user_id = request.session.get("user_id")
+
     try:
         # Exchange code for tokens
         token_data = await OAuth2Service.exchange_code_for_tokens(
@@ -172,7 +306,7 @@ async def oauth2_callback(
                 status_code=500, detail="Failed to obtain user email from provider"
             )
 
-        # Store tokens in database
+        # Store tokens in database with user_id
         OAuth2Service.store_oauth2_tokens(
             session=session,
             email=user_email,
@@ -180,6 +314,7 @@ async def oauth2_callback(
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=expires_in,
+            user_id=user_id,
         )
 
         # Redirect to frontend settings page with success message

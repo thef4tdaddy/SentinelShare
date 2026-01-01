@@ -81,6 +81,7 @@ class SettingsService:
         assigned_category: str,
         priority: int,
         session: Session,
+        user_id: int | None = None,
     ) -> CategoryRule:
         """Create a new category rule."""
         # Validate inputs
@@ -93,6 +94,7 @@ class SettingsService:
             pattern=pattern,
             assigned_category=assigned_category,
             priority=priority,
+            user_id=user_id,
         )
         session.add(rule)
         session.commit()
