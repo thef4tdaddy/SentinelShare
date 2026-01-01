@@ -131,7 +131,7 @@ class AccountService:
                                     }
                                 )
             except Exception as e:
-                logging.error(f"Error parsing EMAIL_ACCOUNTS: {type(e).__name__}")
+                logging.error(f"Error parsing EMAIL_ACCOUNTS: {e}")
 
         # 3. Legacy / Primary Account Fallback
         # Only add if it wasn't already included in EMAIL_ACCOUNTS and exists
