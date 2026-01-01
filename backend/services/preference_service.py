@@ -41,13 +41,17 @@ class PreferenceService:
         Returns:
             Dictionary with 'blocked' and 'allowed' keys containing preference items
         """
-        prefs = PreferenceService.get_preferences_by_types(
-            session, ["Blocked Sender", "Always Forward"]
-        )
+        blocked_items = session.exec(
+            select(Preference.item).where(col(Preference.type) == "Blocked Sender")
+        ).scalars().all()
+
+        allowed_items = session.exec(
+            select(Preference.item).where(col(Preference.type) == "Always Forward")
+        ).scalars().all()
 
         return {
-            "blocked": [p.item for p in prefs if p.type == "Blocked Sender"],
-            "allowed": [p.item for p in prefs if p.type == "Always Forward"],
+            "blocked": blocked_items,
+            "allowed": allowed_items,
         }
 
     @staticmethod
