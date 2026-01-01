@@ -180,6 +180,7 @@ class OAuth2Service:
         access_token: str,
         refresh_token: str,
         expires_in: int,
+        user_id: Optional[int] = None,
         username: Optional[str] = None,
         host: Optional[str] = None,
         port: Optional[int] = None,
@@ -194,6 +195,7 @@ class OAuth2Service:
             access_token: OAuth2 access token
             refresh_token: OAuth2 refresh token
             expires_in: Token expiry time in seconds
+            user_id: ID of the user who owns this email account
             username: IMAP username (defaults to email)
             host: IMAP host (defaults based on provider)
             port: IMAP port (defaults to 993)
@@ -229,10 +231,11 @@ class OAuth2Service:
         encrypted_access_token = EncryptionService.encrypt(access_token)
         encrypted_refresh_token = EncryptionService.encrypt(refresh_token)
 
-        # Check if account exists
-        existing = session.exec(
-            select(EmailAccount).where(EmailAccount.email == normalized_email)
-        ).first()
+        # Check if account exists for this user
+        query = select(EmailAccount).where(EmailAccount.email == normalized_email)
+        if user_id:
+            query = query.where(EmailAccount.user_id == user_id)
+        existing = session.exec(query).first()
 
         if existing:
             # Update existing account
@@ -246,6 +249,8 @@ class OAuth2Service:
             existing.username = username
             existing.is_active = True
             existing.updated_at = datetime.now(timezone.utc)
+            if user_id:
+                existing.user_id = user_id
             session.add(existing)
             session.commit()
             session.refresh(existing)
@@ -264,6 +269,7 @@ class OAuth2Service:
                 encrypted_refresh_token=encrypted_refresh_token,
                 token_expires_at=token_expires_at,
                 is_active=True,
+                user_id=user_id,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )
