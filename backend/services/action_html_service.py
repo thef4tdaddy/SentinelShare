@@ -80,8 +80,10 @@ class ActionHtmlService:
         Returns:
             HTML string with formatted settings view
         """
-        blocked = [p for p in preferences if "Blocked" in p.type]
-        allowed = [p for p in preferences if "Forward" in p.type]
+        blocked_types = {"Blocked Sender", "Blocked Category"}
+        allowed_types = {"Always Forward Sender", "Always Forward Category"}
+        blocked = [p for p in preferences if p.type in blocked_types]
+        allowed = [p for p in preferences if p.type in allowed_types]
 
         html_list = ""
 
