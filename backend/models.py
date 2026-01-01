@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import Column, DateTime, ForeignKey
 from sqlmodel import Field, SQLModel
 
 
@@ -18,8 +18,34 @@ class AuthMethod(str, Enum):
     OAUTH2 = "oauth2"
 
 
+class User(SQLModel, table=True):
+    """
+    Represents a user in the system.
+    Supports multi-user/team deployments.
+    """
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(unique=True, index=True, min_length=3, max_length=50)
+    email: str = Field(unique=True, index=True)
+    password_hash: str  # bcrypt hash of password
+    is_admin: bool = Field(default=False)  # Admin users can manage other users
+    is_active: bool = Field(default=True)  # Allow disabling users without deletion
+    
+    # User-specific settings
+    forwarding_target_email: Optional[str] = None  # Replaces global WIFE_EMAIL
+    
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True), onupdate=utc_now),
+    )
+
+
 class ProcessedEmail(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this email record
     email_id: Optional[str] = Field(
         default=None, index=True, unique=True
     )  # Message-ID header
@@ -40,6 +66,9 @@ class ProcessedEmail(SQLModel, table=True):
 
 class Stats(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Stats per user
     date: datetime = Field(default_factory=utc_now)
     forwarded_count: int = 0
     blocked_count: int = 0
@@ -55,6 +84,9 @@ class GlobalSettings(SQLModel, table=True):
 
 class Preference(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this preference
     item: str  # e.g. "amazon", "restaurants"
     type: str  # "Blocked Sender", "Always Forward", "Blocked Category"
     created_at: datetime = Field(default_factory=utc_now)
@@ -62,6 +94,9 @@ class Preference(SQLModel, table=True):
 
 class ManualRule(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this rule
     email_pattern: Optional[str] = None  # Wildcard supported
     subject_pattern: Optional[str] = None  # Wildcard supported
     priority: int = 10
@@ -93,6 +128,9 @@ class LearningCandidate(SQLModel, table=True):
     """
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this candidate
     sender: str
     subject_pattern: Optional[str] = None
     confidence: float
@@ -109,6 +147,9 @@ class CategoryRule(SQLModel, table=True):
     """
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this rule
     match_type: str = Field(regex="^(sender|subject)$")  # "sender" or "subject"
     pattern: str = Field(
         min_length=1
@@ -130,7 +171,10 @@ class EmailAccount(SQLModel, table=True):
     """
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    email: str = Field(unique=True, index=True)  # Email address
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="user.id", index=True
+    )  # Owner of this account
+    email: str = Field(index=True)  # Email address (no longer globally unique)
     host: str = Field(default="imap.gmail.com")  # IMAP server host
     port: int = Field(default=993)  # IMAP server port
     username: str  # Username for IMAP login (usually same as email)
