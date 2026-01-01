@@ -41,7 +41,10 @@ def quick_action(cmd: str, arg: str, ts: str, sig: str):
                 "Link Expired", "This action link is too old."
             )
     except Exception:
-        return ActionHtmlService.render_error("Invalid Timestamp", "")
+        return ActionHtmlService.render_error(
+            "Invalid Timestamp",
+            "The timestamp format is invalid or could not be parsed.",
+        )
 
     # Execute Command
     success = False

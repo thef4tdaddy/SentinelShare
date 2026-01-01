@@ -41,13 +41,17 @@ class PreferenceService:
         Returns:
             Dictionary with 'blocked' and 'allowed' keys containing preference items
         """
-        blocked_items = session.exec(
-            select(Preference.item).where(col(Preference.type) == "Blocked Sender")
-        ).scalars().all()
+        blocked_items = list(
+            session.exec(
+                select(Preference.item).where(col(Preference.type) == "Blocked Sender")
+            ).all()
+        )
 
-        allowed_items = session.exec(
-            select(Preference.item).where(col(Preference.type) == "Always Forward")
-        ).scalars().all()
+        allowed_items = list(
+            session.exec(
+                select(Preference.item).where(col(Preference.type) == "Always Forward")
+            ).all()
+        )
 
         return {
             "blocked": blocked_items,

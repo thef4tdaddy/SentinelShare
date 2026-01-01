@@ -18,6 +18,17 @@ class TestActionHtmlService:
         assert message in result
         assert "/history" in result
 
+    def test_render_success_escapes_html(self):
+        """Test that HTML in success messages is properly escaped."""
+        message = "<script>alert('xss')</script> Successfully blocked"
+        emoji = "🚫"
+        result = ActionHtmlService.render_success(message, emoji)
+
+        # Should escape HTML tags
+        assert "<script>" not in result
+        assert "&lt;script&gt;" in result
+        assert "Successfully blocked" in result
+
     def test_render_error(self):
         """Test error page rendering."""
         title = "Invalid Request"
@@ -57,6 +68,24 @@ class TestActionHtmlService:
         assert "Always Forwarding" in result
         assert "Blocked" in result
         assert "spam@example.com" in result
+        assert "receipts@store.com" in result
+
+    def test_render_settings_view_with_blocked_category(self):
+        """Test settings view displays blocked categories correctly."""
+        prefs = [
+            Preference(item="spam@example.com", type="Blocked Sender"),
+            Preference(item="restaurants", type="Blocked Category"),
+            Preference(item="promotions", type="Blocked Category"),
+            Preference(item="receipts@store.com", type="Always Forward"),
+        ]
+
+        result = ActionHtmlService.render_settings_view(prefs)
+
+        assert "Current Settings" in result
+        assert "Blocked" in result
+        assert "spam@example.com" in result
+        assert "restaurants" in result
+        assert "promotions" in result
         assert "receipts@store.com" in result
 
     def test_render_settings_view_empty(self):
