@@ -2,10 +2,11 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from backend.models import ManualRule, Preference
-from backend.services.detector import ReceiptDetector
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
+
+from backend.models import ManualRule, Preference
+from backend.services.detector import ReceiptDetector
 
 
 # Create in-memory SQLite database for testing
@@ -690,7 +691,7 @@ def test_is_reply_or_forward_personal_emails():
         assert ReceiptDetector.is_reply_or_forward("Order", "personal@work.com")
 
 
-@patch("backend.services.detector.EmailService.get_all_accounts")
+@patch("backend.services.email_service.EmailService.get_all_accounts")
 def test_is_reply_or_forward_from_email_service_accounts(mock_get_accounts):
     """Test detection of emails from EmailService accounts"""
     mock_get_accounts.return_value = [

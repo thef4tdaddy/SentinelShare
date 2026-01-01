@@ -70,6 +70,7 @@ class EmailParser:
         for part in msg.walk():
             # Skip attachments using AttachmentService for consistent logic
             from backend.services.attachment_service import AttachmentService
+
             if AttachmentService.is_attachment(part):
                 continue
 
@@ -170,10 +171,12 @@ class EmailParser:
         # Extract bodies
         body, html_body = EmailParser.parse_email_body(msg)
 
+        from backend.services.email_utils import normalize_sender
+
         return {
             "message_id": msg.get("Message-ID"),
             "reply_to": msg.get("Reply-To"),
-            "from": msg.get("From"),
+            "from": normalize_sender(msg.get("From")),
             "subject": subject,
             "body": body,
             "html_body": html_body,

@@ -17,7 +17,7 @@ from backend.services.scheduler import start_scheduler, stop_scheduler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    # Check/Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
+    # 1. Run Alembic Migrations (Handles legacy DB stamping + new upgrades)
     if not os.environ.get("TESTING"):
         try:
             from backend.migration_utils import run_migrations
@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI):
             print(f"Startup Migration Error: {e}")
     else:
         print("Startup: Skipping migrations in test environment.")
+
+    # 2. Safety Check: Ensure all tables defined in models exist (handles missing migrations or dirty state)
+    try:
+        from backend.database import create_db_and_tables
+
+        create_db_and_tables()
+        print("Startup: Table creation safety check complete.")
+    except Exception as e:
+        print(f"Startup Table Creation Error: {e}")
 
     print("Startup: Database checks complete.")
     start_scheduler()

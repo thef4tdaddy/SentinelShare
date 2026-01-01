@@ -271,7 +271,7 @@ class EmailService:
             Returns empty list on error or if no credentials provided.
         Environment Variables:
             EMAIL_LOOKBACK_DAYS: Number of days to look back for emails (default: 3).
-                               Must be a positive integer.
+                                Must be a positive integer.
             EMAIL_BATCH_LIMIT: Maximum number of emails to fetch (default: 100).
                              Prevents timeouts with large inboxes.
         """
@@ -320,7 +320,7 @@ class EmailService:
                 search_criterion = f'(SINCE "{since_date}")'
 
             print(f"🔍 IMAP Search: {search_criterion}")
-            
+
             # Search for messages
             email_ids = ImapService.search_messages(mail, search_criterion)
             if email_ids is None:
@@ -372,7 +372,9 @@ class EmailService:
                     raw_email = ImapService.fetch_message(mail, e_id)
                     if raw_email:
                         # Parse the email using EmailParser
-                        parsed_email = EmailParser.parse_email_message(raw_email, username)
+                        parsed_email = EmailParser.parse_email_message(
+                            raw_email, username
+                        )
                         # Remove the 'raw' field from fetched emails (only needed for forwarding)
                         parsed_email.pop("raw", None)
                         fetched_emails.append(parsed_email)
@@ -444,7 +446,7 @@ class EmailService:
             if raw_email:
                 # Parse the email using EmailParser
                 parsed_email = EmailParser.parse_email_message(raw_email, email_user)
-                
+
                 # Return dictionary with body and raw content (if needed for forwarding as attachment/original)
                 return {
                     "subject": parsed_email.get("subject"),
