@@ -84,9 +84,13 @@ class TestNotificationService:
     @patch.dict(
         os.environ, {"DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/123/abc"}
     )
-    @patch("asyncio.create_task")
-    def test_send_receipt_notification_with_webhook(self, mock_create_task):
+    @patch("asyncio.get_running_loop")
+    def test_send_receipt_notification_with_webhook(self, mock_get_loop):
         """Test sending receipt notification when webhook is configured"""
+        mock_loop = patch("asyncio.AbstractEventLoop").start()
+        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_get_loop.return_value = mock_loop
+        
         NotificationService.send_receipt_notification(
             vendor="Amazon",
             amount=50.00,
@@ -94,20 +98,24 @@ class TestNotificationService:
             dashboard_url="https://app.example.com/",
         )
 
-        # Verify that async task was created
-        mock_create_task.assert_called_once()
+        # Verify that loop.create_task was called
+        mock_loop.create_task.assert_called_once()
 
     @patch.dict(
         os.environ, {"DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/123/abc"}
     )
-    @patch("asyncio.create_task")
-    def test_send_receipt_notification_no_amount(self, mock_create_task):
+    @patch("asyncio.get_running_loop")
+    def test_send_receipt_notification_no_amount(self, mock_get_loop):
         """Test sending receipt notification without amount"""
+        mock_loop = patch("asyncio.AbstractEventLoop").start()
+        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_get_loop.return_value = mock_loop
+        
         NotificationService.send_receipt_notification(
             vendor="Starbucks", subject="Receipt from Starbucks"
         )
 
-        mock_create_task.assert_called_once()
+        mock_loop.create_task.assert_called_once()
 
     @patch.dict(os.environ, {}, clear=True)
     @patch("backend.services.notification_service.NotificationService._send_webhook_async")
@@ -124,25 +132,33 @@ class TestNotificationService:
     @patch.dict(
         os.environ, {"DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/123/abc"}
     )
-    @patch("asyncio.create_task")
-    def test_send_error_notification_with_webhook(self, mock_create_task):
+    @patch("asyncio.get_running_loop")
+    def test_send_error_notification_with_webhook(self, mock_get_loop):
         """Test sending error notification when webhook is configured"""
+        mock_loop = patch("asyncio.AbstractEventLoop").start()
+        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_get_loop.return_value = mock_loop
+        
         NotificationService.send_error_notification(
             error_type="Processing Error",
             error_message="Failed to parse email",
             context="Subject: Test Email",
         )
 
-        mock_create_task.assert_called_once()
+        mock_loop.create_task.assert_called_once()
 
     @patch.dict(
         os.environ, {"DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/123/abc"}
     )
-    @patch("asyncio.create_task")
-    def test_send_error_notification_no_context(self, mock_create_task):
+    @patch("asyncio.get_running_loop")
+    def test_send_error_notification_no_context(self, mock_get_loop):
         """Test sending error notification without context"""
+        mock_loop = patch("asyncio.AbstractEventLoop").start()
+        mock_loop.create_task = patch("asyncio.AbstractEventLoop.create_task").start()
+        mock_get_loop.return_value = mock_loop
+        
         NotificationService.send_error_notification(
             error_type="Database Error", error_message="Connection timeout"
         )
 
-        mock_create_task.assert_called_once()
+        mock_loop.create_task.assert_called_once()

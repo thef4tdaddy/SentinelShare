@@ -123,13 +123,24 @@ class NotificationService:
         payload = {"embeds": [embed]}
 
         # Run async send in background without blocking
+        # Note: We intentionally don't await or store the task reference
+        # as this is a fire-and-forget operation for notifications
         try:
-            asyncio.create_task(
+            # Try to create task in current event loop
+            loop = asyncio.get_running_loop()
+            loop.create_task(
                 NotificationService._send_webhook_async(webhook_url, payload)
             )
         except RuntimeError:
-            # If no event loop is running, create one temporarily
-            asyncio.run(NotificationService._send_webhook_async(webhook_url, payload))
+            # No event loop running - use thread pool to avoid blocking
+            import threading
+            thread = threading.Thread(
+                target=lambda: asyncio.run(
+                    NotificationService._send_webhook_async(webhook_url, payload)
+                )
+            )
+            thread.daemon = True
+            thread.start()
 
     @staticmethod
     def send_error_notification(
@@ -168,10 +179,21 @@ class NotificationService:
         payload = {"embeds": [embed]}
 
         # Run async send in background without blocking
+        # Note: We intentionally don't await or store the task reference
+        # as this is a fire-and-forget operation for notifications
         try:
-            asyncio.create_task(
+            # Try to create task in current event loop
+            loop = asyncio.get_running_loop()
+            loop.create_task(
                 NotificationService._send_webhook_async(webhook_url, payload)
             )
         except RuntimeError:
-            # If no event loop is running, create one temporarily
-            asyncio.run(NotificationService._send_webhook_async(webhook_url, payload))
+            # No event loop running - use thread pool to avoid blocking
+            import threading
+            thread = threading.Thread(
+                target=lambda: asyncio.run(
+                    NotificationService._send_webhook_async(webhook_url, payload)
+                )
+            )
+            thread.daemon = True
+            thread.start()

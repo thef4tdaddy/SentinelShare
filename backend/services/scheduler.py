@@ -342,11 +342,22 @@ def process_emails():
                                 # Extract vendor name from sender
                                 from_header = email_data.get("from", "")
                                 real_name, email_addr = parseaddr(from_header)
-                                vendor = real_name.strip() if real_name and real_name.strip() else (
-                                    email_addr.split("@")[1].split(".")[0].capitalize() 
-                                    if "@" in email_addr 
-                                    else "Unknown"
-                                )
+                                
+                                # Try to get vendor from real_name, then from email domain
+                                if real_name and real_name.strip():
+                                    vendor = real_name.strip()
+                                elif "@" in email_addr:
+                                    try:
+                                        domain_parts = email_addr.split("@", 1)
+                                        if len(domain_parts) == 2 and domain_parts[1]:
+                                            domain = domain_parts[1]
+                                            vendor = domain.split(".")[0].capitalize()
+                                        else:
+                                            vendor = "Unknown"
+                                    except (IndexError, AttributeError):
+                                        vendor = "Unknown"
+                                else:
+                                    vendor = "Unknown"
                                 
                                 # Get dashboard URL if APP_URL is set
                                 app_url = os.environ.get("APP_URL", "").rstrip("/")
