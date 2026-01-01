@@ -1,8 +1,8 @@
 """Unit tests for EmailParser"""
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from unittest.mock import Mock, patch
-
 
 from backend.services.email_parser import EmailParser
 
@@ -80,17 +80,17 @@ class TestEmailParser:
     def test_parse_multipart_body_decode_error(self):
         """Test parsing multipart body handles decode errors"""
         msg = MIMEMultipart()
-        
+
         # Create a part that will cause decode error
         bad_part = Mock()
         bad_part.get_content_type.return_value = "text/plain"
         bad_part.get.return_value = None
         bad_part.get_payload.side_effect = Exception("Decode error")
-        
+
         # Mock walk to return our bad part
-        with patch.object(msg, 'walk', return_value=[msg, bad_part]):
+        with patch.object(msg, "walk", return_value=[msg, bad_part]):
             body, html_body = EmailParser.parse_multipart_body(msg)
-            
+
             # Should return empty strings without crashing
             assert body == ""
             assert html_body == ""
@@ -98,7 +98,7 @@ class TestEmailParser:
     def test_parse_simple_body_text(self):
         """Test parsing simple text message"""
         msg = MIMEText("Plain text content")
-        
+
         body, html_body = EmailParser.parse_simple_body(msg)
 
         assert body == "Plain text content"
@@ -107,7 +107,7 @@ class TestEmailParser:
     def test_parse_simple_body_html(self):
         """Test parsing simple HTML message"""
         msg = MIMEText("<html>HTML content</html>", "html")
-        
+
         body, html_body = EmailParser.parse_simple_body(msg)
 
         assert body == ""
@@ -146,7 +146,7 @@ class TestEmailParser:
     def test_parse_email_body_html_fallback(self, mock_extract):
         """Test parse_email_body falls back to HTML extraction"""
         mock_extract.return_value = "Extracted text"
-        
+
         msg = MIMEText("<html>HTML only</html>", "html")
 
         body, html_body = EmailParser.parse_email_body(msg)
@@ -182,7 +182,7 @@ class TestEmailParser:
         msg["Subject"] = "Multipart Test"
         msg["From"] = "sender@test.com"
         msg["Message-ID"] = "<multi@test.com>"
-        
+
         text_part = MIMEText("Text part")
         html_part = MIMEText("<html>HTML part</html>", "html")
         msg.attach(text_part)
@@ -199,7 +199,7 @@ class TestEmailParser:
         """Test parsing email with no subject"""
         msg = MIMEText("Body")
         msg["From"] = "sender@test.com"
-        
+
         raw_email = msg.as_bytes()
         result = EmailParser.parse_email_message(raw_email)
 

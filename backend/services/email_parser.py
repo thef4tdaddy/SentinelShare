@@ -176,7 +176,7 @@ class EmailParser:
         return {
             "message_id": msg.get("Message-ID"),
             "reply_to": msg.get("Reply-To"),
-            "from": normalize_sender(msg.get("From")),
+            "from": normalize_sender(msg.get("From") or ""),
             "subject": subject,
             "body": body,
             "html_body": html_body,

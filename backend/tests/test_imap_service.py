@@ -1,7 +1,7 @@
 """Unit tests for ImapService"""
+
 import imaplib
 from unittest.mock import Mock, patch
-
 
 from backend.services.imap_service import ImapService
 
@@ -196,9 +196,7 @@ class TestImapService:
         mock_mail = Mock()
         mock_mail.search.return_value = ("OK", [b"10"])
 
-        result = ImapService.search_by_message_id(
-            mock_mail, '<test"quote@example.com>'
-        )
+        result = ImapService.search_by_message_id(mock_mail, '<test"quote@example.com>')
 
         # Verify the search was called with escaped quotes
         call_args = mock_mail.search.call_args[0][1]

@@ -83,7 +83,9 @@ class ImapService:
 
         try:
             mail = imaplib.IMAP4_SSL(imap_server, imap_port)
-            ImapService._imap_login(mail, username, password or "", auth_method, access_token)
+            ImapService._imap_login(
+                mail, username, password or "", auth_method, access_token
+            )
             return mail
         except Exception as e:
             logging.error(f"IMAP Connection Error: {type(e).__name__}")
@@ -133,9 +135,7 @@ class ImapService:
             return None
 
     @staticmethod
-    def fetch_message(
-        mail: imaplib.IMAP4_SSL, message_id: bytes
-    ) -> Optional[bytes]:
+    def fetch_message(mail: imaplib.IMAP4_SSL, message_id: bytes) -> Optional[bytes]:
         """
         Fetch a single message by its IMAP ID.
 
@@ -148,14 +148,14 @@ class ImapService:
         """
         try:
             # Convert bytes to string for fetch command
-            msg_id_str = message_id.decode('ascii')
+            msg_id_str = message_id.decode("ascii")
             status, msg_data = mail.fetch(msg_id_str, "(BODY[])")
-            
+
             # Check if fetch was successful
             if status != "OK":
                 logging.warning(f"IMAP fetch returned non-OK status: {status}")
                 return None
-                
+
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     return response_part[1]

@@ -792,6 +792,7 @@ class TestEmailService:
         ) as mock_message_from_bytes:
             # Create a real multipart message structure but mock the problematic part
             mock_msg = Mock()
+
             def mock_get(key, default=None):
                 return {
                     "Subject": "Test Subject",
@@ -800,13 +801,14 @@ class TestEmailService:
                     "Message-ID": "<test@test.com>",
                     "Reply-To": None,
                 }.get(key, default)
-            
+
             mock_msg.get = mock_get
+
             def mock_getitem(key):
                 return {
                     "Subject": "Test Subject",
                 }.get(key)
-            
+
             mock_msg.__getitem__ = mock_getitem
             mock_msg.is_multipart.return_value = True
 
@@ -843,6 +845,7 @@ class TestEmailService:
             "backend.services.email_parser.email.message_from_bytes"
         ) as mock_message_from_bytes:
             mock_msg = Mock()
+
             def mock_get2(key, default=None):
                 return {
                     "Subject": "Test Subject",
@@ -851,8 +854,9 @@ class TestEmailService:
                     "Message-ID": "<test@test.com>",
                     "Reply-To": None,
                 }.get(key, default)
-            
+
             mock_msg.get = mock_get2
+
             def mock_getitem2(key):
                 return {
                     "Subject": "Test Subject",
@@ -860,7 +864,7 @@ class TestEmailService:
                     "Date": "Mon, 01 Jan 2024 12:00:00 +0000",
                     "Message-ID": "<test@test.com>",
                 }.get(key)
-            
+
             mock_msg.__getitem__ = mock_getitem2
             mock_msg.is_multipart.return_value = False
             mock_msg.get_content_type.return_value = "text/plain"

@@ -1,9 +1,9 @@
 """Unit tests for AttachmentService"""
+
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from unittest.mock import Mock
-
 
 from backend.services.attachment_service import AttachmentService
 
@@ -105,11 +105,11 @@ class TestAttachmentService:
     def test_list_attachments_with_attachments(self):
         """Test listing attachments in multipart message"""
         msg = MIMEMultipart()
-        
+
         # Add regular text part
         text_part = MIMEText("Body text")
         msg.attach(text_part)
-        
+
         # Add attachment
         attachment = MIMEBase("application", "pdf")
         attachment.add_header("Content-Disposition", "attachment", filename="doc.pdf")
@@ -124,12 +124,12 @@ class TestAttachmentService:
     def test_list_attachments_multiple(self):
         """Test listing multiple attachments"""
         msg = MIMEMultipart()
-        
+
         # Add two attachments
         att1 = MIMEBase("image", "png")
         att1.add_header("Content-Disposition", "attachment", filename="image.png")
         msg.attach(att1)
-        
+
         att2 = MIMEBase("application", "zip")
         att2.add_header("Content-Disposition", "attachment", filename="archive.zip")
         msg.attach(att2)
@@ -145,7 +145,7 @@ class TestAttachmentService:
     def test_list_attachments_with_size(self):
         """Test listing attachments includes size when available"""
         msg = MIMEMultipart()
-        
+
         attachment = MIMEText("test data")
         attachment.add_header("Content-Disposition", "attachment", filename="test.txt")
         msg.attach(attachment)
@@ -160,12 +160,12 @@ class TestAttachmentService:
     def test_list_attachments_size_exception(self):
         """Test listing attachments handles size calculation exception"""
         msg = MIMEMultipart()
-        
+
         # Create a mock part that raises exception on get_payload
         mock_part = Mock()
         mock_part.get.return_value = "attachment"
         mock_part.get_content_type.return_value = "application/octet-stream"
-        
+
         # Create a real attachment to ensure walk works
         attachment = MIMEText("data")
         attachment.add_header("Content-Disposition", "attachment", filename="test.txt")
@@ -179,7 +179,7 @@ class TestAttachmentService:
     def test_list_attachments_no_filename(self):
         """Test listing attachments without filename"""
         msg = MIMEMultipart()
-        
+
         attachment = MIMEBase("application", "octet-stream")
         attachment.add_header("Content-Disposition", "attachment")
         msg.attach(attachment)
