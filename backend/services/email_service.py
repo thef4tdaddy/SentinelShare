@@ -467,11 +467,13 @@ class EmailService:
                                 soup = BeautifulSoup(html_body, "html.parser")
                                 body = soup.get_text(separator=" ", strip=True)
 
+                            from backend.services.email_utils import normalize_sender
+
                             fetched_emails.append(
                                 {
                                     "message_id": msg.get("Message-ID"),
                                     "reply_to": msg.get("Reply-To"),
-                                    "from": msg.get("From"),
+                                    "from": normalize_sender(msg.get("From")),
                                     "subject": subject,
                                     "body": body,
                                     "html_body": html_body,
