@@ -24,7 +24,7 @@ class ActionHtmlService:
         return f"""
          <html>
             <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-                <div style="font-size: 50px;">{emoji}</div>
+                <div style="font-size: 50px;">{html.escape(emoji)}</div>
                 <h1>Action Confirmed</h1>
                 <p style="font-size: 18px; color: #555;">{html.escape(message)}</p>
                 <p><a href="/history">Go to Dashboard</a></p>
