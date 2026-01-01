@@ -34,6 +34,36 @@ def redact_email(email):
     return f"{redacted}@{domain}"
 
 
+def _extract_vendor_name(email_data: dict) -> str:
+    """
+    Extract vendor name from email sender.
+    
+    Args:
+        email_data: Email data dictionary containing 'from' field
+    
+    Returns:
+        Vendor name as a string, or "Unknown" if extraction fails
+    """
+    try:
+        from_header = email_data.get("from", "")
+        real_name, email_addr = parseaddr(from_header)
+        
+        # Try to get vendor from real_name first
+        if real_name and real_name.strip():
+            return real_name.strip()
+        
+        # Fall back to extracting from email domain
+        if "@" in email_addr:
+            domain_parts = email_addr.split("@", 1)
+            if domain_parts[1]:  # Has domain part
+                domain = domain_parts[1]
+                return domain.split(".")[0].capitalize()
+        
+        return "Unknown"
+    except (IndexError, AttributeError):
+        return "Unknown"
+
+
 def process_emails():
     # 0. Check for SECRET_KEY to ensure encryption services are available
     if not os.environ.get("SECRET_KEY"):
@@ -338,25 +368,7 @@ def process_emails():
                             
                             # Send notification on successful receipt capture
                             try:
-                                # Extract vendor name from sender
-                                from_header = email_data.get("from", "")
-                                real_name, email_addr = parseaddr(from_header)
-                                
-                                # Try to get vendor from real_name, then from email domain
-                                if real_name and real_name.strip():
-                                    vendor = real_name.strip()
-                                elif "@" in email_addr:
-                                    try:
-                                        domain_parts = email_addr.split("@", 1)
-                                        if len(domain_parts) == 2 and domain_parts[1]:
-                                            domain = domain_parts[1]
-                                            vendor = domain.split(".")[0].capitalize()
-                                        else:
-                                            vendor = "Unknown"
-                                    except (IndexError, AttributeError):
-                                        vendor = "Unknown"
-                                else:
-                                    vendor = "Unknown"
+                                vendor = _extract_vendor_name(email_data)
                                 
                                 # Get dashboard URL if APP_URL is set
                                 app_url = os.environ.get("APP_URL", "").rstrip("/")
@@ -370,7 +382,7 @@ def process_emails():
                                 )
                             except Exception as notif_error:
                                 # Don't fail the email processing if notification fails
-                                print(f"⚠️ Failed to send notification: {type(notif_error).__name__}")
+                                print(f"⚠️ Failed to send notification: {notif_error}")
                         else:
                             # Send error notification on forwarding failure
                             try:
@@ -380,7 +392,7 @@ def process_emails():
                                     context=f"Subject: {email_data.get('subject', 'unknown')}",
                                 )
                             except Exception as notif_error:
-                                print(f"⚠️ Failed to send error notification: {type(notif_error).__name__}")
+                                print(f"⚠️ Failed to send error notification: {notif_error}")
 
                     # Save to DB
                     processed = ProcessedEmail(
