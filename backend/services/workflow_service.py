@@ -74,7 +74,7 @@ class WorkflowService:
         existing_rule = session.exec(
             select(ManualRule).where(ManualRule.email_pattern == email_pattern)
         ).first()
-        
+
         rule_is_new = False
         if not existing_rule:
             # Truncate subject intelligently with ellipsis

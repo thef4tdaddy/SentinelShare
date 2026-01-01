@@ -119,7 +119,10 @@ class TestWorkflowServiceToggleIgnoredToForwarded:
         result = WorkflowService.toggle_ignored_to_forwarded(email.id, session)
 
         assert result["success"] is True
-        assert result["message"] == "Email forwarded and rule created for receipts@store.com"
+        assert (
+            result["message"]
+            == "Email forwarded and rule created for receipts@store.com"
+        )
 
         # Verify email status updated
         session.refresh(email)

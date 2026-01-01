@@ -121,7 +121,9 @@ class ReportService:
 
         # 1. Get content from encrypted storage
         body = decrypt_content(email.encrypted_body) if email.encrypted_body else ""
-        html_body = decrypt_content(email.encrypted_html) if email.encrypted_html else ""
+        html_body = (
+            decrypt_content(email.encrypted_html) if email.encrypted_html else ""
+        )
 
         # 2. Fallback to IMAP if content is gone (retention expired)
         if not body and not html_body:
@@ -133,7 +135,10 @@ class ReportService:
                 )
 
             fetched = EmailService.fetch_email_by_id(
-                email.account_email, creds["password"], email.email_id, creds["imap_server"]
+                email.account_email,
+                creds["password"],
+                email.email_id,
+                creds["imap_server"],
             )
             if not fetched:
                 raise ValueError("Email not found in IMAP inbox")
@@ -156,11 +161,15 @@ class ReportService:
             "analysis": analysis,
             "category": category,
             "current_status": email.status,
-            "suggested_status": "forwarded" if analysis["final_decision"] else "blocked",
+            "suggested_status": (
+                "forwarded" if analysis["final_decision"] else "blocked"
+            ),
         }
 
     @staticmethod
-    def submit_feedback(email_id: int, is_receipt: bool, session: Session) -> Dict[str, str]:
+    def submit_feedback(
+        email_id: int, is_receipt: bool, session: Session
+    ) -> Dict[str, str]:
         """Store user feedback for future rule learning."""
         email = session.get(ProcessedEmail, email_id)
         if not email:
@@ -275,9 +284,7 @@ class ReportService:
                         response["rule_created"] = True
                         response[
                             "message"
-                        ] += (
-                            f" and rule created: {match_type}='{pattern}' → '{category}'"
-                        )
+                        ] += f" and rule created: {match_type}='{pattern}' → '{category}'"
                     else:
                         response["message"] += " (rule already exists)"
 
@@ -287,6 +294,7 @@ class ReportService:
         except Exception:
             session.rollback()
             raise
+
     @staticmethod
     def reprocess_all_ignored(session: Session) -> Dict[str, Any]:
         """Reprocess all 'ignored' emails from the last 24 hours."""
@@ -361,7 +369,9 @@ class ReportService:
         # Calculate stats
         total = len(emails)
         forwarded = sum(1 for e in emails if e.status == "forwarded")
-        blocked = sum(1 for e in emails if e.status == "blocked" or e.status == "ignored")
+        blocked = sum(
+            1 for e in emails if e.status == "blocked" or e.status == "ignored"
+        )
         errors = sum(1 for e in emails if e.status == "error")
 
         # Calculate total amount

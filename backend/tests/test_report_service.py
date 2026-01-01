@@ -290,7 +290,9 @@ class TestReportServiceCategoryUpdate:
 
         # Empty category
         with pytest.raises(ValueError, match="cannot be empty"):
-            ReportService.update_email_category(email.id, "  ", False, "sender", session)
+            ReportService.update_email_category(
+                email.id, "  ", False, "sender", session
+            )
 
         # Invalid match_type
         with pytest.raises(ValueError, match="must be either"):
@@ -310,7 +312,9 @@ class TestReportServiceStats:
         assert result["forwarded"] == 2
         assert result["blocked"] == 1
         assert result["errors"] == 0
-        assert abs(result["total_amount"] - 45.49) < 0.01  # 29.99 + 15.50 with float tolerance
+        assert (
+            abs(result["total_amount"] - 45.49) < 0.01
+        )  # 29.99 + 15.50 with float tolerance
         assert result["status_breakdown"]["forwarded"] == 2
         assert result["status_breakdown"]["blocked"] == 1
 

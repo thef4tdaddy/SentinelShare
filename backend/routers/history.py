@@ -90,7 +90,9 @@ def get_email_history(
         )
 
     # Parse date strings
-    date_from_obj = parse_iso_date(date_from) if date_from and date_from.strip() else None
+    date_from_obj = (
+        parse_iso_date(date_from) if date_from and date_from.strip() else None
+    )
     date_to_obj = parse_iso_date(date_to) if date_to and date_to.strip() else None
 
     # Use service to get paginated emails
@@ -113,7 +115,9 @@ def reprocess_email(email_id: int, session: Session = Depends(get_session)):
     try:
         return ReportService.reprocess_email(email_id, session)
     except ValueError as e:
-        raise HTTPException(status_code=404 if "not found" in str(e).lower() else 400, detail=str(e))
+        raise HTTPException(
+            status_code=404 if "not found" in str(e).lower() else 400, detail=str(e)
+        )
 
 
 @router.post("/feedback")
@@ -172,7 +176,9 @@ def get_history_stats(
 ):
     """Get statistics for email processing history"""
     # Parse date strings
-    date_from_obj = parse_iso_date(date_from) if date_from and date_from.strip() else None
+    date_from_obj = (
+        parse_iso_date(date_from) if date_from and date_from.strip() else None
+    )
     date_to_obj = parse_iso_date(date_to) if date_to and date_to.strip() else None
 
     return ReportService.get_history_stats(
@@ -262,7 +268,9 @@ def export_history(
 ):
     """Export email history as CSV file with optional filtering"""
     # Parse date strings
-    date_from_obj = parse_iso_date(date_from) if date_from and date_from.strip() else None
+    date_from_obj = (
+        parse_iso_date(date_from) if date_from and date_from.strip() else None
+    )
     date_to_obj = parse_iso_date(date_to) if date_to and date_to.strip() else None
 
     # Get CSV generator from service
