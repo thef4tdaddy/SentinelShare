@@ -122,19 +122,14 @@ def create_category_rule(
 ):
     """Create a new category rule for the current user."""
     try:
-        created_rule = SettingsService.create_category_rule(
+        return SettingsService.create_category_rule(
             match_type=rule.match_type,
             pattern=rule.pattern,
             assigned_category=rule.assigned_category,
             priority=rule.priority,
             session=session,
+            user_id=current_user.id,
         )
-        # Set user_id after creation
-        created_rule.user_id = current_user.id
-        session.add(created_rule)
-        session.commit()
-        session.refresh(created_rule)
-        return created_rule
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
