@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.7.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.6.0...sentinel-share-v1.7.0) (2026-05-30)
+
+
+### Features
+
+* implement universal apple private relay normalization ([6f5b295](https://github.com/thef4tdaddy/SentinelShare/commit/6f5b2953e0765d20a59f24bd98bf094dc3e3f4c0))
+* **settings:** add option to globally disable checking ([7ffba85](https://github.com/thef4tdaddy/SentinelShare/commit/7ffba85f2721918920c1f3c14bdb8f559cf03229))
+
+
+### Bug Fixes
+
+* resolve daily health check reporting issues and improve diagnostic detail ([1ce5bd2](https://github.com/thef4tdaddy/SentinelShare/commit/1ce5bd221a8c599379c4427ba6a96a779542c9b9))
+* resolve daily health check reporting issues and improve diagnostic detail ([436f926](https://github.com/thef4tdaddy/SentinelShare/commit/436f926cdf252ceb13faee3ab86dbf31278fec5c))
+* resolve playwright regressions by ensuring db tables exist on startup ([adf47ee](https://github.com/thef4tdaddy/SentinelShare/commit/adf47ee705f146bc692776a61b5829c5abe6aded))
+
 ## [1.6.0](https://github.com/thef4tdaddy/SentinelShare/compare/sentinel-share-v1.5.0...sentinel-share-v1.6.0) (2025-12-31)
 
 
