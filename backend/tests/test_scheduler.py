@@ -204,6 +204,7 @@ def test_process_emails_records_error(mock_fetch, mock_engine_patch, engine):
 
             run = runs[0]
             assert run.status == "error"
+            assert run.error_message is not None
             assert "Connection failed (Exception)" in run.error_message
             assert run.completed_at is not None
     finally:
@@ -363,6 +364,41 @@ def test_process_emails_no_secret_key(mock_engine_patch, engine):
     },
 )
 @patch("backend.services.scheduler.engine")
+def test_process_emails_disabled_checking(mock_engine_patch, engine):
+    """Test that process_emails returns early when disable_checking is True"""
+    from backend.models import GlobalSettings
+
+    # Use our test engine in the scheduler module
+    original_engine = scheduler_module.engine
+    scheduler_module.engine = engine
+
+    try:
+        # Create the disable_checking setting set to 'true'
+        with Session(engine) as session:
+            setting = GlobalSettings(key="disable_checking", value="true")
+            session.add(setting)
+            session.commit()
+
+        # Call process_emails
+        process_emails()
+
+        # Verify that no ProcessingRun was created because it returned early
+        with Session(engine) as session:
+            runs = session.exec(select(ProcessingRun)).all()
+            assert len(runs) == 0
+    finally:
+        # Restore original engine
+        scheduler_module.engine = original_engine
+
+
+@patch.dict(
+    os.environ,
+    {
+        "POLL_INTERVAL": "60",
+        "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",
+    },
+)
+@patch("backend.services.scheduler.engine")
 @patch("backend.services.scheduler.Session")
 def test_process_emails_run_creation_error(mock_session_class, mock_engine_patch):
     """Test that process_emails handles errors when creating ProcessingRun"""
@@ -461,6 +497,7 @@ def test_process_emails_no_wife_email(mock_fetch, mock_engine_patch, engine):
             assert len(runs) == 1
             run = runs[0]
             assert run.status == "error"
+            assert run.error_message is not None
             assert "WIFE_EMAIL not configured" in run.error_message
             assert run.emails_checked == 1
             assert run.emails_processed == 0
@@ -719,6 +756,7 @@ def test_process_emails_individual_error_handling(
             assert len(runs) == 1
             run = runs[0]
             assert run.status == "error"
+            assert run.error_message is not None
             assert "Receipt from Starbucks" in run.error_message
 
             # Verify first email was processed successfully
@@ -833,6 +871,7 @@ def test_cleanup_expired_emails(engine):
             expired_email = session.exec(
                 select(ProcessedEmail).where(ProcessedEmail.email_id == "expired1")
             ).first()
+            assert expired_email is not None
             assert expired_email.encrypted_body is None
             assert expired_email.encrypted_html is None
 
@@ -840,6 +879,7 @@ def test_cleanup_expired_emails(engine):
             active_email = session.exec(
                 select(ProcessedEmail).where(ProcessedEmail.email_id == "active1")
             ).first()
+            assert active_email is not None
             assert active_email.encrypted_body == "encrypted_body_data"
             assert active_email.encrypted_html == "encrypted_html_data"
     finally:
@@ -982,6 +1022,7 @@ def test_process_emails_multiple_errors(
             run = runs[0]
             assert run.status == "error"
             # Check that error message contains both failed emails
+            assert run.error_message is not None
             assert "Receipt from Starbucks" in run.error_message
             assert "Receipt from Target" in run.error_message
     finally:
@@ -1034,6 +1075,7 @@ def test_process_emails_outer_exception(
             assert len(runs) == 1
             run = runs[0]
             assert run.status == "error"
+            assert run.error_message is not None
             assert "Auto-promote failed" in run.error_message
     finally:
         # Restore original engine
@@ -1084,6 +1126,7 @@ def test_process_emails_scheduler_overlap_detection(mock_engine_patch, engine):
 
             # Verify the skipped run has correct status and message
             assert skipped_run.status == "skipped"
+            assert skipped_run.error_message is not None
             assert f"Overlap with Run {active_run_id}" in skipped_run.error_message
             assert skipped_run.completed_at is not None
     finally:
@@ -1097,15 +1140,14 @@ def test_process_emails_scheduler_overlap_detection(mock_engine_patch, engine):
         "POLL_INTERVAL": "60",
         "WIFE_EMAIL": "wife@example.com",
         "SECRET_KEY": "cpUbNMiXWufM3gAPx1arHE1h7Y72s9sBri-MDiWtwb4=",
-        "GMAIL_EMAIL": "test@example.com",
-        "GMAIL_PASSWORD": "password",
     },
 )
 @patch("backend.services.scheduler.engine")
+@patch("backend.services.scheduler.EmailService.get_all_accounts")
 @patch("backend.services.scheduler.EmailService.fetch_recent_emails")
 @patch("backend.services.scheduler.Session")
 def test_process_emails_overlap_check_exception_handling(
-    mock_session_class, mock_fetch, mock_engine_patch, engine
+    mock_session_class, mock_fetch, mock_get_accounts, mock_engine_patch, engine
 ):
     """Test that exceptions during overlap check are handled gracefully"""
     # Use our test engine in the scheduler module
@@ -1113,6 +1155,15 @@ def test_process_emails_overlap_check_exception_handling(
     scheduler_module.engine = engine
 
     try:
+        # Mock get_all_accounts to return a single test account to prevent local env leaks
+        mock_get_accounts.return_value = [
+            {
+                "email": "test@example.com",
+                "password": "password",
+                "imap_server": "imap.gmail.com",
+            }
+        ]
+
         # Mock fetch to return emails
         mock_emails = [
             {

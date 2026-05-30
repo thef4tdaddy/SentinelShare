@@ -137,3 +137,353 @@ class TestOAuth2Endpoints:
         config = OAuth2Config.get_config("invalid")
 
         assert config is None
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    @patch("backend.routers.auth.OAuth2Service.store_oauth2_tokens")
+    @patch("httpx.AsyncClient")
+    def test_oauth2_callback_success_google(
+        self,
+        mock_async_client_class,
+        mock_store_tokens,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test successful Google OAuth2 callback"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        assert auth_response.status_code == 307
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange
+        mock_exchange.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token",
+            "expires_in": 3600,
+        }
+
+        # 3. Mock Google userinfo fetch
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"email": "google_user@example.com"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+
+        # 4. Call callback
+        callback_response = client.get(
+            f"/api/auth/google/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 5. Verify redirect to frontend settings page with success message
+        assert callback_response.status_code == 307
+        redirect_url = callback_response.headers["location"]
+        assert "http://frontend-test.com/settings" in redirect_url
+        assert "oauth_success=true" in redirect_url
+        assert "google_user%40example.com" in redirect_url
+
+        # Verify tokens stored
+        mock_store_tokens.assert_called_once()
+        args, kwargs = mock_store_tokens.call_args
+        assert kwargs["email"] == "google_user@example.com"
+        assert kwargs["provider"] == "google"
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    @patch("backend.routers.auth.OAuth2Service.store_oauth2_tokens")
+    @patch("httpx.AsyncClient")
+    def test_oauth2_callback_success_microsoft(
+        self,
+        mock_async_client_class,
+        mock_store_tokens,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test successful Microsoft OAuth2 callback"""
+        monkeypatch.setenv("MICROSOFT_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get(
+            "/api/auth/microsoft/authorize", follow_redirects=False
+        )
+        assert auth_response.status_code == 307
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange
+        mock_exchange.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token",
+            "expires_in": 3600,
+        }
+
+        # 3. Mock Microsoft userinfo fetch
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"mail": "microsoft_user@example.com"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+
+        # 4. Call callback
+        callback_response = client.get(
+            f"/api/auth/microsoft/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 5. Verify redirect to frontend settings page with success message
+        assert callback_response.status_code == 307
+        redirect_url = callback_response.headers["location"]
+        assert "http://frontend-test.com/settings" in redirect_url
+        assert "oauth_success=true" in redirect_url
+        assert "microsoft_user%40example.com" in redirect_url
+
+        # Verify tokens stored
+        mock_store_tokens.assert_called_once()
+        args, kwargs = mock_store_tokens.call_args
+        assert kwargs["email"] == "microsoft_user@example.com"
+        assert kwargs["provider"] == "microsoft"
+
+    def test_oauth2_callback_provider_mismatch(self, client: TestClient, monkeypatch):
+        """Test OAuth2 callback when provider in session does not match"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+
+        # 1. Authorize for Google (sets session provider to google)
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Call callback but for microsoft provider
+        callback_response = client.get(
+            f"/api/auth/microsoft/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        assert callback_response.status_code == 400
+        assert "Provider mismatch" in callback_response.json()["detail"]
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    def test_oauth2_callback_missing_tokens(
+        self,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test OAuth2 callback when provider does not return tokens"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange returning incomplete tokens
+        mock_exchange.return_value = {
+            "access_token": None,
+            "refresh_token": "test_refresh_token",
+        }
+
+        # 3. Call callback
+        callback_response = client.get(
+            f"/api/auth/google/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 4. Verify redirect with error message
+        assert callback_response.status_code == 307
+        from urllib.parse import unquote
+
+        redirect_url = unquote(callback_response.headers["location"])
+        assert "oauth_error=true" in redirect_url
+        assert "Failed to obtain tokens from provider" in redirect_url
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    @patch("httpx.AsyncClient")
+    def test_oauth2_callback_httpx_error(
+        self,
+        mock_async_client_class,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test OAuth2 callback when userinfo request fails with HTTPError"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange
+        mock_exchange.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token",
+        }
+
+        # 3. Mock Google userinfo fetch raising HTTPError
+        from unittest.mock import AsyncMock, MagicMock
+
+        import httpx
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=httpx.HTTPError("Connection timeout"))
+        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+
+        # 4. Call callback
+        callback_response = client.get(
+            f"/api/auth/google/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 5. Verify redirect with error message
+        assert callback_response.status_code == 307
+        from urllib.parse import unquote
+
+        redirect_url = unquote(callback_response.headers["location"])
+        assert "oauth_error=true" in redirect_url
+        assert "Failed to retrieve user information from google" in redirect_url
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    @patch("httpx.AsyncClient")
+    def test_oauth2_callback_missing_email(
+        self,
+        mock_async_client_class,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test OAuth2 callback when userinfo response contains no email"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange
+        mock_exchange.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token",
+        }
+
+        # 3. Mock Google userinfo fetch returning no email
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"name": "Test User"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+
+        # 4. Call callback
+        callback_response = client.get(
+            f"/api/auth/google/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 5. Verify redirect with error message
+        assert callback_response.status_code == 307
+        from urllib.parse import unquote
+
+        redirect_url = unquote(callback_response.headers["location"])
+        assert "oauth_error=true" in redirect_url
+        assert "Failed to obtain user email from provider" in redirect_url
+
+    @patch("backend.routers.auth.OAuth2Service.exchange_code_for_tokens")
+    @patch("backend.routers.auth.OAuth2Service.store_oauth2_tokens")
+    @patch("httpx.AsyncClient")
+    def test_oauth2_callback_db_store_error(
+        self,
+        mock_async_client_class,
+        mock_store_tokens,
+        mock_exchange,
+        client: TestClient,
+        monkeypatch,
+    ):
+        """Test OAuth2 callback when storing tokens in database fails"""
+        monkeypatch.setenv("GOOGLE_CLIENT_ID", "test_client_id")
+        monkeypatch.setenv("FRONTEND_URL", "http://frontend-test.com")
+
+        # 1. Authorize to set session state
+        auth_response = client.get("/api/auth/google/authorize", follow_redirects=False)
+        location = auth_response.headers["location"]
+        from urllib.parse import parse_qs, urlparse
+
+        parsed_url = urlparse(location)
+        query_params = parse_qs(parsed_url.query)
+        state = query_params["state"][0]
+
+        # 2. Mock token exchange
+        mock_exchange.return_value = {
+            "access_token": "test_access_token",
+            "refresh_token": "test_refresh_token",
+        }
+
+        # 3. Mock Google userinfo fetch
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"email": "google_user@example.com"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(return_value=mock_response)
+        mock_async_client_class.return_value.__aenter__.return_value = mock_client
+
+        # 4. Mock database storage failure
+        mock_store_tokens.side_effect = Exception("Database write error")
+
+        # 5. Call callback
+        callback_response = client.get(
+            f"/api/auth/google/callback?code=test_code&state={state}",
+            follow_redirects=False,
+        )
+
+        # 6. Verify redirect with error message
+        assert callback_response.status_code == 307
+        from urllib.parse import unquote
+
+        redirect_url = unquote(callback_response.headers["location"])
+        assert "oauth_error=true" in redirect_url
+        assert "Database write error" in redirect_url

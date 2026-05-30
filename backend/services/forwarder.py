@@ -51,6 +51,49 @@ def format_email_date(date_input) -> str:
         return str(date_input) if date_input else "Unknown"
 
 
+def get_preference_item_from_sender(from_header: str) -> str:
+    """
+    Extract a reliable preference item (email or domain) from a From header.
+
+    Returns:
+        - The email address if it's a generic domain (e.g. user@gmail.com)
+        - The domain if it's a corporate/service domain (e.g. uber.com)
+        - Otherwise the email address as a fallback
+    """
+    from email.utils import parseaddr
+
+    _, email_addr = parseaddr(from_header)
+    email_addr = email_addr.lower().strip()
+    if not email_addr or "@" not in email_addr:
+        return "unknown"
+
+    domain = email_addr.split("@")[-1]
+
+    # Common generic email providers
+    GENERIC_DOMAINS = {
+        "gmail.com",
+        "yahoo.com",
+        "hotmail.com",
+        "outlook.com",
+        "icloud.com",
+        "aol.com",
+        "mail.com",
+        "me.com",
+        "msn.com",
+        "live.com",
+        "zoho.com",
+        "protonmail.com",
+        "proton.me",
+        "yandex.com",
+        "gmx.com",
+        "mail.ru",
+    }
+
+    if domain in GENERIC_DOMAINS:
+        return email_addr
+    return domain
+
+
 class EmailForwarder:
     @staticmethod
     def forward_email(original_email_data: dict, target_email: str):
@@ -161,8 +204,9 @@ class EmailForwarder:
                 params = {"subject": subject_re, "body": body}
                 return f"mailto:{sender_email}?{urllib.parse.urlencode(params).replace('+', '%20')}"
 
-        link_stop = make_link("STOP", simple_name.lower())  # Args usually lowercase
-        link_more = make_link("MORE", simple_name.lower())
+        pref_arg = get_preference_item_from_sender(from_header)
+        link_stop = make_link("STOP", pref_arg)
+        link_more = make_link("MORE", pref_arg)
         link_settings = make_link("SETTINGS", "")
 
         # Dashboard Token for the recipient

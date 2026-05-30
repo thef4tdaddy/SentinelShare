@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler  # type: ignor
 from sqlmodel import Session, select
 
 from backend.database import engine
-from backend.models import ProcessedEmail, ProcessingRun
+from backend.models import GlobalSettings, ProcessedEmail, ProcessingRun
 from backend.security import encrypt_content, get_email_content_hash
 from backend.services.categorizer import Categorizer
 from backend.services.command_service import CommandService
@@ -51,6 +51,21 @@ def process_emails():
     # Create a processing run record
     try:
         with Session(engine) as session:
+            # Check if checking is disabled globally
+            try:
+                disable_setting = session.exec(
+                    select(GlobalSettings).where(
+                        GlobalSettings.key == "disable_checking"
+                    )
+                ).first()
+                if disable_setting and disable_setting.value.lower() == "true":
+                    print(
+                        "⏸️ Email checking is disabled globally via settings. Skipping."
+                    )
+                    return
+            except Exception as e:
+                print(f"⚠️ Error checking disable_checking setting: {type(e).__name__}")
+
             processing_run = ProcessingRun(
                 started_at=datetime.now(timezone.utc),
                 check_interval_minutes=poll_interval,
@@ -230,9 +245,11 @@ def process_emails():
             # Pre-fetch category rules for batch optimization
             from backend.models import CategoryRule
 
-            category_rules = session.exec(
-                select(CategoryRule).order_by(CategoryRule.priority.desc())
-            ).all()
+            category_rules = list(
+                session.exec(
+                    select(CategoryRule).order_by(CategoryRule.priority.desc())  # type: ignore
+                ).all()
+            )
 
             for email_data in emails:
                 try:
@@ -416,7 +433,7 @@ def cleanup_expired_emails():
         with Session(engine) as session:
             now = datetime.now(timezone.utc)
             expired_emails = session.exec(
-                select(ProcessedEmail).where(ProcessedEmail.retention_expires_at < now)
+                select(ProcessedEmail).where(ProcessedEmail.retention_expires_at < now)  # type: ignore
             ).all()
 
             count = 0
