@@ -53,14 +53,36 @@ class ManualRuleStrategy(DetectionStrategy):
             ).all()
             for pref in blocked:
                 p_item = pref.item.lower()
-                if p_item in sender or p_item in subject:
-                    masked = self._mask_text(pref.item)
-                    return DetectionResult(
-                        is_match=False,
-                        confidence=100,
-                        reason=f"Preference match (Blocked): {masked}",
-                        matched_by="Blocked Preference",
-                    )
+                if pref.type == "Blocked Category":
+                    # Lazy import to avoid circular dependency
+                    from backend.services.categorizer import Categorizer
+
+                    category = Categorizer.predict_category(email, session)
+                    if category == "other":
+                        category = Categorizer.get_fallback_category(email)
+
+                    if (
+                        p_item == category.lower()
+                        or p_item in sender
+                        or p_item in subject
+                    ):
+                        masked = self._mask_text(pref.item)
+                        return DetectionResult(
+                            is_match=False,
+                            confidence=100,
+                            reason=f"Preference match (Blocked Category): {masked}",
+                            matched_by="Blocked Preference",
+                        )
+                else:
+                    # Blocked Sender - check sender only to avoid false positive matches in subject
+                    if p_item in sender:
+                        masked = self._mask_text(pref.item)
+                        return DetectionResult(
+                            is_match=False,
+                            confidence=100,
+                            reason=f"Preference match (Blocked Sender): {masked}",
+                            matched_by="Blocked Preference",
+                        )
 
         except Exception as e:
             print(f"⚠️ Error checking database rules: {type(e).__name__}")

@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlmodel import Session, select
 
 from backend.database import get_session
-from backend.models import CategoryRule, ManualRule, Preference
+from backend.models import CategoryRule, GlobalSettings, ManualRule, Preference
 from backend.services.email_service import EmailService
 from backend.services.scheduler import process_emails
 from backend.services.settings_service import SettingsService
@@ -123,6 +123,43 @@ def trigger_poll(
     return {"status": "triggered", "message": "Email poll started in background"}
 
 
+@router.get("/disable-checking")
+def get_disable_checking(session: Session = Depends(get_session)):
+    """Get the current disable_checking status."""
+    setting = session.exec(
+        select(GlobalSettings).where(GlobalSettings.key == "disable_checking")
+    ).first()
+    return {"disabled": setting.value.lower() == "true" if setting else False}
+
+
+class DisableCheckingUpdate(BaseModel):
+    disabled: bool
+
+
+@router.post("/disable-checking")
+def update_disable_checking(
+    data: DisableCheckingUpdate, session: Session = Depends(get_session)
+):
+    """Update the disable_checking status."""
+    setting = session.exec(
+        select(GlobalSettings).where(GlobalSettings.key == "disable_checking")
+    ).first()
+    if setting:
+        setting.value = str(data.disabled).lower()
+    else:
+        setting = GlobalSettings(
+            key="disable_checking",
+            value=str(data.disabled).lower(),
+            description="Disable global email checking",
+        )
+        session.add(setting)
+    session.commit()
+    return {
+        "disabled": setting.value.lower() == "true",
+        "message": "Global checking status updated",
+    }
+
+
 # Email Template endpoints
 
 
@@ -203,7 +240,7 @@ def get_email_accounts(session: Session = Depends(get_session)):
     db_accounts = session.exec(select(EmailAccount)).all()
     response_list = [
         EmailAccountResponse(
-            id=acc.id,
+            id=acc.id if acc.id is not None else 0,
             email=acc.email,
             host=acc.host,
             port=acc.port,
@@ -262,7 +299,7 @@ def create_email_account(
     from backend.services.encryption_service import EncryptionService
 
     # Normalize email to lowercase for case-insensitive comparison
-    normalized_email = str(account.email).lower()
+    normalized_email = account.email.lower()
 
     # Check if account already exists (case-insensitive)
     existing = session.exec(
@@ -298,7 +335,7 @@ def create_email_account(
     session.refresh(new_account)
 
     return EmailAccountResponse(
-        id=new_account.id,
+        id=new_account.id if new_account.id is not None else 0,
         email=new_account.email,
         host=new_account.host,
         port=new_account.port,

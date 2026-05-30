@@ -8,25 +8,35 @@ describe('dateUtils', () => {
 		});
 
 		it('formats date string with timezone', () => {
-			const result = formatDate('2024-01-15T10:30:00Z');
+			const dateStr = '2024-01-15T10:30:00Z';
+			const result = formatDate(dateStr);
+			const date = new Date(dateStr);
 			// Should contain date components (month, day, year) and time
 			expect(result).toMatch(/Jan/);
 			expect(result).toMatch(/15/);
 			expect(result).toMatch(/2024/);
-			expect(result).toMatch(/10/);
+
+			const localHour = date.getHours();
+			const hour12 = localHour % 12 || 12;
+			const hourPattern = new RegExp(`(0?${localHour}|0?${hour12})`);
+			expect(result).toMatch(hourPattern);
 			expect(result).toMatch(/30/);
 		});
 
 		it('appends Z to date string without timezone and treats as UTC', () => {
 			const dateWithoutTz = '2024-01-15T10:30:00';
 			const result = formatDate(dateWithoutTz);
+			const date = new Date(dateWithoutTz + 'Z');
 			// When Z is appended, the date should be treated as UTC
 			// Should contain date components
 			expect(result).toMatch(/Jan/);
 			expect(result).toMatch(/15/);
 			expect(result).toMatch(/2024/);
-			// Should contain time components (verifies UTC parsing)
-			expect(result).toMatch(/10/);
+
+			const localHour = date.getHours();
+			const hour12 = localHour % 12 || 12;
+			const hourPattern = new RegExp(`(0?${localHour}|0?${hour12})`);
+			expect(result).toMatch(hourPattern);
 			expect(result).toMatch(/30/);
 		});
 
@@ -46,18 +56,27 @@ describe('dateUtils', () => {
 		});
 
 		it('formats time string with timezone', () => {
-			const result = formatTime('2024-01-15T10:30:00Z');
-			// Should contain time components
-			expect(result).toMatch(/10/);
+			const dateStr = '2024-01-15T10:30:00Z';
+			const result = formatTime(dateStr);
+			const date = new Date(dateStr);
+
+			const localHour = date.getHours();
+			const hour12 = localHour % 12 || 12;
+			const hourPattern = new RegExp(`(0?${localHour}|0?${hour12})`);
+			expect(result).toMatch(hourPattern);
 			expect(result).toMatch(/30/);
 		});
 
 		it('appends Z to time string without timezone and treats as UTC', () => {
 			const timeWithoutTz = '2024-01-15T10:30:00';
 			const result = formatTime(timeWithoutTz);
+			const date = new Date(timeWithoutTz + 'Z');
 			// When Z is appended, the time should be treated as UTC
-			// Should contain time components (verifies UTC parsing)
-			expect(result).toMatch(/10/);
+
+			const localHour = date.getHours();
+			const hour12 = localHour % 12 || 12;
+			const hourPattern = new RegExp(`(0?${localHour}|0?${hour12})`);
+			expect(result).toMatch(hourPattern);
 			expect(result).toMatch(/30/);
 		});
 

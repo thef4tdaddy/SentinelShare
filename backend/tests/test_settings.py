@@ -396,3 +396,36 @@ def test_test_email_account_not_found(session: Session):
 
     assert exc_info.value.status_code == 404
     assert "Account not found" in str(exc_info.value.detail)
+
+
+def test_disable_checking_endpoints(session: Session):
+    from backend.routers.settings import (
+        DisableCheckingUpdate,
+        get_disable_checking,
+        update_disable_checking,
+    )
+
+    # Initially, it should be enabled (disabled=False)
+    status = get_disable_checking(session=session)
+    assert status["disabled"] is False
+
+    # Update to disabled=True
+    update_res = update_disable_checking(
+        DisableCheckingUpdate(disabled=True), session=session
+    )
+    assert update_res["disabled"] is True
+    assert "Global checking status updated" in update_res["message"]
+
+    # Verify status is disabled=True
+    status = get_disable_checking(session=session)
+    assert status["disabled"] is True
+
+    # Toggle back to disabled=False
+    update_res = update_disable_checking(
+        DisableCheckingUpdate(disabled=False), session=session
+    )
+    assert update_res["disabled"] is False
+
+    # Verify status is disabled=False
+    status = get_disable_checking(session=session)
+    assert status["disabled"] is False

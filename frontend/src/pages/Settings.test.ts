@@ -28,6 +28,7 @@ describe('Settings Component', () => {
 			if (url === '/settings/test-connections') return [];
 			if (url.includes('trigger-poll')) return { message: 'Poll triggered' };
 			if (url === '/api/settings/email-template') return { template: '' };
+			if (url === '/settings/disable-checking') return { disabled: false };
 			return [];
 		});
 	};

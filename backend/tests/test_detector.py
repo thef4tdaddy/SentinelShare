@@ -837,3 +837,68 @@ def test_mask_text_with_short_text():
     """Test _mask_text masks short text correctly"""
     result = ReceiptDetector._mask_text("test")
     assert result == "*** (masked, 4 chars)"
+
+
+def test_get_preference_item_from_sender():
+    from backend.services.forwarder import get_preference_item_from_sender
+
+    assert get_preference_item_from_sender("Uber <receipts@uber.com>") == "uber.com"
+    assert get_preference_item_from_sender("<no-reply@amazon.com>") == "amazon.com"
+    assert (
+        get_preference_item_from_sender("John Doe <john.doe@gmail.com>")
+        == "john.doe@gmail.com"
+    )
+    assert get_preference_item_from_sender("unknown_sender") == "unknown"
+
+
+def test_preference_blocked_category_smart_match(session):
+    """Test smart category matching for Blocked Category preference"""
+    pref = Preference(item="restaurants", type="Blocked Category")
+    session.add(pref)
+    session.commit()
+
+    # Classified as restaurants by fallback categorizer, but subject has no "restaurants" keyword
+    email = MockEmail(
+        subject="Your order receipt",
+        body="Order total: $15.00",
+        sender="receipts@starbucks.com",
+    )
+    assert ReceiptDetector.is_receipt(email, session) is False
+
+
+def test_preference_blocked_sender_subject_exclusion(session):
+    """Test that blocked sender does NOT block an email when the blocked word is only in the subject"""
+    pref = Preference(item="amazon.com", type="Blocked Sender")
+    session.add(pref)
+    session.commit()
+
+    email = MockEmail(
+        subject="Your Amazon order details",
+        body="Order #12345678 Total: $12.99",
+        sender="friend@gmail.com",
+    )
+    # The sender is friend@gmail.com, not amazon.com. The subject contains amazon.com but it's a strong receipt.
+    # Therefore, it should be detected as a receipt and NOT blocked by Blocked Sender.
+    assert ReceiptDetector.is_receipt(email, session) is True
+
+
+def test_promotional_with_weak_transactional_indicators():
+    """Test that promotional emails with weak transactional indicators are excluded"""
+    email = MockEmail(
+        subject="Get 50% off today!",
+        body="Subscribe today. Total price is only $19.99 for first year payment!",
+        sender="deals@shop.com",
+    )
+    # This would have matched the transactional score >= 3 under the old logic.
+    # But it is promotional and not a definitive receipt, so it should be excluded.
+    assert ReceiptDetector.is_receipt(email) is False
+
+
+def test_strong_receipt_with_promotional_footer():
+    """Test that definitive receipts are forwarded even if they contain promotional keywords/unsubscribe in footer"""
+    email = MockEmail(
+        subject="Your Amazon.com order confirmation",
+        body="Thank you for your order. Total: $25.99. Click here to unsubscribe.",
+        sender="auto-confirm@amazon.com",
+    )
+    assert ReceiptDetector.is_receipt(email) is True

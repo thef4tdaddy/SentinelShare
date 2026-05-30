@@ -4,6 +4,7 @@
 	import AccountList from '../components/settings/AccountList.svelte';
 	import InboxStatus from '../components/settings/InboxStatus.svelte';
 	import AppearanceSettings from '../components/settings/AppearanceSettings.svelte';
+	import CheckingSettings from '../components/settings/CheckingSettings.svelte';
 	import CategoryRulesList from '../components/CategoryRulesList.svelte';
 	import ConfirmDialog from '../components/ConfirmDialog.svelte';
 	import { fetchJson } from '../lib/api';
@@ -150,8 +151,9 @@
 
 <div class="space-y-8">
 	<!-- Theme Toggle Section -->
-	<!-- Theme Toggle Section -->
 	<AppearanceSettings />
+	<!-- Checking Toggle Section -->
+	<CheckingSettings />
 	<!-- Connection Status -->
 	<InboxStatus results={connectionResults} />
 

@@ -35,6 +35,14 @@ class ReceiptDetector:
         subject = (
             getattr(email, "subject", None) or email.get("subject", "") or ""
         ).lower()
+        sender = (
+            getattr(email, "sender", None)
+            or getattr(email, "from", None)
+            or email.get("sender", "")
+            or email.get("from", "")
+            or ""
+        ).lower()
+        body = (getattr(email, "body", None) or email.get("body", "") or "").lower()
 
         # Strategy 1: Manual Rules & Preferences (highest priority)
         manual_result = ReceiptDetector._manual_rule_strategy.detect(email, session)
@@ -45,23 +53,18 @@ class ReceiptDetector:
             print(f"🚫 {manual_result.reason}")
             return False
 
-        # Strategy 2: Transactional Detection (includes reply/forward exclusion)
-        transactional_result = ReceiptDetector._transactional_strategy.detect(
-            email, session
-        )
-        if transactional_result.is_match:
-            masked = ReceiptDetector._mask_text(subject)
-            print(f"✅ {transactional_result.reason}: {masked}")
-            return True
-        elif (
-            transactional_result.reason
-            and "Reply or forward" in transactional_result.reason
-        ):
-            masked = ReceiptDetector._mask_text(subject)
-            print(f"🚫 {transactional_result.reason}: {masked}")
+        # Strategy 2: Reply/Forward Exclusion
+        if ReceiptDetector.is_reply_or_forward(subject, sender):
+            print(f"🚫 Reply or forward email: {ReceiptDetector._mask_text(subject)}")
             return False
 
-        # Strategy 3: Promotional Detection (exclusion)
+        # Strategy 3: Definitive/Strong Transactional Receipt
+        if ReceiptDetector.has_strong_receipt_indicators(subject, body):
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"✅ Strong receipt indicators found: {masked}")
+            return True
+
+        # Strategy 4: Promotional Detection (exclusion)
         promotional_result = ReceiptDetector._promotional_strategy.detect(
             email, session
         )
@@ -70,12 +73,26 @@ class ReceiptDetector:
             print(f"🚫 Excluded promotional email: {masked}")
             return False
 
-        # Strategy 4: Shipping Detection (exclusion)
+        # Strategy 5: Shipping Detection (exclusion)
         shipping_result = ReceiptDetector._shipping_strategy.detect(email, session)
         if shipping_result.is_match:
             masked = ReceiptDetector._mask_text(subject)
             print(f"🚫 Excluded shipping notification: {masked}")
             return False
+
+        # Strategy 6: Remaining Transactional Detection (High score or known sender confirmation)
+        score = ReceiptDetector.calculate_transactional_score(subject, body, sender)
+        if score >= 3:
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"✅ High transactional score ({score}): {masked}")
+            return True
+
+        if ReceiptDetector.is_known_receipt_sender(
+            sender
+        ) and ReceiptDetector.has_transaction_confirmation(subject, body):
+            masked = ReceiptDetector._mask_text(subject)
+            print(f"✅ Known sender with transaction confirmation: {masked}")
+            return True
 
         print(f"❌ Not a receipt: {ReceiptDetector._mask_text(subject)}")
         return False
