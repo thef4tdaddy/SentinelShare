@@ -16,7 +16,7 @@ isort==5.13.2
 itsdangerous
 cryptography==46.0.3
 httpx>=0.23.0
-ruff>=0.1.0
+ruff>=0.15.16
 mypy>=1.0.0
 bleach
 types-bleach
